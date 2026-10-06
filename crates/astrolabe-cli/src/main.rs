@@ -141,6 +141,7 @@ async fn main() -> Result<()> {
 
             info!("Indexing complete.");
         }
+        // TODO: Set xml as default --format
         Commands::Prompt { fqsn, format } => {
             let export_format = match format.to_lowercase().as_str() {
                 "md" | "markdown" => ExportFormat::Markdown,
@@ -156,7 +157,7 @@ async fn main() -> Result<()> {
                 Err(e) => eprintln!("Failed to export prompt: {e}"),
             }
         }
-        Commands::Query { query } => match db.inner().query_json(&query).await {
+        Commands::Query { query } => match db.query_with_rules(&query).await {
             Ok(json) => println!("{json}"),
             Err(e) => eprintln!("Query error: {e}"),
         },

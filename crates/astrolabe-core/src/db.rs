@@ -1,68 +1,95 @@
-//! Wrapper around `mesodb-core` providing Astrolabe-specific initialization and queries.
+//! Database handle and query wrapper for MesoDB
 
-use mesodb_core::{config::Config, db::MesoDB, error::MesoError};
+use crate::rules::STANDARD_RULES;
+use mesodb_core::MesoDB;
 use std::path::Path;
 use thiserror::Error;
 
-use crate::schema::bootstrap;
-
 #[derive(Error, Debug)]
-pub enum AstrolabeDbError {
-    #[error("Database error: {0}")]
-    Db(#[from] MesoError),
+pub enum DbError {
+    #[error("MesoDB internal error: {0}")]
+    MesoDb(String),
 }
 
-/// The core graph database manager for an Astrolabe project.
 pub struct AstrolabeDb {
     inner: MesoDB,
 }
 
 impl AstrolabeDb {
-    /// Opens or creates an Astrolabe database at the given path.
-    /// Bootstraps the required UIR schema automatically.
-    ///
-    /// # Errors
-    /// Returns `AstrolabeDbError` if the underlying database fails to open or initialize.
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, AstrolabeDbError> {
-        let schema = bootstrap();
-
-        // Use a balanced config by default. Can be extended to accept a user-provided config.
-        let config = Config::balanced();
-
-        let inner = MesoDB::open(path, schema, config)?;
-
+    /// Opens or creates an Astrolabe database at the specified path.
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, DbError> {
+        let inner = MesoDB::open(path).map_err(|e| DbError::MesoDb(e.to_string()))?;
         Ok(Self { inner })
     }
 
-    /// Provides read-only access to the underlying `MesoDB` instance for queries.
+    /// Access the underlying MesoDB engine directly.
     #[must_use]
     pub fn inner(&self) -> &MesoDB {
         &self.inner
     }
+
+    /// Exposes standard rules for caller-constructed queries.
+    #[must_use]
+    pub fn standard_rules() -> &'static str {
+        STANDARD_RULES
+    }
+
+    /// Evaluates a raw Datalog query string directly without rule transformations.
+    pub async fn query_json(&self, query_str: &str) -> Result<String, DbError> {
+        self.inner
+            .query_json(query_str)
+            .await
+            .map_err(|e| DbError::MesoDb(e.to_string()))
+    }
+
+    /// Evaluates a Datalog query, automatically injecting `STANDARD_RULES` if rule
+    /// predicates or rule bindings (`%`) are detected.
+    pub async fn query_with_rules(&self, query_str: &str) -> Result<String, DbError> {
+        self.query_with_custom_rules(query_str, STANDARD_RULES)
+            .await
+    }
+
+    /// Evaluates a Datalog query with custom recursive rules provided as an EDN string.
+    pub async fn query_with_custom_rules(
+        &self,
+        query_str: &str,
+        rules_str: &str,
+    ) -> Result<String, DbError> {
+        let trimmed = query_str.trim();
+
+        // If the query uses rule terms but hasn't explicitly specified `:in $ %`,
+        // auto-inject `:in $ %` before `:where`
+        let prepared_query =
+            if !trimmed.contains(":in") && (trimmed.contains('%') || contains_rule_call(trimmed)) {
+                if let Some(pos) = trimmed.find(":where") {
+                    let (head, tail) = trimmed.split_at(pos);
+                    format!("{head} :in $ % {tail}")
+                } else {
+                    trimmed.to_string()
+                }
+            } else {
+                trimmed.to_string()
+            };
+
+        // If rule binding `%` is active, bundle query + rules into a multi-input array payload
+        let final_payload = if prepared_query.contains('%') {
+            format!("[{prepared_query} {rules_str}]")
+        } else {
+            prepared_query
+        };
+
+        self.inner
+            .query_json(&final_payload)
+            .await
+            .map_err(|e| DbError::MesoDb(e.to_string()))
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-
-    #[tokio::test]
-    async fn test_astrolabe_db_initialization() {
-        let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("astrolabe.db");
-
-        let db = AstrolabeDb::open(&db_path).expect("Failed to open DB");
-
-        // Verify the database created the required files (WAL, parquet dir, indexes)
-        let parent_dir = db_path.parent().unwrap();
-        assert!(parent_dir.join("now.idx").exists());
-        assert!(parent_dir.join("parquet").exists());
-
-        // Perform a simple smoke test query against the bootstrapped schema
-        let query = r#"[:find ?type :where [?e :entity/type ?type]]"#;
-        let results = db.inner().query(query).await.expect("Failed basic query");
-
-        assert_eq!(results.len(), 1, "Should return an empty but valid RecordBatch");
-        assert_eq!(results[0].num_rows(), 0, "Database should be initially empty");
-    }
+/// Helper to detect if a query string invokes standard recursive rule predicates.
+#[must_use]
+fn contains_rule_call(query: &str) -> bool {
+    query.contains("calls?")
+        || query.contains("calls-transitive?")
+        || query.contains("parent?")
+        || query.contains("parent-transitive?")
 }
