@@ -7,6 +7,8 @@ license.workspace = true
 
 [dependencies]
 astrolabe-protocol.workspace = true
+
+anyhow.workspace = true
 ra_ap_hir.workspace = true
 ra_ap_ide.workspace = true
 ra_ap_ide_db.workspace = true

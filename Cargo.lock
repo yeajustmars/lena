@@ -394,6 +394,7 @@ dependencies = [
 name = "astrolabe-adapter-rust"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "astrolabe-protocol",
  "clap",
  "ra_ap_hir",
