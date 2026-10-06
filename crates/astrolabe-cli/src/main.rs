@@ -111,15 +111,19 @@ async fn main() -> Result<()> {
         Commands::Index { target } => {
             info!("Beginning Astrolabe indexing on: {}", target.display());
 
-            // Sequentially run our two primary adapters.
-            // In the future, this can dynamically discover adapters in the ~/.config/astrolabe/adapters dir.
-
-            if let Err(e) = run_adapter("astrolabe-adapter-rust", &target, &db).await {
-                error!("Rust adapter error: {e}");
-            }
+            // Sequentially run our primary adapters.
+            // TODO: In the future, this can dynamically discover adapters in the ~/.config/astrolabe/adapters dir.
 
             if let Err(e) = run_adapter("astrolabe-adapter-clj", &target, &db).await {
                 error!("Clojure adapter error: {e}");
+            }
+
+            if let Err(e) = run_adapter("astrolabe-adapter-go", &target, &db).await {
+                error!("Go adapter error: {e}");
+            }
+
+            if let Err(e) = run_adapter("astrolabe-adapter-rust", &target, &db).await {
+                error!("Rust adapter error: {e}");
             }
 
             info!("Indexing complete.");
