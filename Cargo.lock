@@ -426,6 +426,7 @@ version = "0.1.0"
 dependencies = [
  "astrolabe-protocol",
  "mesodb-core",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",

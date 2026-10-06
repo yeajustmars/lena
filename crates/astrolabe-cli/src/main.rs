@@ -4,7 +4,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result};
-use astrolabe_core::{db::AstrolabeDb, ingest::ingest_stream};
 use clap::{Parser, Subcommand};
 use std::{
     path::{Path, PathBuf},
@@ -14,6 +13,12 @@ use std::{
 use tokio::process::Command;
 use tracing::{Level, error, info, warn};
 use tracing_subscriber::FmtSubscriber;
+
+use astrolabe_core::{
+    db::AstrolabeDb,
+    exporter::{ExportFormat, export_prompt},
+    ingest::ingest_stream,
+};
 
 #[derive(Parser)]
 #[command(name = "astrolabe")]
@@ -38,6 +43,14 @@ enum Commands {
         /// Target directory to index
         #[arg(default_value = ".")]
         target: PathBuf,
+    },
+    /// Export an entity as LLM Context
+    Prompt {
+        /// The Fully Qualified Symbol Name (e.g. rust:crates/astrolabe-protocol/src/emitter.rs::TransactionBuilder::add)
+        fqsn: String,
+        /// Format to export (xml or md)
+        #[arg(short, long, default_value = "xml")]
+        format: String,
     },
     /// Query the graph using Datalog
     Query {
@@ -127,6 +140,21 @@ async fn main() -> Result<()> {
             }
 
             info!("Indexing complete.");
+        }
+        Commands::Prompt { fqsn, format } => {
+            let export_format = match format.to_lowercase().as_str() {
+                "md" | "markdown" => ExportFormat::Markdown,
+                "xml" => ExportFormat::Xml,
+                _ => {
+                    eprintln!("Invalid format. Use 'xml' or 'md'.");
+                    return Ok(());
+                }
+            };
+
+            match export_prompt(&db, &fqsn, export_format).await {
+                Ok(output) => println!("{output}"),
+                Err(e) => eprintln!("Failed to export prompt: {e}"),
+            }
         }
         Commands::Query { query } => match db.inner().query_json(&query).await {
             Ok(json) => println!("{json}"),
