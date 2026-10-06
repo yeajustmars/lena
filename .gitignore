@@ -1,0 +1,14 @@
+
+.astrolabe/
+.env
+/target
+**/target/**
+**.DS_store
+.!*
+assets/.!*
+**assets/\.!*
+**assets/\.!*/**
+**.swp
+**.swo
+**mesodb_history.txt
+**ipynb_checkpoints**

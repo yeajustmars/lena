@@ -1,0 +1,19 @@
+[package]
+name = "astrolabe-bench"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+astrolabe-protocol.workspace = true
+astrolabe-core.workspace = true
+tokio.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "ingest_bench"
+harness = false

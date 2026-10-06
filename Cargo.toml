@@ -1,0 +1,63 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/astrolabe-protocol",
+    "crates/astrolabe-core",
+    "crates/astrolabe-cli",
+    "crates/astrolabe-bench",
+    "adapters/astrolabe-adapter-rust",
+    "adapters/astrolabe-adapter-clj",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Astrolabe Contributors"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+astrolabe-protocol = { path = "crates/astrolabe-protocol", version = "0.1.0" }
+astrolabe-core = { path = "crates/astrolabe-core", version = "0.1.0" }
+mesodb-core = "0.1.0"
+
+anyhow = "1.0.102"
+arrow = { version = "58.2.0", default-features = false }
+datafusion = { version = "53.1.0", default-features = false }
+parquet = { version = "58.2.0", default-features = false }
+
+tokio = { version = "1.52.2", default-features = false }
+serde = { version = "1.0.228", default-features = false, features = ["derive"] }
+serde_json = "1.0.149"
+chrono = { version = "0.4.44", default-features = false, features = ["clock", "serde"] }
+
+clap = { version = "4.6.1", default-features = false, features = ["std", "color", "help", "usage", "error-context", "derive"] }
+comfy-table = { version = "7.2.2", default-features = false }
+
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["env-filter", "fmt"] }
+thiserror = "2.0.18"
+ahash = "0.8.12"
+ordered-float = "5.3.0"
+toml = "1.1.2"
+
+ra_ap_hir = "0.0.357"
+ra_ap_ide = "0.0.357"
+ra_ap_ide_db = "0.0.357"
+ra_ap_paths = "0.0.357"
+ra_ap_project_model = "0.0.357"
+ra_ap_syntax = "0.0.357"
+ra_ap_vfs = "0.0.357"
+
+criterion = { version = "0.5.1", features = ["async_tokio"] }
+tempfile = "3.27.0"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+strip = true
+
+[profile.bench]
+inherits = "release"
+debug = true

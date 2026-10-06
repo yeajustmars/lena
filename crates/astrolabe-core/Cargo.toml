@@ -1,0 +1,13 @@
+[package]
+name = "astrolabe-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+astrolabe-protocol.workspace = true
+mesodb-core.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["process", "rt-multi-thread", "io-util", "fs"] }
