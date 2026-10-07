@@ -70,4 +70,81 @@ mod tests {
             .expect("Missing Start Line");
         assert_eq!(start_line.value_type, ValueType::Int64);
     }
+
+    #[test]
+    fn test_bootstrap_identity_attributes() {
+        let schema = bootstrap();
+
+        // FQSN must be a String and MUST be unique
+        let fqsn = schema.get_by_ident(ATTR_SYMBOL_FQSN).expect("Missing FQSN");
+        assert_eq!(fqsn.value_type, ValueType::String);
+        assert!(fqsn.is_unique, "FQSN must be unique");
+
+        // Entity type is a string but not unique
+        let ent_type = schema
+            .get_by_ident(ATTR_ENTITY_TYPE)
+            .expect("Missing entity type");
+        assert_eq!(ent_type.value_type, ValueType::String);
+        assert!(!ent_type.is_unique);
+    }
+
+    #[test]
+    fn test_bootstrap_code_payload_attributes() {
+        let schema = bootstrap();
+
+        let raw = schema
+            .get_by_ident(ATTR_CODE_RAW)
+            .expect("Missing raw code");
+        assert_eq!(raw.value_type, ValueType::String);
+        assert!(!raw.is_unique);
+
+        let hash = schema
+            .get_by_ident(ATTR_CODE_HASH)
+            .expect("Missing code hash");
+        assert_eq!(hash.value_type, ValueType::String);
+        assert!(!hash.is_unique);
+    }
+
+    #[test]
+    fn test_bootstrap_location_attributes() {
+        let schema = bootstrap();
+
+        let start_line = schema
+            .get_by_ident(ATTR_LOC_START_LINE)
+            .expect("Missing start line");
+        assert_eq!(start_line.value_type, ValueType::Int64);
+        assert!(!start_line.is_unique);
+
+        let end_col = schema
+            .get_by_ident(ATTR_LOC_END_COL)
+            .expect("Missing end col");
+        assert_eq!(end_col.value_type, ValueType::Int64);
+        assert!(!end_col.is_unique);
+    }
+
+    #[test]
+    fn test_bootstrap_graph_edge_attributes() {
+        let schema = bootstrap();
+
+        let parent = schema
+            .get_by_ident(ATTR_PARENT_ENTITY)
+            .expect("Missing parent entity");
+        assert_eq!(parent.value_type, ValueType::Ref);
+        assert!(!parent.is_unique);
+
+        let caller = schema
+            .get_by_ident(ATTR_CALL_CALLER)
+            .expect("Missing call caller");
+        assert_eq!(caller.value_type, ValueType::Ref);
+        assert!(!caller.is_unique);
+    }
+
+    #[test]
+    fn test_bootstrap_unknown_attribute() {
+        let schema = bootstrap();
+
+        // Querying an attribute that was not bootstrapped should safely return None
+        let missing = schema.get_by_ident(":missing/attribute");
+        assert!(missing.is_none());
+    }
 }
