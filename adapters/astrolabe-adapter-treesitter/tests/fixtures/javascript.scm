@@ -12,3 +12,6 @@
 ;; Call sites
 (call_expression function: (identifier) @call.callee)
 (call_expression function: (member_expression property: (property_identifier) @call.callee))
+
+;; Prototype assignments and callbacks (e.g., app.init = function init() {})
+(function_expression name: (identifier) @symbol.function)

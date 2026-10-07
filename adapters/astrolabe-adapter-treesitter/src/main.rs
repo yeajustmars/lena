@@ -185,10 +185,10 @@ fn hash_id(input: &str) -> u64 {
 mod tests {
     use super::*;
 
-    const PY_SOURCE: &str = include_str!("../tests/fixtures/edge_cases.py");
+    const PY_SOURCE: &str = include_str!("../tests/fixtures/python/edge_cases.py");
     const PY_QUERY: &str = include_str!("../tests/fixtures/python.scm");
 
-    const JS_SOURCE: &str = include_str!("../tests/fixtures/edge_cases.js");
+    const JS_SOURCE: &str = include_str!("../tests/fixtures/javascript/edge_cases.js");
     const JS_QUERY: &str = include_str!("../tests/fixtures/javascript.scm");
 
     fn run_python() -> Vec<String> {
@@ -391,5 +391,63 @@ mod tests {
 
         // Did it map the Stripe API call inside the arrow function?
         assert!(output.contains("call:javascript:edge_cases.js::processPayment->create"));
+    }
+
+    // 14. Industrial Stress Test: FastAPI Core (Python)
+    const FASTAPI_SOURCE: &str =
+        include_str!("../tests/fixtures/python/fastapi/fastapi/0.103.1/fastapi/router.py");
+
+    #[test]
+    fn test_stress_fastapi_routing() {
+        let facts = extract_facts(
+            tree_sitter_python::LANGUAGE.into(),
+            FASTAPI_SOURCE,
+            PY_QUERY,
+            "fastapi_routing.py",
+            "python",
+        )
+        .expect("Failed to extract FastAPI facts");
+
+        let output = facts.join("\n");
+
+        // Verify it didn't choke and extracted a massive volume of facts
+        assert!(
+            output.matches("[:db/add").count() > 100,
+            "Should extract hundreds of facts from FastAPI"
+        );
+
+        // Verify it captured core framework classes and their complex call sites
+        assert!(output.contains(":symbol/fqsn \"python:fastapi_routing.py::APIRoute\""));
+        assert!(output.contains(":symbol/fqsn \"python:fastapi_routing.py::APIRouter\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    // 15. Industrial Stress Test: Express Core (JavaScript)
+    const EXPRESS_SOURCE: &str = include_str!(
+        "../tests/fixtures/javascript/expressjs/express/4.18.2/lib/express_application.js"
+    );
+
+    #[test]
+    fn test_stress_express_application() {
+        let facts = extract_facts(
+            tree_sitter_javascript::LANGUAGE.into(),
+            EXPRESS_SOURCE,
+            JS_QUERY,
+            "express_application.js",
+            "javascript",
+        )
+        .expect("Failed to extract Express facts");
+
+        let output = facts.join("\n");
+
+        // Verify volume
+        assert!(
+            output.matches("[:db/add").count() > 50,
+            "Should extract hundreds of facts from Express application.js"
+        );
+
+        // Express uses `app.init = function init()`. Did we catch the prototype methods?
+        assert!(output.contains(":symbol/fqsn \"javascript:express_application.js::init\""));
+        assert!(output.contains(":type/call-site"));
     }
 }
