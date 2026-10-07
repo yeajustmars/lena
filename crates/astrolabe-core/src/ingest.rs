@@ -22,10 +22,7 @@ pub enum IngestError {
 ///
 /// # Errors
 /// Returns `IngestError` if the underlying reader fails or if a transaction panics.
-pub async fn ingest_stream<R>(
-    db: &Arc<AstrolabeDb>,
-    reader: R,
-) -> Result<usize, IngestError>
+pub async fn ingest_stream<R>(db: &Arc<AstrolabeDb>, reader: R) -> Result<usize, IngestError>
 where
     R: tokio::io::AsyncRead + Unpin + Send + 'static,
 {
@@ -79,7 +76,6 @@ where
 mod tests {
     use super::*;
     use crate::db::AstrolabeDb;
-    use std::path::Path;
 
     #[tokio::test]
     async fn test_ingest_stream() {
@@ -89,13 +85,19 @@ mod tests {
 
         let edn_stream = b"[[:db/add 100 :entity/type :type/module] [:db/add 100 :symbol/name \"my_mod\"]]\n[[:db/add 101 :entity/type :type/function]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..]).await.expect("Ingestion failed");
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed");
 
         // 2 datoms in first tx, 1 in second
         assert_eq!(facts_written, 3);
 
         // Verify via query
-        let results = db.inner().query("[:find ?e :where [?e :entity/type :type/function]]").await.unwrap();
+        let results = db
+            .inner()
+            .query("[:find ?e :where [?e :entity/type :type/function]]")
+            .await
+            .unwrap();
         assert_eq!(results[0].num_rows(), 1);
     }
 }

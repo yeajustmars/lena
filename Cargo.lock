@@ -427,6 +427,7 @@ dependencies = [
  "astrolabe-protocol",
  "mesodb-core",
  "serde_json",
+ "tempfile",
  "thiserror",
  "tokio",
  "tracing",
@@ -2520,9 +2521,9 @@ dependencies = [
 
 [[package]]
 name = "mesodb-core"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c257aa726a46624ec5cb411447d8313ffe2af5c121d15c21156c783283a1fcb2"
+checksum = "2de897d34c06cdc1c1d409946f547b67547231e5aa67029bd7325cce8e4f4db4"
 dependencies = [
  "ahash",
  "arrow",

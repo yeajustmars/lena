@@ -13,6 +13,7 @@ tempfile.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
+tokio = { workspace = true, features = ["full"] }
 
 [[bench]]
 name = "ingest_bench"
