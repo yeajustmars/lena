@@ -100,4 +100,79 @@ mod tests {
             .unwrap();
         assert_eq!(results[0].num_rows(), 1);
     }
+
+    async fn setup_db() -> Arc<AstrolabeDb> {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("ingest.db");
+        Arc::new(AstrolabeDb::open(&db_path).unwrap())
+    }
+
+    #[tokio::test]
+    async fn test_ingest_stream_basic() {
+        let db = setup_db().await;
+        let edn_stream = b"[[:db/add 100 :entity/type :type/module] [:db/add 100 :symbol/name \"my_mod\"]]\n[[:db/add 101 :entity/type :type/function]]\n";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed");
+        assert_eq!(facts_written, 3);
+
+        let results = db
+            .inner()
+            .query("[:find ?e :where [?e :entity/type :type/function]]")
+            .await
+            .unwrap();
+        assert_eq!(results[0].num_rows(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_ingest_stream_skips_empty_lines() {
+        let db = setup_db().await;
+        // Includes empty lines and whitespace-only lines
+        let edn_stream = b"\n   \n\t\n[[:db/add 100 :symbol/name \"test\"]]\n\n";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed");
+        assert_eq!(facts_written, 1);
+    }
+
+    #[tokio::test]
+    async fn test_ingest_stream_resilience_malformed_edn() {
+        let db = setup_db().await;
+        // Line 2 is completely invalid EDN. The stream should skip it and process Line 3.
+        let edn_stream = b"[[:db/add 100 :symbol/name \"valid_1\"]]\n[MALFORMED NONSENSE\n[[:db/add 101 :symbol/name \"valid_2\"]]\n";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed");
+        assert_eq!(
+            facts_written, 2,
+            "Should have skipped the malformed line and processed the valid ones"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_ingest_stream_empty_transactions() {
+        let db = setup_db().await;
+        // Empty transaction arrays should parse but result in 0 facts written
+        let edn_stream = b"[]\n[  ]\n[[:db/add 100 :symbol/name \"real\"]]\n";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed");
+        assert_eq!(facts_written, 1);
+    }
+
+    #[tokio::test]
+    async fn test_ingest_stream_clean_eof() {
+        let db = setup_db().await;
+        // An empty stream should just return 0 without error
+        let edn_stream = b"";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion should cleanly exit on EOF");
+        assert_eq!(facts_written, 0);
+    }
 }

@@ -136,3 +136,139 @@ fn format_markdown(name: &str, lang: &str, file: &str, line: i64, sig: &str, doc
 
     out.trim_end().to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::AstrolabeDb;
+    use mesodb_core::transactor::Fact;
+    use mesodb_core::types::Value as MesoValue;
+    use serde_json::json;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_extract_string_with_and_without_colons() {
+        let val1 = json!({ ":symbol/name": "test_func" });
+        let val2 = json!({ "symbol/name": "test_func_no_colon" });
+        let val3 = json!({ "symbol/name": ["array_string"] });
+
+        assert_eq!(extract_string(&val1, "symbol/name"), "test_func");
+        assert_eq!(extract_string(&val2, ":symbol/name"), "test_func_no_colon");
+        assert_eq!(extract_string(&val3, "symbol/name"), "array_string");
+        assert_eq!(extract_string(&val1, "missing_key"), "");
+    }
+
+    #[test]
+    fn test_extract_i64_with_and_without_colons() {
+        let val1 = json!({ ":location/start-line": 42 });
+        let val2 = json!({ "location/start-line": 99 });
+        let val3 = json!({ "location/start-line": [7] });
+
+        assert_eq!(extract_i64(&val1, "location/start-line"), 42);
+        assert_eq!(extract_i64(&val2, ":location/start-line"), 99);
+        assert_eq!(extract_i64(&val3, "location/start-line"), 7);
+        assert_eq!(extract_i64(&val1, "missing_key"), 0);
+    }
+
+    #[test]
+    fn test_format_xml() {
+        let xml = format_xml(
+            "add",
+            "Rust",
+            "src/lib.rs",
+            10,
+            "fn add(a: i32) -> i32",
+            "Adds numbers",
+        );
+        assert!(xml.contains("<entity name=\"add\" language=\"Rust\">"));
+        assert!(xml.contains("<location file=\"src/lib.rs\" line=\"10\" />"));
+        assert!(xml.contains("<![CDATA[\nfn add(a: i32) -> i32\n    ]]>"));
+        assert!(xml.contains("<![CDATA[\nAdds numbers\n    ]]>"));
+    }
+
+    #[test]
+    fn test_format_markdown() {
+        let md = format_markdown(
+            "add",
+            ":lang/Rust",
+            "src/lib.rs",
+            10,
+            "fn add(a: i32)",
+            "Docs here",
+        );
+        assert!(md.contains("### `add`"));
+        assert!(md.contains("- **Language:** `Rust`")); // Should strip :lang/
+        assert!(md.contains("- **Location:** `src/lib.rs:10`"));
+        assert!(md.contains("```Rust\nfn add(a: i32)\n```"));
+        assert!(md.contains("```text\nDocs here\n```"));
+    }
+
+    #[tokio::test]
+    async fn test_export_prompt_not_found() {
+        let dir = tempdir().unwrap();
+        let db = Arc::new(AstrolabeDb::open(dir.path().join("not_found.db")).unwrap());
+
+        let res = export_prompt(&db, "rust:missing::func", ExportFormat::Xml).await;
+        assert!(matches!(res, Err(ExporterError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_export_prompt_success() {
+        let dir = tempdir().unwrap();
+        let db = Arc::new(AstrolabeDb::open(dir.path().join("export_success.db")).unwrap());
+
+        // Transact the exact schema attributes the exporter looks for
+        db.inner()
+            .transact(vec![
+                Fact {
+                    e: 1,
+                    ident: ":symbol/fqsn".into(),
+                    v: MesoValue::String("rust:test::success".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/name".into(),
+                    v: MesoValue::String("success_func".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":entity/language".into(),
+                    v: MesoValue::String("Rust".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":location/file".into(),
+                    v: MesoValue::String("src/main.rs".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":location/start-line".into(),
+                    v: MesoValue::Int64(42),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+            ])
+            .await
+            .unwrap();
+
+        let xml_res = export_prompt(&db, "rust:test::success", ExportFormat::Xml)
+            .await
+            .unwrap();
+        assert!(xml_res.contains("name=\"success_func\""));
+        assert!(xml_res.contains("language=\"Rust\""));
+        assert!(xml_res.contains("line=\"42\""));
+    }
+}
