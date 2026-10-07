@@ -1,12 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/astrolabe-protocol",
-    "crates/astrolabe-core",
-    "crates/astrolabe-cli",
     "crates/astrolabe-bench",
-    "adapters/astrolabe-adapter-rust",
+    "crates/astrolabe-cli",
+    "crates/astrolabe-core",
+    "crates/astrolabe-protocol",
     "adapters/astrolabe-adapter-clj",
+    # TODO: "adapters/astrolabe-adapter-go",
+    "adapters/astrolabe-adapter-rust",
+    "adapters/astrolabe-adapter-treesitter",
 ]
 
 [workspace.package]
@@ -47,6 +49,9 @@ ra_ap_paths = "0.0.357"
 ra_ap_project_model = "0.0.357"
 ra_ap_syntax = "0.0.357"
 ra_ap_vfs = "0.0.357"
+
+libloading = "0.8.0"
+tree-sitter = "0.27.0"
 
 criterion = { version = "0.5.1", features = ["async_tokio"] }
 tempfile = "3.27.0"
