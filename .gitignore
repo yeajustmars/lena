@@ -12,3 +12,4 @@ assets/.!*
 **.swo
 **mesodb_history.txt
 **ipynb_checkpoints**
+astrolabe-adapter-go/astrolabe-adapter-go

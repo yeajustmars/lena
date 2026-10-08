@@ -1,3 +1,5 @@
+// astrolabe-adapter-go/src/main.go
+
 package main
 
 import (
@@ -27,13 +29,14 @@ func escapeString(s string) string {
 	return s
 }
 
-func processFile(fset *token.FileSet, path string) {
-	// Parse the file, preserving comments for docstrings
+// extractFacts decouples parsing from stdout to enable robust unit testing
+func extractFacts(fset *token.FileSet, path string) ([]string, error) {
 	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
-		return // Skip unparseable files
+		return nil, err
 	}
 
+	var facts []string
 	pkgName := node.Name.Name
 	filename := filepath.ToSlash(path)
 
@@ -41,10 +44,9 @@ func processFile(fset *token.FileSet, path string) {
 	modFqsn := fmt.Sprintf("go:%s/%s", pkgName, filepath.Base(filename))
 	modId := hashId(modFqsn)
 
-	fmt.Printf("[[:db/add %d :entity/type :type/module] ", modId)
-	fmt.Printf("[:db/add %d :entity/language :lang/go] ", modId)
-	fmt.Printf("[:db/add %d :symbol/fqsn \"%s\"] ", modId, escapeString(modFqsn))
-	fmt.Printf("[:db/add %d :location/file \"%s\"]]\n", modId, escapeString(filename))
+	modFact := fmt.Sprintf("[[:db/add %d :entity/type :type/module] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :location/file \"%s\"]]",
+		modId, modId, modId, escapeString(modFqsn), modId, escapeString(filename))
+	facts = append(facts, modFact)
 
 	// 2. Walk the AST to find Functions and Structs
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -68,23 +70,20 @@ func processFile(fset *token.FileSet, path string) {
 			fnId := hashId(fnFqsn)
 			pos := fset.Position(decl.Pos())
 
-			fmt.Printf("[[:db/add %d :entity/type :type/function] ", fnId)
-			fmt.Printf("[:db/add %d :entity/language :lang/go] ", fnId)
-			fmt.Printf("[:db/add %d :symbol/fqsn \"%s\"] ", fnId, escapeString(fnFqsn))
-			fmt.Printf("[:db/add %d :symbol/name \"%s\"] ", fnId, escapeString(fnName))
-			fmt.Printf("[:db/add %d :parent/entity %d] ", fnId, modId)
-			fmt.Printf("[:db/add %d :location/file \"%s\"] ", fnId, escapeString(filename))
-			fmt.Printf("[:db/add %d :location/start-line %d] ", fnId, pos.Line)
-			fmt.Printf("[:db/add %d :location/start-col %d] ", fnId, pos.Column)
+			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
+				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(fnName), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
 
 			if decl.Doc != nil {
 				docText := decl.Doc.Text()
-				fmt.Printf("[:db/add %d :doc/text \"%s\"] ", fnId, escapeString(strings.TrimSpace(docText)))
+				fact += fmt.Sprintf(" [:db/add %d :doc/text \"%s\"]", fnId, escapeString(strings.TrimSpace(docText)))
 			}
-			fmt.Print("]\n")
+			fact += "]"
+			facts = append(facts, fact)
 		}
 		return true
 	})
+
+	return facts, nil
 }
 
 func main() {
@@ -105,7 +104,11 @@ func main() {
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(d.Name(), ".go") {
-			processFile(fset, path)
+			if facts, err := extractFacts(fset, path); err == nil {
+				for _, fact := range facts {
+					fmt.Println(fact)
+				}
+			}
 		}
 		return nil
 	})

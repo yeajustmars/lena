@@ -1,3 +1,5 @@
+// astrolabe-adapter-treesitter/src/main.rs
+
 use clap::Parser;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;

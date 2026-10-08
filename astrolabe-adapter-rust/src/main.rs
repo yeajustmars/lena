@@ -1,4 +1,4 @@
-// adapters/astrolabe-adapter-rust/src/main.rs
+// astrolabe-adapter-rust/src/main.rs
 
 #![deny(warnings)]
 #![warn(clippy::all, clippy::pedantic)]

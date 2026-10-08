@@ -1,4 +1,4 @@
-// adapaters/astrolabe-adapter-clj/src/main.rs
+// astrolabe-adapter-clj/src/main.rs
 
 #![deny(warnings)]
 #![warn(clippy::all, clippy::pedantic)]
