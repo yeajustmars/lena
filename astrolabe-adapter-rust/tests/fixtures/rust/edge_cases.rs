@@ -11,5 +11,9 @@ pub async fn async_worker<T: std::fmt::Debug>(payload: T) {
 impl MyStruct {
     fn method_call(&self) {
         let x = vec![1, 2, 3];
+        // This exercises ast::CallExpr
+        standard_function(x.len() as i32);
+        // This exercises ast::MethodCallExpr
+        x.push(4);
     }
 }

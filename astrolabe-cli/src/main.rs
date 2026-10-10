@@ -1,16 +1,12 @@
-// crates/astrolabe-cli/src/main.rs
+// astrolabe-cli/src/main.rs
 
 #![deny(warnings)]
 #![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use std::{
-    path::{Path, PathBuf},
-    process::Stdio,
-    sync::Arc,
-};
-use tokio::process::Command;
+use std::{path::PathBuf, process::Stdio, sync::Arc};
+use tokio::{process::Command, sync::Semaphore, task::JoinSet};
 use tracing::{Level, error, info, warn};
 use tracing_subscriber::FmtSubscriber;
 
@@ -43,10 +39,22 @@ enum Commands {
         /// Target directory to index
         #[arg(default_value = ".")]
         target: PathBuf,
+
+        /// Path to the directory containing Tree-sitter .scm query files
+        #[arg(long, default_value = "queries")]
+        queries_dir: PathBuf,
+
+        /// Path to the directory containing Tree-sitter grammar binaries (.so, .dylib, .dll)
+        #[arg(long, default_value = "grammars")]
+        grammars_dir: PathBuf,
+
+        /// Maximum number of concurrent subprocesses (default: 16)
+        #[arg(long, default_value = "16")]
+        concurrency: usize,
     },
     /// Export an entity as LLM Context
     Prompt {
-        /// The Fully Qualified Symbol Name (e.g. rust:crates/astrolabe-protocol/src/emitter.rs::TransactionBuilder::add)
+        /// The Fully Qualified Symbol Name (e.g. `rust:crates/astrolabe/src/main.rs::main`)
         fqsn: String,
         /// Format to export (xml or md)
         #[arg(short, long, default_value = "xml")]
@@ -59,45 +67,91 @@ enum Commands {
     },
 }
 
-/// Spawns an adapter, hooks up its standard output to our ingestion stream, and waits for it to finish.
-async fn run_adapter(adapter_name: &str, target: &Path, db: &Arc<AstrolabeDb>) -> Result<()> {
-    // 1. Try to find the adapter next to our own executable (e.g., target/debug/)
-    let mut current_exe = std::env::current_exe()?;
-    current_exe.pop(); // Remove the "astrolabe" binary name from the path
+/// Helper to resolve adapter binary paths
+fn resolve_binary(adapter_name: &str) -> String {
+    let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("astrolabe"));
+    current_exe.pop();
 
-    // Add .exe for Windows compatibility if needed
     let exe_suffix = std::env::consts::EXE_SUFFIX;
     let adapter_filename = format!("{adapter_name}{exe_suffix}");
     let local_adapter_path = current_exe.join(&adapter_filename);
 
-    let bin_to_run = if local_adapter_path.exists() {
+    if local_adapter_path.exists() {
         local_adapter_path.to_string_lossy().to_string()
     } else {
-        // 2. Fallback to system $PATH
         adapter_filename
-    };
+    }
+}
 
-    info!("Starting adapter [{adapter_name}] on {}", target.display());
+/// Spawns a native directory-level adapter (Go, Rust, Clojure).
+async fn run_native_adapter(
+    adapter_name: &str,
+    target: PathBuf,
+    db: Arc<AstrolabeDb>,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+) -> Result<usize> {
+    let bin_to_run = resolve_binary(adapter_name);
+    info!(
+        "Starting native adapter [{adapter_name}] on {}",
+        target.display()
+    );
 
     let mut child = Command::new(&bin_to_run)
-        .arg(target)
+        .arg(&target)
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit()) // Let adapter errors pass through to the terminal
+        .stderr(Stdio::inherit())
         .spawn()
         .with_context(|| format!("Failed to spawn adapter binary: {bin_to_run}"))?;
 
-    // 3. Take stdout and stream it directly into MesoDB
+    let mut facts_ingested = 0;
     if let Some(stdout) = child.stdout.take() {
-        let facts_ingested = ingest_stream(db, stdout).await?;
-        info!("Adapter [{adapter_name}] finished. Ingested {facts_ingested} facts.");
+        facts_ingested = ingest_stream(&db, stdout).await?;
     }
 
     let status = child.wait().await?;
-    if !status.success() {
+    if status.success() {
+        info!("Adapter [{adapter_name}] finished. Ingested {facts_ingested} facts.");
+    } else {
         warn!("Adapter [{adapter_name}] exited with non-zero status: {status}");
     }
 
-    Ok(())
+    Ok(facts_ingested)
+}
+
+async fn run_treesitter_directory(
+    target: PathBuf,
+    lang: &str,
+    grammar_file: PathBuf,
+    db: Arc<AstrolabeDb>,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+) -> Result<usize> {
+    let bin_to_run = resolve_binary("astrolabe-adapter-treesitter");
+
+    let mut child = Command::new(&bin_to_run)
+        .arg(&target)
+        .arg("--lang")
+        .arg(lang)
+        .arg("--grammar")
+        .arg(&grammar_file)
+        // Notice we omitted --query, letting the adapter use its embedded defaults
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .with_context(|| format!("Failed to spawn {bin_to_run} for {}", target.display()))?;
+
+    let mut facts_ingested = 0;
+    if let Some(stdout) = child.stdout.take() {
+        facts_ingested = ingest_stream(&db, stdout).await?;
+    }
+
+    let status = child.wait().await?;
+    if status.success() {
+        info!("Tree-sitter adapter [{lang}] finished. Ingested {facts_ingested} facts.");
+    } else {
+        warn!("Tree-sitter adapter failed for language {}", lang);
+    }
+
+    Ok(facts_ingested)
 }
 
 #[tokio::main]
@@ -109,11 +163,9 @@ async fn main() -> Result<()> {
     } else {
         Level::INFO
     };
-
     let subscriber = FmtSubscriber::builder().with_max_level(log_level).finish();
     tracing::subscriber::set_global_default(subscriber).expect("Setting default subscriber failed");
 
-    // Ensure parent directories exist
     if let Some(parent) = cli.db_path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -121,27 +173,72 @@ async fn main() -> Result<()> {
     let db = Arc::new(AstrolabeDb::open(&cli.db_path)?);
 
     match cli.command {
-        Commands::Index { target } => {
-            info!("Beginning Astrolabe indexing on: {}", target.display());
+        Commands::Index {
+            target,
+            queries_dir: _,
+            grammars_dir,
+            concurrency,
+        } => {
+            info!(
+                "Beginning concurrent Astrolabe indexing on: {}",
+                target.display()
+            );
 
-            // Sequentially run our primary adapters.
-            // TODO: In the future, this can dynamically discover adapters in the ~/.config/astrolabe/adapters dir.
+            let mut join_set = JoinSet::new();
+            let semaphore = Arc::new(Semaphore::new(concurrency));
 
-            if let Err(e) = run_adapter("astrolabe-adapter-clj", &target, &db).await {
-                error!("Clojure adapter error: {e}");
+            // 1. Dispatch Native Adapters
+            let native_adapters = vec![
+                "astrolabe-adapter-clj",
+                "astrolabe-adapter-go",
+                "astrolabe-adapter-rust",
+            ];
+            for adapter in native_adapters {
+                let permit = semaphore.clone().acquire_owned().await.unwrap();
+                let db_clone = Arc::clone(&db);
+                let target_clone = target.clone();
+                join_set.spawn(run_native_adapter(adapter, target_clone, db_clone, permit));
             }
 
-            if let Err(e) = run_adapter("astrolabe-adapter-go", &target, &db).await {
-                error!("Go adapter error: {e}");
+            let dylib_ext = std::env::consts::DLL_EXTENSION;
+            let ts_languages = vec![
+                ("python", format!("tree_sitter_python.{dylib_ext}")),
+                ("javascript", format!("tree_sitter_javascript.{dylib_ext}")),
+            ];
+
+            for (lang, grammar_name) in ts_languages {
+                let grammar_path = grammars_dir.join(grammar_name);
+                if grammar_path.exists() {
+                    let permit = semaphore.clone().acquire_owned().await.unwrap();
+                    let db_clone = Arc::clone(&db);
+                    let target_clone = target.clone();
+                    join_set.spawn(run_treesitter_directory(
+                        target_clone,
+                        lang,
+                        grammar_path,
+                        db_clone,
+                        permit,
+                    ));
+                } else {
+                    warn!(
+                        "Skipping {} indexing: Grammar file {:?} not found.",
+                        lang, grammar_path
+                    );
+                }
             }
 
-            if let Err(e) = run_adapter("astrolabe-adapter-rust", &target, &db).await {
-                error!("Rust adapter error: {e}");
+            // 3. Await all tasks and aggregate totals
+            let mut total_facts = 0;
+            while let Some(res) = join_set.join_next().await {
+                match res {
+                    Ok(Ok(facts)) => total_facts += facts,
+                    Ok(Err(e)) => error!("Adapter task failed: {e}"),
+                    Err(e) => error!("Task join error: {e}"),
+                }
             }
 
-            info!("Indexing complete.");
+            info!("Indexing complete. Total facts ingested across all languages: {total_facts}");
         }
-        // TODO: Set xml as default --format
         Commands::Prompt { fqsn, format } => {
             let export_format = match format.to_lowercase().as_str() {
                 "md" | "markdown" => ExportFormat::Markdown,

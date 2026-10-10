@@ -167,3 +167,21 @@ func TestGoGinStressAddCount(t *testing.T) {
 		t.Errorf("Expected >100 [:db/add assertions for Gin, got %d", addCount)
 	}
 }
+
+func TestGoCallSiteExtraction(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+
+	output := strings.Join(facts, "\n")
+
+	// Did it create call-site entities?
+	if !strings.Contains(output, ":type/call-site") {
+		t.Error("Failed to extract any :type/call-site entities")
+	}
+
+	// Did it catch the fmt.Println call inside StandaloneFunc?
+	// The callee ID should map to "go:fmt/Println"
+	if !strings.Contains(output, ":call/caller") || !strings.Contains(output, ":call/callee") {
+		t.Error("Missing :call/caller or :call/callee edges on call-site")
+	}
+}
