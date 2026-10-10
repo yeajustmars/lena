@@ -1,4 +1,4 @@
-//! Database handle and query wrapper for MesoDB
+//! Database handle and query wrapper for `MesoDB`
 
 use mesodb_core::{
     config::Config,
@@ -22,6 +22,8 @@ pub struct AstrolabeDb {
 
 impl AstrolabeDb {
     /// Opens or creates an Astrolabe database at the specified path.
+    /// # Errors
+    /// Returns `DbError::MesoDb` if the underlying database engine fails.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, DbError> {
         let inner = MesoDb::open(path, schema::bootstrap(), Config::default())
             .map_err(|e| DbError::MesoDb(e.to_string()))?;
@@ -41,6 +43,8 @@ impl AstrolabeDb {
     }
 
     /// Evaluates a raw Datalog query string directly without rule transformations.
+    /// # Errors
+    /// Returns `DbError::MesoDb` if the underlying database engine fails.
     pub async fn query_json(&self, query_str: &str) -> Result<String, DbError> {
         self.inner
             .query_json(query_str)
@@ -50,6 +54,8 @@ impl AstrolabeDb {
 
     /// Evaluates a Datalog query, automatically injecting `STANDARD_RULES` if rule
     /// predicates or rule bindings (`%`) are detected.
+    /// # Errors
+    /// Returns `DbError::MesoDb` if the underlying database engine fails.
     pub async fn query_with_rules(&self, query_str: &str) -> Result<String, DbError> {
         self.query_with_custom_rules(query_str, STANDARD_RULES)
             .await

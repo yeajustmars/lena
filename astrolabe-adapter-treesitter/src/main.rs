@@ -1,6 +1,10 @@
 // astrolabe-adapter-treesitter/src/main.rs
 
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
+
 use clap::Parser;
+use std::collections::HashMap;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -33,6 +37,19 @@ struct Args {
     grammar: PathBuf,
 }
 
+#[derive(Debug, Default)]
+pub struct SymbolTable {
+    /// Maps raw symbol names (e.g., "processPayment") to their canonical FQSNs globally
+    pub global_symbols: HashMap<String, String>,
+}
+
+pub struct ParsedFile {
+    pub path: String,
+    pub source: String,
+    pub tree: tree_sitter::Tree,
+}
+
+#[must_use]
 fn hash_id(input: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     input.hash(&mut hasher);
@@ -94,17 +111,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut files = Vec::new();
     visit_dirs(&args.target, ext, &mut files)?;
 
-    // Pass 1 & 2: Process file by file
+    let mut table = SymbolTable::default();
+    let mut parsed_files = Vec::new();
+    let ts_query = Query::new(&language, &query_source)?;
+
+    // Pass 1: Global Symbol Discovery
     for file_path in files {
         let source_code = fs::read_to_string(&file_path)?;
-        let facts = extract_facts(
-            &language,
-            &source_code,
-            &query_source,
-            &file_path.to_string_lossy(),
-            &args.lang,
-        )?;
+        let mut parser = TsParser::new();
+        parser.set_language(&language)?;
 
+        if let Some(tree) = parser.parse(&source_code, None) {
+            let path_str = file_path.to_string_lossy().to_string();
+            discover_symbols(
+                &tree,
+                &source_code,
+                &ts_query,
+                &path_str,
+                &args.lang,
+                &mut table,
+            )?;
+
+            parsed_files.push(ParsedFile {
+                path: path_str,
+                source: source_code,
+                tree,
+            });
+        }
+    }
+
+    // Pass 2: Fact Emission & Cross-Module Linking
+    for pf in parsed_files {
+        let facts = emit_facts(
+            &pf.tree, &pf.source, &ts_query, &pf.path, &args.lang, &table,
+        )?;
         for fact in facts {
             println!("{fact}");
         }
@@ -114,21 +154,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn extract_facts(
-    language: &Language,
+/// Pass 1 implementation: Harvest symbol definitions globally
+pub fn discover_symbols(
+    tree: &tree_sitter::Tree,
     source_code: &str,
-    query_source: &str,
+    ts_query: &Query,
     file_path: &str,
     lang_name: &str,
-) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let mut parser = TsParser::new();
-    parser.set_language(language)?;
-    let tree = parser
-        .parse(source_code, None)
-        .ok_or("Failed to parse source code")?;
-    let ts_query = Query::new(language, query_source)?;
+    table: &mut SymbolTable,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut cursor = QueryCursor::new();
-    let mut matches = cursor.matches(&ts_query, tree.root_node(), source_code.as_bytes());
+    let mut matches = cursor.matches(ts_query, tree.root_node(), source_code.as_bytes());
+    let capture_names = ts_query.capture_names();
+
+    while let Some(m) = matches.next() {
+        for capture in m.captures() {
+            let capture_name = &capture_names[capture.index as usize];
+            if capture_name.starts_with("symbol.") {
+                let name = capture.node.utf8_text(source_code.as_bytes())?;
+                let fqsn = format!("{lang_name}:{file_path}::{name}");
+                table.global_symbols.insert(name.to_string(), fqsn);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Pass 2 implementation: Emit AST facts and resolve calls against the SymbolTable
+#[allow(clippy::similar_names)]
+pub fn emit_facts(
+    tree: &tree_sitter::Tree,
+    source_code: &str,
+    ts_query: &Query,
+    file_path: &str,
+    lang_name: &str,
+    table: &SymbolTable,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut cursor = QueryCursor::new();
+    let mut matches = cursor.matches(ts_query, tree.root_node(), source_code.as_bytes());
     let capture_names = ts_query.capture_names();
 
     let mut facts = Vec::new();
@@ -141,7 +204,7 @@ pub fn extract_facts(
             if capture_name.starts_with("symbol.") {
                 let entity_type = capture_name.replace("symbol.", "");
                 let name = capture.node.utf8_text(source_code.as_bytes())?;
-                let fqsn = format!("{}:{}::{}", lang_name, file_path, name);
+                let fqsn = format!("{lang_name}:{file_path}::{name}");
 
                 let id = hash_id(&fqsn);
                 let parent_node = capture.node.parent().unwrap_or(capture.node);
@@ -151,20 +214,13 @@ pub fn extract_facts(
                     fqsn.clone(),
                 ));
 
-                facts.push(format!("[:db/add {} :symbol/fqsn \"{}\"]", id, fqsn));
+                facts.push(format!("[:db/add {id} :symbol/fqsn \"{fqsn}\"]"));
+                facts.push(format!("[:db/add {id} :entity/type :type/{entity_type}]"));
+                facts.push(format!("[:db/add {id} :entity/language \"{lang_name}\"]"));
+                facts.push(format!("[:db/add {id} :location/file \"{file_path}\"]"));
                 facts.push(format!(
-                    "[:db/add {} :entity/type :type/{}]",
-                    id, entity_type
-                ));
-                facts.push(format!(
-                    "[:db/add {} :entity/language \"{}\"]",
-                    id, lang_name
-                ));
-                facts.push(format!("[:db/add {} :location/file \"{}\"]", id, file_path));
-                facts.push(format!(
-                    "[:db/add {} :location/start-line {}]",
-                    id,
-                    capture.node.start_position().row + 1
+                    "[:db/add {id} :location/start-line {}]",
+                    capture.node.start_position().row() + 1
                 ));
             } else if *capture_name == "call.callee" {
                 let callee_name = capture.node.utf8_text(source_code.as_bytes())?;
@@ -192,28 +248,26 @@ pub fn extract_facts(
 
         if let Some(caller_fqsn) = enclosing_fqsn {
             let caller_id = hash_id(&caller_fqsn);
-            let call_site_fqsn = format!("call:{}->{}", caller_fqsn, callee_name);
+
+            // Resolve using the global SymbolTable or fallback to file-local
+            let callee_fqsn = table
+                .global_symbols
+                .get(&callee_name)
+                .cloned()
+                .unwrap_or_else(|| format!("{lang_name}:{file_path}::{callee_name}"));
+
+            let call_site_fqsn = format!("call:{caller_fqsn}->{callee_fqsn}");
             let call_site_id = hash_id(&call_site_fqsn);
-
-            // File-local fallback for now
-            let callee_id = hash_id(&format!("{}:{}::{}", lang_name, file_path, callee_name));
+            let callee_id = hash_id(&callee_fqsn);
 
             facts.push(format!(
-                "[:db/add {} :entity/type :type/call-site]",
-                call_site_id
+                "[:db/add {call_site_id} :entity/type :type/call-site]"
             ));
             facts.push(format!(
-                "[:db/add {} :symbol/fqsn \"{}\"]",
-                call_site_id, call_site_fqsn
+                "[:db/add {call_site_id} :symbol/fqsn \"{call_site_fqsn}\"]"
             ));
-            facts.push(format!(
-                "[:db/add {} :call/caller {}]",
-                call_site_id, caller_id
-            ));
-            facts.push(format!(
-                "[:db/add {} :call/callee {}]",
-                call_site_id, callee_id
-            ));
+            facts.push(format!("[:db/add {call_site_id} :call/caller {caller_id}]"));
+            facts.push(format!("[:db/add {call_site_id} :call/callee {callee_id}]"));
         }
     }
 
@@ -223,6 +277,35 @@ pub fn extract_facts(
     }
 
     Ok(results)
+}
+
+/// Wrapper to preserve unit test signatures. Acts as a single-file two-pass pipeline.
+pub fn extract_facts(
+    language: &Language,
+    source_code: &str,
+    query_source: &str,
+    file_path: &str,
+    lang_name: &str,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut parser = TsParser::new();
+    parser.set_language(language)?;
+
+    let tree = parser
+        .parse(source_code, None)
+        .ok_or("Failed to parse source code")?;
+    let ts_query = Query::new(language, query_source)?;
+
+    let mut table = SymbolTable::default();
+    discover_symbols(
+        &tree,
+        source_code,
+        &ts_query,
+        file_path,
+        lang_name,
+        &mut table,
+    )?;
+
+    emit_facts(&tree, source_code, &ts_query, file_path, lang_name, &table)
 }
 
 #[cfg(test)]
@@ -277,15 +360,22 @@ mod tests {
         .unwrap();
         let output = facts.join("\n");
         assert!(output.contains(":symbol/fqsn \"javascript:edge_cases.js::js_func\""));
-        assert!(output.contains("call:javascript:edge_cases.js::js_func->log"));
+        assert!(
+            output
+                .contains("call:javascript:edge_cases.js::js_func->javascript:edge_cases.js::log")
+        );
     }
 
     #[test]
     fn test_chained_method_calls() {
         let facts = run_python();
         let output = facts.join("\n");
-        assert!(output.contains("call:python:edge_cases.py::chained->method_b"));
-        assert!(output.contains("call:python:edge_cases.py::chained->func_a"));
+        assert!(
+            output.contains("call:python:edge_cases.py::chained->python:edge_cases.py::method_b")
+        );
+        assert!(
+            output.contains("call:python:edge_cases.py::chained->python:edge_cases.py::func_a")
+        );
     }
 
     #[test]
@@ -364,11 +454,23 @@ mod tests {
         let output = facts.join("\n");
         assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::get_user\""));
         assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::process_checkout\""));
-        assert!(output.contains("call:python:edge_cases.py::get_user->query"));
-        assert!(output.contains("call:python:edge_cases.py::get_user->filter_by"));
-        assert!(output.contains("call:python:edge_cases.py::get_user->first"));
-        assert!(output.contains("call:python:edge_cases.py::process_checkout->get_user"));
-        assert!(output.contains("call:python:edge_cases.py::process_checkout->create"));
+        assert!(
+            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::query")
+        );
+        assert!(
+            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::filter_by")
+        );
+        assert!(
+            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::first")
+        );
+        assert!(output.contains(
+            "call:python:edge_cases.py::process_checkout->python:edge_cases.py::get_user"
+        ));
+        assert!(
+            output.contains(
+                "call:python:edge_cases.py::process_checkout->python:edge_cases.py::create"
+            )
+        );
     }
 
     #[test]
@@ -397,8 +499,14 @@ mod tests {
         )
         .unwrap();
         let output = facts.join("\n");
-        assert!(output.contains("call:javascript:edge_cases.js::handle->process"));
-        assert!(output.contains("call:javascript:edge_cases.js::processPayment->create"));
+        assert!(
+            output.contains(
+                "call:javascript:edge_cases.js::handle->javascript:edge_cases.js::process"
+            )
+        );
+        assert!(output.contains(
+            "call:javascript:edge_cases.js::processPayment->javascript:edge_cases.js::create"
+        ));
     }
 
     const FASTAPI_SOURCE: &str =

@@ -94,6 +94,8 @@ fn discover_symbols(file: &ParsedFile, table: &mut SymbolTable) {
     }
 }
 
+// TODO: fix all occurances of pendantic Clippy "too many lines"
+#[allow(clippy::too_many_lines)]
 fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
     let mut facts = Vec::new();
 
@@ -246,8 +248,9 @@ fn visit_dirs(dir: &Path) -> Result<()> {
     let mut parsed_files = Vec::new();
 
     for path in &files_to_process {
-        let content =
-            fs::read_to_string(path).with_context(|| format!("Failed to read {path:?}"))?;
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
+        // .with_context(|| format!("Failed to read {path:?}"))?;
         let parse = SourceFile::parse(&content, Edition::Edition2024);
 
         let path_str = path.to_string_lossy().to_string();
@@ -381,14 +384,14 @@ mod tests {
 
         for fact in facts {
             let parts: Vec<&str> = fact.split_whitespace().collect();
-            if parts.len() > 1 && parts[0] == "[:db/add" {
-                if let Ok(id) = parts[1].parse::<u64>() {
-                    assert!(
-                        id <= 0x7FFF_FFFF_FFFF_FFFF,
-                        "Hash ID {} exceeds positive 64-bit limit",
-                        id
-                    );
-                }
+            if parts.len() > 1
+                && parts[0] == "[:db/add"
+                && let Ok(id) = parts[1].parse::<u64>()
+            {
+                assert!(
+                    id <= 0x7FFF_FFFF_FFFF_FFFF,
+                    "Hash ID {id} exceeds positive 64-bit limit"
+                );
             }
         }
     }

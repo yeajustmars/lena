@@ -1,7 +1,7 @@
 //! Standard Recursive Datalog Rules for Astrolabe
 
 /// Predefined Datalog rules for transitive graph traversal.
-pub const STANDARD_RULES: &str = r#"
+pub const STANDARD_RULES: &str = r"
 [
   [(calls_rule ?caller ?callee)
    [?cs :entity/type :type/call-site]
@@ -29,4 +29,4 @@ pub const STANDARD_RULES: &str = r#"
    [?intermediate :parent/entity ?p]
    (parent_transitive ?intermediate ?c)]
 ]
-"#;
+";

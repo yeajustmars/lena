@@ -3,7 +3,7 @@
 
 use std::fmt::{self, Write};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EdnValue<'a> {
     String(&'a str),
     Int(i64),
@@ -13,7 +13,7 @@ pub enum EdnValue<'a> {
     Keyword(&'a str),
 }
 
-impl<'a> fmt::Display for EdnValue<'a> {
+impl fmt::Display for EdnValue<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::String(s) => {
