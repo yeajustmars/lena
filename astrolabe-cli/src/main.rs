@@ -1,8 +1,7 @@
 // astrolabe-cli/src/main.rs
 
-// TODO: put pedantic back, after tests succeed
-//#![deny(warnings)]
-//#![warn(clippy::all, clippy::pedantic)]
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -186,7 +185,10 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Callers { fqsn } => {
             let query = format!(
-                "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
+                "[:find ?caller_fqsn
+                  :where [?callee :symbol/fqsn \"{fqsn}\"]
+                         (calls_rule ?caller ?callee)
+                         [?caller :symbol/fqsn ?caller_fqsn]]"
             );
             match db.query_with_rules(&query).await {
                 Ok(json) => println!("{json}"),
@@ -195,7 +197,10 @@ async fn main() -> Result<()> {
         }
         Commands::Callees { fqsn } => {
             let query = format!(
-                "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
+                "[:find ?callee_fqsn
+                  :where [?caller :symbol/fqsn \"{fqsn}\"]
+                         (calls_rule ?caller ?callee)
+                         [?callee :symbol/fqsn ?callee_fqsn]]"
             );
             match db.query_with_rules(&query).await {
                 Ok(json) => println!("{json}"),
