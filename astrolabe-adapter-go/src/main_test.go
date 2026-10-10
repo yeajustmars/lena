@@ -26,7 +26,7 @@ func countDbAdds(facts []string) int {
 
 func TestGoEdgeCasesParse(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, err := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, err := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 	if err != nil {
 		t.Fatalf("Failed to extract facts: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestGoEdgeCasesParse(t *testing.T) {
 
 func TestGoModuleEntityCreation(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	moduleFound := false
 	for _, f := range facts {
@@ -54,7 +54,7 @@ func TestGoModuleEntityCreation(t *testing.T) {
 
 func TestGoMethodReceiverCorrelation(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
 	if !strings.Contains(output, "\"go:edgecases.MyStruct/PointerReceiver\"") {
@@ -67,7 +67,7 @@ func TestGoMethodReceiverCorrelation(t *testing.T) {
 
 func TestGoDocstringExtraction(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
 	if !strings.Contains(output, ":doc/text \"StandaloneFunc is a standard function") {
@@ -77,7 +77,7 @@ func TestGoDocstringExtraction(t *testing.T) {
 
 func TestGoHashIdMasking(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	for _, f := range facts {
 		parts := strings.Split(f, " ")
@@ -101,7 +101,7 @@ func TestGoEmptyFileGracefulHandling(t *testing.T) {
 	defer os.Remove(emptyPath)
 
 	fset := token.NewFileSet()
-	facts, err := extractFacts(fset, emptyPath)
+	facts, err := RunTwoPass(fset, []string{emptyPath})
 
 	// go/parser throws an error on completely empty files (expected package declaration)
 	if err == nil {
@@ -118,7 +118,7 @@ func TestGoMalformedSyntaxResilience(t *testing.T) {
 	defer os.Remove(malformedPath)
 
 	fset := token.NewFileSet()
-	_, err := extractFacts(fset, malformedPath)
+	_, err := RunTwoPass(fset, []string{malformedPath})
 
 	if err == nil {
 		t.Error("Expected parser to surface syntax error")
@@ -127,7 +127,7 @@ func TestGoMalformedSyntaxResilience(t *testing.T) {
 
 func TestGoFunctionPositions(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
 	if !strings.Contains(output, ":location/start-line") || !strings.Contains(output, ":location/start-col") {
@@ -137,7 +137,7 @@ func TestGoFunctionPositions(t *testing.T) {
 
 func TestGoMultipleFunctions(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	fnCount := 0
 	for _, f := range facts {
@@ -157,7 +157,7 @@ func TestGoGinStressAddCount(t *testing.T) {
 	}
 
 	fset := token.NewFileSet()
-	facts, err := extractFacts(fset, ginPath)
+	facts, err := RunTwoPass(fset, []string{ginPath})
 	if err != nil {
 		t.Fatalf("Failed to parse Gin: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestGoGinStressAddCount(t *testing.T) {
 
 func TestGoCallSiteExtraction(t *testing.T) {
 	fset := token.NewFileSet()
-	facts, _ := extractFacts(fset, getFixturePath("edge_cases.go"))
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
 
@@ -180,7 +180,7 @@ func TestGoCallSiteExtraction(t *testing.T) {
 	}
 
 	// Did it catch the fmt.Println call inside StandaloneFunc?
-	// The callee ID should map to "go:fmt/Println"
+	// The callee ID should map to "go:fmt/Println" because localImports maps "fmt" to "fmt".
 	if !strings.Contains(output, ":call/caller") || !strings.Contains(output, ":call/callee") {
 		t.Error("Missing :call/caller or :call/callee edges on call-site")
 	}

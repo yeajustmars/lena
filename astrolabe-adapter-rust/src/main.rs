@@ -36,7 +36,7 @@ struct SymbolTable {
     pub file_to_module: HashMap<String, String>,
     /// Tracks all discovered symbols globally: Canonical FQSN -> Entity ID
     pub symbols: HashMap<String, u64>,
-    /// Tracks module-scoped imports per file: FilePath -> (LocalAlias -> CanonicalFqsn)
+    /// Tracks module-scoped imports per file: `FilePath` -> (`LocalAlias` -> `CanonicalFqsn`)
     pub use_maps: HashMap<String, HashMap<String, String>>,
 }
 

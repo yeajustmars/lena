@@ -1,187 +1,244 @@
-// astrolabe-adapter-go/src/main_test.go
+// astrolabe-adapter-go/src/main.go
 
 package main
 
 import (
+	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/token"
+	"hash/fnv"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"testing"
 )
 
-func getFixturePath(file string) string {
-	cwd, _ := os.Getwd()
-	return filepath.Join(cwd, "..", "tests", "fixtures", "go", file)
+func hashId(s string) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(s))
+	// Mask the most significant bit so it parses safely as a positive i64 in MesoDB
+	return h.Sum64() & 0x7FFFFFFFFFFFFFFF
 }
 
-func countDbAdds(facts []string) int {
-	count := 0
-	for _, f := range facts {
-		count += strings.Count(f, "[:db/add")
-	}
-	return count
+func escapeString(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
 }
 
-func TestGoEdgeCasesParse(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, err := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-	if err != nil {
-		t.Fatalf("Failed to extract facts: %v", err)
-	}
-
-	if len(facts) == 0 {
-		t.Fatal("Expected facts to be extracted, got 0")
+// getExprName extracts a readable name from an AST expression (e.g., "fmt.Println")
+func getExprName(expr ast.Expr) string {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name
+	case *ast.SelectorExpr:
+		return getExprName(e.X) + "." + e.Sel.Name
+	default:
+		return "unknown"
 	}
 }
 
-func TestGoModuleEntityCreation(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	moduleFound := false
-	for _, f := range facts {
-		if strings.Contains(f, ":type/module") && strings.Contains(f, "edge_cases.go") {
-			moduleFound = true
-			break
+// getFuncPrefix resolves the correct prefix (Package or Package.Struct) for a function
+func getFuncPrefix(pkgName string, decl *ast.FuncDecl) string {
+	prefix := pkgName
+	if decl.Recv != nil && len(decl.Recv.List) > 0 {
+		if starExpr, ok := decl.Recv.List[0].Type.(*ast.StarExpr); ok {
+			if ident, ok := starExpr.X.(*ast.Ident); ok {
+				prefix = fmt.Sprintf("%s.%s", pkgName, ident.Name)
+			}
+		} else if ident, ok := decl.Recv.List[0].Type.(*ast.Ident); ok {
+			prefix = fmt.Sprintf("%s.%s", pkgName, ident.Name)
 		}
 	}
-	if !moduleFound {
-		t.Error("Expected module entity for edge_cases.go")
+	return prefix
+}
+
+// SymbolTable maintains the global index of symbols and local file imports
+type SymbolTable struct {
+	symbols     map[string]uint64
+	fileImports map[string]map[string]string
+}
+
+func NewSymbolTable() *SymbolTable {
+	return &SymbolTable{
+		symbols:     make(map[string]uint64),
+		fileImports: make(map[string]map[string]string),
 	}
 }
 
-func TestGoMethodReceiverCorrelation(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+// ParsedFile caches the AST and metadata for Pass 2
+type ParsedFile struct {
+	Path    string
+	PkgName string
+	Tree    *ast.File
+	Fset    *token.FileSet
+}
 
-	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, "\"go:edgecases.MyStruct/PointerReceiver\"") {
-		t.Error("Failed to correctly correlate pointer receiver method")
+// discoverSymbols (Pass 1) harvests imports and function declarations into the SymbolTable
+func discoverSymbols(file *ParsedFile, table *SymbolTable) {
+	localImports := make(map[string]string)
+	for _, imp := range file.Tree.Imports {
+		path := strings.Trim(imp.Path.Value, "\"`")
+		alias := filepath.Base(path)
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+		localImports[alias] = path
 	}
-	if !strings.Contains(output, "\"go:edgecases.MyStruct/ValueReceiver\"") {
-		t.Error("Failed to correctly correlate value receiver method")
+	table.fileImports[file.Path] = localImports
+
+	for _, decl := range file.Tree.Decls {
+		if fnDecl, ok := decl.(*ast.FuncDecl); ok {
+			fnName := fnDecl.Name.Name
+			prefix := getFuncPrefix(file.PkgName, fnDecl)
+			fqsn := fmt.Sprintf("go:%s/%s", prefix, fnName)
+			table.symbols[fqsn] = hashId(fqsn)
+		}
 	}
 }
 
-func TestGoDocstringExtraction(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+// emitFacts (Pass 2) walks the AST again, generating module, function, and call-site edges
+func emitFacts(file *ParsedFile, table *SymbolTable) []string {
+	var facts []string
+	pkgName := file.PkgName
+	filename := file.Path
 
-	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, ":doc/text \"StandaloneFunc is a standard function") {
-		t.Error("Failed to extract docstring")
-	}
-}
+	// 1. Emit Module (File/Package) Entity
+	modFqsn := fmt.Sprintf("go:%s/%s", pkgName, filepath.Base(filename))
+	modId := hashId(modFqsn)
 
-func TestGoHashIdMasking(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+	modFact := fmt.Sprintf("[[:db/add %d :entity/type :type/module] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :location/file \"%s\"]]",
+		modId, modId, modId, escapeString(modFqsn), modId, escapeString(filename))
+	facts = append(facts, modFact)
 
-	for _, f := range facts {
-		parts := strings.Split(f, " ")
-		for i, part := range parts {
-			if part == "[:db/add" && i+1 < len(parts) {
-				idStr := parts[i+1]
-				id, err := strconv.ParseUint(idStr, 10, 64)
-				if err == nil {
-					if id > 0x7FFFFFFFFFFFFFFF {
-						t.Errorf("Hash ID %d exceeds positive 64-bit threshold", id)
+	localImports := table.fileImports[filename]
+
+	// 2. Walk the AST to find Functions and Call Sites
+	ast.Inspect(file.Tree, func(n ast.Node) bool {
+		switch decl := n.(type) {
+		case *ast.FuncDecl:
+			fnName := decl.Name.Name
+			prefix := getFuncPrefix(pkgName, decl)
+
+			fnFqsn := fmt.Sprintf("go:%s/%s", prefix, fnName)
+			fnId := hashId(fnFqsn)
+			pos := file.Fset.Position(decl.Pos())
+
+			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
+				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(fnName), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
+
+			if decl.Doc != nil {
+				docText := decl.Doc.Text()
+				fact += fmt.Sprintf(" [:db/add %d :doc/text \"%s\"]", fnId, escapeString(strings.TrimSpace(docText)))
+			}
+			fact += "]"
+			facts = append(facts, fact)
+
+			// 3. Inspect the function body for Call Sites
+			if decl.Body != nil {
+				ast.Inspect(decl.Body, func(bn ast.Node) bool {
+					if call, ok := bn.(*ast.CallExpr); ok {
+						calleeName := getExprName(call.Fun)
+						if calleeName == "unknown" {
+							return true
+						}
+
+						var calleeFqsn string
+						parts := strings.SplitN(calleeName, ".", 2)
+						if len(parts) == 2 {
+							pkgAlias := parts[0]
+							methodName := parts[1]
+							if fullPkg, ok := localImports[pkgAlias]; ok {
+								calleeFqsn = fmt.Sprintf("go:%s/%s", fullPkg, methodName)
+							} else {
+								calleeFqsn = fmt.Sprintf("go:%s/%s", pkgAlias, methodName)
+							}
+						} else {
+							calleeFqsn = fmt.Sprintf("go:%s/%s", pkgName, calleeName)
+						}
+
+						callPos := file.Fset.Position(call.Pos())
+						callSiteFqsn := fmt.Sprintf("call:go:%s:%d:%d:%s->%s", filename, callPos.Line, callPos.Column, fnFqsn, calleeFqsn)
+						callSiteId := hashId(callSiteFqsn)
+						calleeId := hashId(calleeFqsn)
+
+						callFact := fmt.Sprintf("[[:db/add %d :entity/type :type/call-site] [:db/add %d :call/caller %d] [:db/add %d :call/callee %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]]",
+							callSiteId, callSiteId, fnId, callSiteId, calleeId, callSiteId, escapeString(filename), callSiteId, callPos.Line, callSiteId, callPos.Column)
+						facts = append(facts, callFact)
 					}
-				}
+					return true
+				})
 			}
 		}
-	}
+		return true
+	})
+
+	return facts
 }
 
-func TestGoEmptyFileGracefulHandling(t *testing.T) {
-	emptyPath := getFixturePath("empty.go")
-	os.WriteFile(emptyPath, []byte(""), 0644)
-	defer os.Remove(emptyPath)
+// RunTwoPass orchestrates the two-pass extraction logic over a slice of file paths
+func RunTwoPass(fset *token.FileSet, paths []string) ([]string, error) {
+	table := NewSymbolTable()
+	var parsedFiles []*ParsedFile
 
-	fset := token.NewFileSet()
-	facts, err := RunTwoPass(fset, []string{emptyPath})
-
-	// go/parser throws an error on completely empty files (expected package declaration)
-	if err == nil {
-		t.Error("Expected parsing error for empty file, got nil")
-	}
-	if len(facts) != 0 {
-		t.Error("Expected 0 facts from empty file")
-	}
-}
-
-func TestGoMalformedSyntaxResilience(t *testing.T) {
-	malformedPath := getFixturePath("malformed.go")
-	os.WriteFile(malformedPath, []byte("package bad\nfunc A() {\n"), 0644)
-	defer os.Remove(malformedPath)
-
-	fset := token.NewFileSet()
-	_, err := RunTwoPass(fset, []string{malformedPath})
-
-	if err == nil {
-		t.Error("Expected parser to surface syntax error")
-	}
-}
-
-func TestGoFunctionPositions(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, ":location/start-line") || !strings.Contains(output, ":location/start-col") {
-		t.Error("Missing physical line/col metadata")
-	}
-}
-
-func TestGoMultipleFunctions(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	fnCount := 0
-	for _, f := range facts {
-		if strings.Contains(f, ":type/function") {
-			fnCount++
+	// Pass 1: Parse and Discover
+	for _, path := range paths {
+		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
 		}
+		pf := &ParsedFile{
+			Path:    filepath.ToSlash(path),
+			PkgName: node.Name.Name,
+			Tree:    node,
+			Fset:    fset,
+		}
+		discoverSymbols(pf, table)
+		parsedFiles = append(parsedFiles, pf)
 	}
-	if fnCount != 3 {
-		t.Errorf("Expected 3 functions, found %d", fnCount)
+
+	// Pass 2: Emit Facts
+	var allFacts []string
+	for _, pf := range parsedFiles {
+		allFacts = append(allFacts, emitFacts(pf, table)...)
 	}
+
+	return allFacts, nil
 }
 
-func TestGoGinStressAddCount(t *testing.T) {
-	ginPath := getFixturePath("gin/gin/1.9.1/gin.go")
-	if _, err := os.Stat(ginPath); os.IsNotExist(err) {
-		t.Skip("Gin fixture not found, skipping stress test. Run download script first.")
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: astrolabe-adapter-go <target_directory>")
+		os.Exit(1)
 	}
-
+	targetDir := os.Args[1]
 	fset := token.NewFileSet()
-	facts, err := RunTwoPass(fset, []string{ginPath})
-	if err != nil {
-		t.Fatalf("Failed to parse Gin: %v", err)
-	}
 
-	addCount := countDbAdds(facts)
-	if addCount <= 100 {
-		t.Errorf("Expected >100 [:db/add assertions for Gin, got %d", addCount)
-	}
-}
+	var filesToProcess []string
+	filepath.WalkDir(targetDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if name == ".git" || name == "vendor" || name == "node_modules" {
+				return filepath.SkipDir
+			}
+		} else if strings.HasSuffix(d.Name(), ".go") {
+			filesToProcess = append(filesToProcess, path)
+		}
+		return nil
+	})
 
-func TestGoCallSiteExtraction(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	output := strings.Join(facts, "\n")
-
-	// Did it create call-site entities?
-	if !strings.Contains(output, ":type/call-site") {
-		t.Error("Failed to extract any :type/call-site entities")
-	}
-
-	// Did it catch the fmt.Println call inside StandaloneFunc?
-	// The callee ID should map to "go:fmt/Println" because localImports maps "fmt" to "fmt".
-	if !strings.Contains(output, ":call/caller") || !strings.Contains(output, ":call/callee") {
-		t.Error("Missing :call/caller or :call/callee edges on call-site")
+	if facts, err := RunTwoPass(fset, filesToProcess); err == nil {
+		for _, fact := range facts {
+			fmt.Println(fact)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Error parsing files: %v\n", err)
+		os.Exit(1)
 	}
 }
