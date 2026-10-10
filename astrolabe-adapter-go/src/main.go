@@ -1,158 +1,187 @@
-// astrolabe-adapter-go/src/main.go
+// astrolabe-adapter-go/src/main_test.go
 
 package main
 
 import (
-	"fmt"
-	"go/ast"
-	"go/parser"
 	"go/token"
-	"hash/fnv"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"testing"
 )
 
-func hashId(s string) uint64 {
-	h := fnv.New64a()
-	h.Write([]byte(s))
-	// Mask the most significant bit so it parses safely as a positive i64 in MesoDB
-	return h.Sum64() & 0x7FFFFFFFFFFFFFFF
+func getFixturePath(file string) string {
+	cwd, _ := os.Getwd()
+	return filepath.Join(cwd, "..", "tests", "fixtures", "go", file)
 }
 
-func escapeString(s string) string {
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	return s
-}
-
-// Helper to extract a readable name from an AST expression (e.g., "fmt.Println")
-func getExprName(expr ast.Expr) string {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name
-	case *ast.SelectorExpr:
-		return getExprName(e.X) + "." + e.Sel.Name
-	default:
-		return "unknown"
+func countDbAdds(facts []string) int {
+	count := 0
+	for _, f := range facts {
+		count += strings.Count(f, "[:db/add")
 	}
+	return count
 }
 
-// extractFacts decouples parsing from stdout to enable robust unit testing
-func extractFacts(fset *token.FileSet, path string) ([]string, error) {
-	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-
-	var facts []string
-	pkgName := node.Name.Name
-	filename := filepath.ToSlash(path)
-
-	// 1. Emit Module (File/Package) Entity
-	modFqsn := fmt.Sprintf("go:%s/%s", pkgName, filepath.Base(filename))
-	modId := hashId(modFqsn)
-
-	modFact := fmt.Sprintf("[[:db/add %d :entity/type :type/module] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :location/file \"%s\"]]",
-		modId, modId, modId, escapeString(modFqsn), modId, escapeString(filename))
-	facts = append(facts, modFact)
-
-	// 2. Walk the AST to find Functions and Structs
-	ast.Inspect(node, func(n ast.Node) bool {
-		switch decl := n.(type) {
-		case *ast.FuncDecl:
-			fnName := decl.Name.Name
-
-			// Handle receiver (methods vs standalone functions)
-			prefix := pkgName
-			if decl.Recv != nil && len(decl.Recv.List) > 0 {
-				if starExpr, ok := decl.Recv.List[0].Type.(*ast.StarExpr); ok {
-					if ident, ok := starExpr.X.(*ast.Ident); ok {
-						prefix = fmt.Sprintf("%s.%s", pkgName, ident.Name)
-					}
-				} else if ident, ok := decl.Recv.List[0].Type.(*ast.Ident); ok {
-					prefix = fmt.Sprintf("%s.%s", pkgName, ident.Name)
-				}
-			}
-
-			fnFqsn := fmt.Sprintf("go:%s/%s", prefix, fnName)
-			fnId := hashId(fnFqsn)
-			pos := fset.Position(decl.Pos())
-
-			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
-				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(fnName), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
-
-			if decl.Doc != nil {
-				docText := decl.Doc.Text()
-				fact += fmt.Sprintf(" [:db/add %d :doc/text \"%s\"]", fnId, escapeString(strings.TrimSpace(docText)))
-			}
-			fact += "]"
-			facts = append(facts, fact)
-
-			// 3. Inspect the function body for Call Sites
-			if decl.Body != nil {
-				ast.Inspect(decl.Body, func(bn ast.Node) bool {
-					if call, ok := bn.(*ast.CallExpr); ok {
-						calleeName := getExprName(call.Fun)
-						if calleeName == "unknown" {
-							return true
-						}
-
-						// Best-effort local namespace resolution
-						var calleeFqsn string
-						parts := strings.SplitN(calleeName, ".", 2)
-						if len(parts) == 2 {
-							calleeFqsn = fmt.Sprintf("go:%s/%s", parts[0], parts[1])
-						} else {
-							calleeFqsn = fmt.Sprintf("go:%s/%s", pkgName, calleeName)
-						}
-
-						callPos := fset.Position(call.Pos())
-						callSiteFqsn := fmt.Sprintf("call:go:%s:%d:%d:%s->%s", filename, callPos.Line, callPos.Column, fnFqsn, calleeFqsn)
-						callSiteId := hashId(callSiteFqsn)
-						calleeId := hashId(calleeFqsn)
-
-						callFact := fmt.Sprintf("[[:db/add %d :entity/type :type/call-site] [:db/add %d :call/caller %d] [:db/add %d :call/callee %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]]",
-							callSiteId, callSiteId, fnId, callSiteId, calleeId, callSiteId, escapeString(filename), callSiteId, callPos.Line, callSiteId, callPos.Column)
-						facts = append(facts, callFact)
-					}
-					return true
-				})
-			}
-		}
-		return true
-	})
-
-	return facts, nil
-}
-
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: astrolabe-adapter-go <target_directory>")
-		os.Exit(1)
-	}
-	targetDir := os.Args[1]
+func TestGoEdgeCasesParse(t *testing.T) {
 	fset := token.NewFileSet()
+	facts, err := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+	if err != nil {
+		t.Fatalf("Failed to extract facts: %v", err)
+	}
 
-	filepath.WalkDir(targetDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
+	if len(facts) == 0 {
+		t.Fatal("Expected facts to be extracted, got 0")
+	}
+}
+
+func TestGoModuleEntityCreation(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	moduleFound := false
+	for _, f := range facts {
+		if strings.Contains(f, ":type/module") && strings.Contains(f, "edge_cases.go") {
+			moduleFound = true
+			break
 		}
-		if d.IsDir() {
-			name := d.Name()
-			if name == ".git" || name == "vendor" || name == "node_modules" {
-				return filepath.SkipDir
-			}
-		} else if strings.HasSuffix(d.Name(), ".go") {
-			if facts, err := extractFacts(fset, path); err == nil {
-				for _, fact := range facts {
-					fmt.Println(fact)
+	}
+	if !moduleFound {
+		t.Error("Expected module entity for edge_cases.go")
+	}
+}
+
+func TestGoMethodReceiverCorrelation(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	output := strings.Join(facts, "\n")
+	if !strings.Contains(output, "\"go:edgecases.MyStruct/PointerReceiver\"") {
+		t.Error("Failed to correctly correlate pointer receiver method")
+	}
+	if !strings.Contains(output, "\"go:edgecases.MyStruct/ValueReceiver\"") {
+		t.Error("Failed to correctly correlate value receiver method")
+	}
+}
+
+func TestGoDocstringExtraction(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	output := strings.Join(facts, "\n")
+	if !strings.Contains(output, ":doc/text \"StandaloneFunc is a standard function") {
+		t.Error("Failed to extract docstring")
+	}
+}
+
+func TestGoHashIdMasking(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	for _, f := range facts {
+		parts := strings.Split(f, " ")
+		for i, part := range parts {
+			if part == "[:db/add" && i+1 < len(parts) {
+				idStr := parts[i+1]
+				id, err := strconv.ParseUint(idStr, 10, 64)
+				if err == nil {
+					if id > 0x7FFFFFFFFFFFFFFF {
+						t.Errorf("Hash ID %d exceeds positive 64-bit threshold", id)
+					}
 				}
 			}
 		}
-		return nil
-	})
+	}
+}
+
+func TestGoEmptyFileGracefulHandling(t *testing.T) {
+	emptyPath := getFixturePath("empty.go")
+	os.WriteFile(emptyPath, []byte(""), 0644)
+	defer os.Remove(emptyPath)
+
+	fset := token.NewFileSet()
+	facts, err := RunTwoPass(fset, []string{emptyPath})
+
+	// go/parser throws an error on completely empty files (expected package declaration)
+	if err == nil {
+		t.Error("Expected parsing error for empty file, got nil")
+	}
+	if len(facts) != 0 {
+		t.Error("Expected 0 facts from empty file")
+	}
+}
+
+func TestGoMalformedSyntaxResilience(t *testing.T) {
+	malformedPath := getFixturePath("malformed.go")
+	os.WriteFile(malformedPath, []byte("package bad\nfunc A() {\n"), 0644)
+	defer os.Remove(malformedPath)
+
+	fset := token.NewFileSet()
+	_, err := RunTwoPass(fset, []string{malformedPath})
+
+	if err == nil {
+		t.Error("Expected parser to surface syntax error")
+	}
+}
+
+func TestGoFunctionPositions(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	output := strings.Join(facts, "\n")
+	if !strings.Contains(output, ":location/start-line") || !strings.Contains(output, ":location/start-col") {
+		t.Error("Missing physical line/col metadata")
+	}
+}
+
+func TestGoMultipleFunctions(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	fnCount := 0
+	for _, f := range facts {
+		if strings.Contains(f, ":type/function") {
+			fnCount++
+		}
+	}
+	if fnCount != 3 {
+		t.Errorf("Expected 3 functions, found %d", fnCount)
+	}
+}
+
+func TestGoGinStressAddCount(t *testing.T) {
+	ginPath := getFixturePath("gin/gin/1.9.1/gin.go")
+	if _, err := os.Stat(ginPath); os.IsNotExist(err) {
+		t.Skip("Gin fixture not found, skipping stress test. Run download script first.")
+	}
+
+	fset := token.NewFileSet()
+	facts, err := RunTwoPass(fset, []string{ginPath})
+	if err != nil {
+		t.Fatalf("Failed to parse Gin: %v", err)
+	}
+
+	addCount := countDbAdds(facts)
+	if addCount <= 100 {
+		t.Errorf("Expected >100 [:db/add assertions for Gin, got %d", addCount)
+	}
+}
+
+func TestGoCallSiteExtraction(t *testing.T) {
+	fset := token.NewFileSet()
+	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
+
+	output := strings.Join(facts, "\n")
+
+	// Did it create call-site entities?
+	if !strings.Contains(output, ":type/call-site") {
+		t.Error("Failed to extract any :type/call-site entities")
+	}
+
+	// Did it catch the fmt.Println call inside StandaloneFunc?
+	// The callee ID should map to "go:fmt/Println" because localImports maps "fmt" to "fmt".
+	if !strings.Contains(output, ":call/caller") || !strings.Contains(output, ":call/callee") {
+		t.Error("Missing :call/caller or :call/callee edges on call-site")
+	}
 }
