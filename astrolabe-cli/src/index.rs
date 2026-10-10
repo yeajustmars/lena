@@ -1,5 +1,8 @@
 // astrolabe-cli/src/index.rs
 
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
+
 use anyhow::{Context, Result};
 use astrolabe_core::{db::AstrolabeDb, ingest::ingest_stream};
 use std::{

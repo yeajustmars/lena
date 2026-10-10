@@ -1,5 +1,8 @@
 // astrolabe-cli/src/callers.rs
 
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
+
 use anyhow::Result;
 use astrolabe_core::db::AstrolabeDb;
 use std::sync::Arc;
