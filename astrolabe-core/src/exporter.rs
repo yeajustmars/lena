@@ -21,6 +21,116 @@ pub enum ExportFormat {
     Markdown,
 }
 
+/// The Canonical Context Intermediate Representation (IR).
+/// This decouples graph extraction from view rendering.
+#[derive(Debug, Clone)]
+pub struct AstrolabeContext {
+    pub fqsn: String,
+    pub name: String,
+    pub language: String,
+    pub location: SourceLocation,
+    pub payload: Payload,
+    pub callers: Vec<String>,
+    pub callees: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    pub file: String,
+    pub line: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Payload {
+    pub signature: String,
+    pub docs: String,
+}
+
+impl AstrolabeContext {
+    #[must_use]
+    pub fn to_xml(&self) -> String {
+        let mut out = format!(
+            "<entity name=\"{}\" language=\"{}\">\n",
+            self.name, self.language
+        );
+        out.push_str(&format!(
+            "  <location file=\"{}\" line=\"{}\" />\n",
+            self.location.file, self.location.line
+        ));
+
+        if !self.payload.signature.is_empty() {
+            out.push_str("  <signature>\n");
+            out.push_str(&format!(
+                "    <![CDATA[\n{}\n    ]]>\n",
+                self.payload.signature
+            ));
+            out.push_str("  </signature>\n");
+        }
+        if !self.payload.docs.is_empty() {
+            out.push_str("  <documentation>\n");
+            out.push_str(&format!("    <![CDATA[\n{}\n    ]]>\n", self.payload.docs));
+            out.push_str("  </documentation>\n");
+        }
+        if !self.callers.is_empty() {
+            out.push_str("  <callers>\n");
+            for caller in &self.callers {
+                out.push_str(&format!("    <caller fqsn=\"{caller}\" />\n"));
+            }
+            out.push_str("  </callers>\n");
+        }
+        if !self.callees.is_empty() {
+            out.push_str("  <callees>\n");
+            for callee in &self.callees {
+                out.push_str(&format!("    <callee fqsn=\"{callee}\" />\n"));
+            }
+            out.push_str("  </callees>\n");
+        }
+
+        out.push_str("</entity>");
+        out
+    }
+
+    #[must_use]
+    pub fn to_markdown(&self) -> String {
+        let lang_clean = self.language.replace(":lang/", "");
+        let mut out = format!("### `{}`\n\n", self.name);
+        out.push_str(&format!("- **Language:** `{lang_clean}`\n"));
+        out.push_str(&format!(
+            "- **Location:** `{}:{}`\n\n",
+            self.location.file, self.location.line
+        ));
+
+        if !self.payload.signature.is_empty() {
+            out.push_str("**Signature:**\n");
+            out.push_str(&format!(
+                "```{}\n{}\n```\n\n",
+                lang_clean.to_lowercase(),
+                self.payload.signature
+            ));
+        }
+        if !self.payload.docs.is_empty() {
+            out.push_str("**Documentation:**\n");
+            out.push_str(&format!("```text\n{}\n```\n\n", self.payload.docs));
+        }
+        if !self.callers.is_empty() {
+            out.push_str("**Called By:**\n");
+            for caller in &self.callers {
+                out.push_str(&format!("- `{caller}`\n"));
+            }
+            out.push_str("\n");
+        }
+        if !self.callees.is_empty() {
+            out.push_str("**Makes Calls To:**\n");
+            for callee in &self.callees {
+                out.push_str(&format!("- `{callee}`\n"));
+            }
+            out.push_str("\n");
+        }
+
+        out.trim_end().to_string()
+    }
+}
+
 /// Helper to extract a string from either `:key` or `key` inside a JSON Value.
 fn extract_string(val: &Value, key: &str) -> String {
     let key_with_colon = if key.starts_with(':') {
@@ -83,58 +193,78 @@ pub async fn export_prompt(
     // MesoDB returns rows as `[{"e": {":symbol/name": "add", ...}}]`
     let entity_data = rows[0].get("e").cloned().unwrap_or_else(|| rows[0].clone());
 
-    let name = extract_string(&entity_data, "symbol/name");
-    let lang = extract_string(&entity_data, "entity/language");
-    let file = extract_string(&entity_data, "location/file");
+    let raw_name = extract_string(&entity_data, "symbol/name");
+    let raw_lang = extract_string(&entity_data, "entity/language");
+    let raw_file = extract_string(&entity_data, "location/file");
+
+    let name = if raw_name.is_empty() {
+        "Unknown".to_string()
+    } else {
+        raw_name
+    };
+    let language = if raw_lang.is_empty() {
+        "Unknown".to_string()
+    } else {
+        raw_lang
+    };
+    let file = if raw_file.is_empty() {
+        "Unknown".to_string()
+    } else {
+        raw_file
+    };
     let line = extract_i64(&entity_data, "location/start-line");
-    let sig = extract_string(&entity_data, "code/signature");
+    let signature = extract_string(&entity_data, "code/signature");
     let docs = extract_string(&entity_data, "doc/text");
 
-    let name = if name.is_empty() { "Unknown" } else { &name };
-    let lang = if lang.is_empty() { "Unknown" } else { &lang };
-    let file = if file.is_empty() { "Unknown" } else { &file };
+    // Fetch callers
+    let callers_query = format!(
+        "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
+    );
+    let mut callers = Vec::new();
+    if let Ok(caller_json) = db.query_with_rules(&callers_query).await {
+        if let Ok(caller_rows) = serde_json::from_str::<Vec<Vec<String>>>(&caller_json) {
+            for row in caller_rows {
+                if let Some(c) = row.first() {
+                    callers.push(c.clone());
+                }
+            }
+        }
+    }
+
+    // Fetch callees
+    let callees_query = format!(
+        "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
+    );
+    let mut callees = Vec::new();
+    if let Ok(callee_json) = db.query_with_rules(&callees_query).await {
+        if let Ok(callee_rows) = serde_json::from_str::<Vec<Vec<String>>>(&callee_json) {
+            for row in callee_rows {
+                if let Some(c) = row.first() {
+                    callees.push(c.clone());
+                }
+            }
+        }
+    }
+
+    callers.sort();
+    callers.dedup();
+    callees.sort();
+    callees.dedup();
+
+    let context = AstrolabeContext {
+        fqsn: fqsn.to_string(),
+        name,
+        language,
+        location: SourceLocation { file, line },
+        payload: Payload { signature, docs },
+        callers,
+        callees,
+    };
 
     match format {
-        ExportFormat::Xml => Ok(format_xml(name, lang, file, line, &sig, &docs)),
-        ExportFormat::Markdown => Ok(format_markdown(name, lang, file, line, &sig, &docs)),
+        ExportFormat::Xml => Ok(context.to_xml()),
+        ExportFormat::Markdown => Ok(context.to_markdown()),
     }
-}
-
-fn format_xml(name: &str, lang: &str, file: &str, line: i64, sig: &str, docs: &str) -> String {
-    let mut out = format!("<entity name=\"{name}\" language=\"{lang}\">\n");
-    out.push_str(&format!("  <location file=\"{file}\" line=\"{line}\" />\n"));
-
-    if !sig.is_empty() {
-        out.push_str("  <signature>\n");
-        out.push_str(&format!("    <![CDATA[\n{sig}\n    ]]>\n"));
-        out.push_str("  </signature>\n");
-    }
-    if !docs.is_empty() {
-        out.push_str("  <documentation>\n");
-        out.push_str(&format!("    <![CDATA[\n{docs}\n    ]]>\n"));
-        out.push_str("  </documentation>\n");
-    }
-
-    out.push_str("</entity>");
-    out
-}
-
-fn format_markdown(name: &str, lang: &str, file: &str, line: i64, sig: &str, docs: &str) -> String {
-    let lang_clean = lang.replace(":lang/", "");
-    let mut out = format!("### `{name}`\n\n");
-    out.push_str(&format!("- **Language:** `{lang_clean}`\n"));
-    out.push_str(&format!("- **Location:** `{file}:{line}`\n\n"));
-
-    if !sig.is_empty() {
-        out.push_str("**Signature:**\n");
-        out.push_str(&format!("```{}\n{sig}\n```\n\n", lang_clean));
-    }
-    if !docs.is_empty() {
-        out.push_str("**Documentation:**\n");
-        out.push_str(&format!("```text\n{docs}\n```\n"));
-    }
-
-    out.trim_end().to_string()
 }
 
 #[cfg(test)]
@@ -172,35 +302,57 @@ mod tests {
 
     #[test]
     fn test_format_xml() {
-        let xml = format_xml(
-            "add",
-            "Rust",
-            "src/lib.rs",
-            10,
-            "fn add(a: i32) -> i32",
-            "Adds numbers",
-        );
+        let ctx = AstrolabeContext {
+            fqsn: "rust:crate::add".to_string(),
+            name: "add".to_string(),
+            language: "Rust".to_string(),
+            location: SourceLocation {
+                file: "src/lib.rs".to_string(),
+                line: 10,
+            },
+            payload: Payload {
+                signature: "fn add(a: i32) -> i32".to_string(),
+                docs: "Adds numbers".to_string(),
+            },
+            callers: vec!["rust:crate::main".to_string()],
+            callees: vec!["rust:std::ops::Add".to_string()],
+        };
+
+        let xml = ctx.to_xml();
         assert!(xml.contains("<entity name=\"add\" language=\"Rust\">"));
         assert!(xml.contains("<location file=\"src/lib.rs\" line=\"10\" />"));
         assert!(xml.contains("<![CDATA[\nfn add(a: i32) -> i32\n    ]]>"));
         assert!(xml.contains("<![CDATA[\nAdds numbers\n    ]]>"));
+        assert!(xml.contains("<caller fqsn=\"rust:crate::main\" />"));
+        assert!(xml.contains("<callee fqsn=\"rust:std::ops::Add\" />"));
     }
 
     #[test]
     fn test_format_markdown() {
-        let md = format_markdown(
-            "add",
-            ":lang/Rust",
-            "src/lib.rs",
-            10,
-            "fn add(a: i32)",
-            "Docs here",
-        );
+        let ctx = AstrolabeContext {
+            fqsn: "rust:crate::add".to_string(),
+            name: "add".to_string(),
+            language: ":lang/Rust".to_string(),
+            location: SourceLocation {
+                file: "src/lib.rs".to_string(),
+                line: 10,
+            },
+            payload: Payload {
+                signature: "fn add(a: i32)".to_string(),
+                docs: "Docs here".to_string(),
+            },
+            callers: vec!["rust:crate::main".to_string()],
+            callees: vec![],
+        };
+
+        let md = ctx.to_markdown();
         assert!(md.contains("### `add`"));
-        assert!(md.contains("- **Language:** `Rust`")); // Should strip :lang/
+        assert!(md.contains("- **Language:** `Rust`"));
         assert!(md.contains("- **Location:** `src/lib.rs:10`"));
-        assert!(md.contains("```Rust\nfn add(a: i32)\n```"));
+        assert!(md.contains("```rust\nfn add(a: i32)\n```"));
         assert!(md.contains("```text\nDocs here\n```"));
+        assert!(md.contains("**Called By:**\n- `rust:crate::main`"));
+        assert!(!md.contains("**Makes Calls To:**"));
     }
 
     #[tokio::test]
@@ -217,7 +369,6 @@ mod tests {
         let dir = tempdir().unwrap();
         let db = Arc::new(AstrolabeDb::open(dir.path().join("export_success.db")).unwrap());
 
-        // Transact the exact schema attributes the exporter looks for
         db.inner()
             .transact(vec![
                 Fact {
