@@ -363,104 +363,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "astrolabe"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "astrolabe-core",
- "astrolabe-protocol",
- "clap",
- "comfy-table",
- "minijinja",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "astrolabe-adapter-clj"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "astrolabe-protocol",
- "clap",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "astrolabe-adapter-rust"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "astrolabe-protocol",
- "clap",
- "ra_ap_hir",
- "ra_ap_ide",
- "ra_ap_ide_db",
- "ra_ap_paths",
- "ra_ap_project_model",
- "ra_ap_syntax",
- "ra_ap_vfs",
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "astrolabe-adapter-treesitter"
-version = "0.1.0"
-dependencies = [
- "astrolabe-protocol",
- "clap",
- "libloading",
- "thiserror",
- "tree-sitter",
- "tree-sitter-javascript",
- "tree-sitter-python",
-]
-
-[[package]]
-name = "astrolabe-bench"
-version = "0.1.0"
-dependencies = [
- "astrolabe-core",
- "astrolabe-protocol",
- "criterion",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "astrolabe-core"
-version = "0.1.0"
-dependencies = [
- "astrolabe-protocol",
- "mesodb-core",
- "minijinja",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "astrolabe-protocol"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "async-compression"
 version = "0.4.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2351,6 +2253,104 @@ name = "lazy_static"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
+
+[[package]]
+name = "lena"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "comfy-table",
+ "lena-core",
+ "lena-protocol",
+ "minijinja",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "lena-adapter-clj"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "lena-protocol",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "lena-adapter-rust"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "lena-protocol",
+ "ra_ap_hir",
+ "ra_ap_ide",
+ "ra_ap_ide_db",
+ "ra_ap_paths",
+ "ra_ap_project_model",
+ "ra_ap_syntax",
+ "ra_ap_vfs",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "lena-adapter-treesitter"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "lena-protocol",
+ "libloading",
+ "thiserror",
+ "tree-sitter",
+ "tree-sitter-javascript",
+ "tree-sitter-python",
+]
+
+[[package]]
+name = "lena-bench"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "lena-core",
+ "lena-protocol",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "lena-core"
+version = "0.1.0"
+dependencies = [
+ "lena-protocol",
+ "mesodb-core",
+ "minijinja",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "lena-protocol"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
 
 [[package]]
 name = "lexical-core"

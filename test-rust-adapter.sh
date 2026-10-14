@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd astrolabe-adapter-rust
+cd lena-adapter-rust
 
 cargo build --release
 cargo test

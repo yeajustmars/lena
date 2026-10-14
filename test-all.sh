@@ -11,7 +11,7 @@ cargo test --workspace
 
 echo ""
 echo "=== Running Go Adapter Tests ==="
-cd astrolabe-adapter-go
+cd lena-adapter-go
 go test -v ./...
 cd ..
 

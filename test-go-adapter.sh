@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-cd astrolabe-adapter-go/
+cd lena-adapter-go/
 
 go test -v ./src

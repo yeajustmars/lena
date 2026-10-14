@@ -1,5 +1,5 @@
 
-.astrolabe/
+.lena/
 .env
 /target
 **/target/**
@@ -12,4 +12,4 @@ assets/.!*
 **.swo
 **mesodb_history.txt
 **ipynb_checkpoints**
-astrolabe-adapter-go/astrolabe-adapter-go
+lena-adapter-go/lena-adapter-go

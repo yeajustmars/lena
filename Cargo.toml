@@ -1,25 +1,25 @@
 [workspace]
 resolver = "2"
 members = [
-    "astrolabe-adapter-clj",
-    # TODO: "astrolabe-adapter-go",
-    "astrolabe-adapter-rust",
-    "astrolabe-adapter-treesitter",
-    "astrolabe-bench",
-    "astrolabe-cli",
-    "astrolabe-core",
-    "astrolabe-protocol",
+    "lena-adapter-clj",
+    # TODO: "lena-adapter-go",
+    "lena-adapter-rust",
+    "lena-adapter-treesitter",
+    "lena-bench",
+    "lena-cli",
+    "lena-core",
+    "lena-protocol",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-authors = ["Astrolabe Contributors"]
+authors = ["Lena Contributors"]
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-astrolabe-protocol = { path = "astrolabe-protocol", version = "0.1.0" }
-astrolabe-core = { path = "astrolabe-core", version = "0.1.0" }
+lena-protocol = { path = "lena-protocol", version = "0.1.0" }
+lena-core = { path = "lena-core", version = "0.1.0" }
 mesodb-core = "0.2.0"
 
 anyhow = "1.0.102"
