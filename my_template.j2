@@ -1,0 +1,10 @@
+SYSTEM PROMPT: Review the following {{ language }} function:
+Name: {{ name }}
+File: {{ location.file }}:{{ location.line }}
+
+Source:
+{{ payload.signature }}
+
+Dependencies ({{ callees|length }} total):
+{% for callee in callees %}- {{ callee }}
+{% endfor %}

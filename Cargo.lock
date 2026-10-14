@@ -371,6 +371,8 @@ dependencies = [
  "astrolabe-protocol",
  "clap",
  "comfy-table",
+ "minijinja",
+ "tempfile",
  "thiserror",
  "tokio",
  "tracing",
@@ -439,6 +441,8 @@ version = "0.1.0"
 dependencies = [
  "astrolabe-protocol",
  "mesodb-core",
+ "minijinja",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror",
@@ -2534,6 +2538,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "memo-map"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5449c8c750f1a07ea702bbd212bd999fceece9b3d1508b17023b3e174583124b"
+
+[[package]]
 name = "memoffset"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2566,6 +2576,16 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "minijinja"
+version = "2.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86886cf6dbf4e614b19c9a1eec9775f021869d7eadde0fc73921a81b90c9b4c9"
+dependencies = [
+ "memo-map",
+ "serde",
 ]
 
 [[package]]

@@ -8,6 +8,7 @@ mod callers;
 mod index;
 mod prompt;
 mod query;
+mod skeleton;
 
 use anyhow::Result;
 use astrolabe_core::db::AstrolabeDb;
@@ -56,8 +57,22 @@ enum Commands {
     Prompt {
         /// The Fully Qualified Symbol Name
         fqsn: String,
-        /// Format to export (xml or md)
+        /// Format to export (xml, md, or template)
         #[arg(short, long, default_value = "xml")]
+        format: String,
+        /// Path to custom Jinja2 template file (required if format is 'template')
+        #[arg(short, long)]
+        template: Option<PathBuf>,
+    },
+    /// Generate a call graph skeleton (indented, mermaid, or dot)
+    Skeleton {
+        /// The root Fully Qualified Symbol Name
+        fqsn: String,
+        /// Max depth to traverse
+        #[arg(long, default_value = "1")]
+        depth: usize,
+        /// Output format: indented, mermaid, or dot
+        #[arg(short, long, default_value = "indented")]
         format: String,
     },
     /// Query the graph using Datalog
@@ -77,6 +92,7 @@ enum Commands {
     },
 }
 
+// TODO: remove all test templates (i.e. /my_template.j2)
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -102,7 +118,16 @@ async fn main() -> Result<()> {
             grammars_dir,
             concurrency,
         } => index::run(target, &grammars_dir, concurrency, &db).await?,
-        Commands::Prompt { fqsn, format } => prompt::run(&db, &fqsn, &format).await?,
+        Commands::Prompt {
+            fqsn,
+            format,
+            template,
+        } => prompt::run(&db, &fqsn, &format, template.as_ref()).await?,
+        Commands::Skeleton {
+            fqsn,
+            depth,
+            format,
+        } => skeleton::run(&db, &fqsn, depth, &format).await?,
         Commands::Query { query: q } => query::run(&db, &q).await?,
         Commands::Callers { fqsn } => callers::run(&db, &fqsn).await?,
         Commands::Callees { fqsn } => callees::run(&db, &fqsn).await?,

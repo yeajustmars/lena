@@ -1,6 +1,8 @@
 //! Prompt Exporting Engine
 
 use crate::db::AstrolabeDb;
+use minijinja::Environment;
+use serde::Serialize;
 use serde_json::Value;
 use std::sync::Arc;
 use thiserror::Error;
@@ -13,17 +15,20 @@ pub enum ExporterError {
     NotFound(String),
     #[error("Failed to parse entity data: {0}")]
     Parse(String),
+    #[error("Template rendering error: {0}")]
+    Template(String),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum ExportFormat {
     Xml,
     Markdown,
+    Template(String),
 }
 
 /// The Canonical Context Intermediate Representation (IR).
 /// This decouples graph extraction from view rendering.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AstrolabeContext {
     pub fqsn: String,
     pub name: String,
@@ -34,13 +39,13 @@ pub struct AstrolabeContext {
     pub callees: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SourceLocation {
     pub file: String,
     pub line: i64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Payload {
     pub signature: String,
     pub docs: String,
@@ -53,6 +58,7 @@ impl AstrolabeContext {
             "<entity name=\"{}\" language=\"{}\">\n",
             self.name, self.language
         );
+
         out.push_str(&format!(
             "  <location file=\"{}\" line=\"{}\" />\n",
             self.location.file, self.location.line
@@ -117,14 +123,14 @@ impl AstrolabeContext {
             for caller in &self.callers {
                 out.push_str(&format!("- `{caller}`\n"));
             }
-            out.push_str("\n");
+            out.push('\n');
         }
         if !self.callees.is_empty() {
             out.push_str("**Makes Calls To:**\n");
             for callee in &self.callees {
                 out.push_str(&format!("- `{callee}`\n"));
             }
-            out.push_str("\n");
+            out.push('\n');
         }
 
         out.trim_end().to_string()
@@ -221,12 +227,19 @@ pub async fn export_prompt(
         "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
     );
     let mut callers = Vec::new();
-    if let Ok(caller_json) = db.query_with_rules(&callers_query).await {
-        if let Ok(caller_rows) = serde_json::from_str::<Vec<Vec<String>>>(&caller_json) {
-            for row in caller_rows {
-                if let Some(c) = row.first() {
-                    callers.push(c.clone());
-                }
+    if let Ok(caller_json) = db.query_with_rules(&callers_query).await
+        && let Ok(rows) = serde_json::from_str::<Vec<serde_json::Value>>(&caller_json)
+    {
+        for row in rows {
+            let caller = if let Some(arr) = row.as_array() {
+                arr.first().and_then(|v| v.as_str())
+            } else if let Some(obj) = row.as_object() {
+                obj.values().next().and_then(|v| v.as_str())
+            } else {
+                None
+            };
+            if let Some(caller_str) = caller {
+                callers.push(caller_str.to_string());
             }
         }
     }
@@ -236,12 +249,19 @@ pub async fn export_prompt(
         "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
     );
     let mut callees = Vec::new();
-    if let Ok(callee_json) = db.query_with_rules(&callees_query).await {
-        if let Ok(callee_rows) = serde_json::from_str::<Vec<Vec<String>>>(&callee_json) {
-            for row in callee_rows {
-                if let Some(c) = row.first() {
-                    callees.push(c.clone());
-                }
+    if let Ok(callee_json) = db.query_with_rules(&callees_query).await
+        && let Ok(rows) = serde_json::from_str::<Vec<serde_json::Value>>(&callee_json)
+    {
+        for row in rows {
+            let callee = if let Some(arr) = row.as_array() {
+                arr.first().and_then(|v| v.as_str())
+            } else if let Some(obj) = row.as_object() {
+                obj.values().next().and_then(|v| v.as_str())
+            } else {
+                None
+            };
+            if let Some(callee_str) = callee {
+                callees.push(callee_str.to_string());
             }
         }
     }
@@ -264,6 +284,16 @@ pub async fn export_prompt(
     match format {
         ExportFormat::Xml => Ok(context.to_xml()),
         ExportFormat::Markdown => Ok(context.to_markdown()),
+        ExportFormat::Template(tpl_str) => {
+            let mut env = Environment::new();
+            env.add_template("prompt", &tpl_str)
+                .map_err(|e| ExporterError::Template(e.to_string()))?;
+            let tmpl = env
+                .get_template("prompt")
+                .map_err(|e| ExporterError::Template(e.to_string()))?;
+            tmpl.render(&context)
+                .map_err(|e| ExporterError::Template(e.to_string()))
+        }
     }
 }
 
