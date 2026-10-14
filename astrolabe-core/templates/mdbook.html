@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astrolabe Documentation</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #333333;
+            --sidebar-bg: #fafafa;
+            --sidebar-fg: #36312d;
+            --border: #e1e1e1;
+            --link: #2b6cb0;
+            --code-bg: #1f2328;
+            --code-fg: #e6edf3;
+            --badge-bg: #e2e8f0;
+            --badge-fg: #1a202c;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+        }
+
+        html.dark {
+            --bg: #1d1f21;
+            --fg: #c5c8c6;
+            --sidebar-bg: #282a2e;
+            --sidebar-fg: #c5c8c6;
+            --border: #373b41;
+            --link: #81a2be;
+            --code-bg: #1d1f21;
+            --code-fg: #c5c8c6;
+            --badge-bg: #373b41;
+            --badge-fg: #de935f;
+            --card-bg: #282a2e;
+            --card-border: #373b41;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: "Open Sans", sans-serif; margin: 0; background: var(--bg); color: var(--fg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Top Bar */
+        #nav-bar { position: absolute; top: 0; right: 0; left: 300px; height: 50px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; background: var(--bg); z-index: 10; }
+        .theme-toggle { cursor: pointer; background: none; border: 1px solid var(--border); color: var(--fg); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; }
+
+        /* Sidebar (mdBook Style) */
+        #sidebar { width: 300px; background: var(--sidebar-bg); border-right: 1px solid var(--border); height: 100vh; overflow-y: auto; padding: 1rem; flex-shrink: 0; font-size: 0.9rem; }
+        #sidebar h1 { font-size: 1.2rem; margin: 0 0 1rem 0; color: var(--sidebar-fg); }
+        .search-box { width: 100%; padding: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+        .chapter-title { font-weight: bold; margin-top: 1rem; margin-bottom: 0.25rem; color: var(--sidebar-fg); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        .entity-item { display: block; padding: 0.3rem 0.5rem; color: var(--link); text-decoration: none; border-radius: 3px; font-family: monospace; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        .entity-item:hover { background: var(--border); }
+
+        /* Main Content */
+        #content { flex: 1; padding: 4rem 4rem 2rem 4rem; overflow-y: auto; height: 100vh; margin-top: 20px; }
+        .doc-section { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; padding: 1.5rem; margin-bottom: 2rem; }
+        .card h2 { margin-top: 0; font-family: monospace; color: var(--link); }
+        .badges { margin-bottom: 1rem; }
+        .badge { display: inline-block; padding: 0.15rem 0.4rem; background: var(--badge-bg); color: var(--badge-fg); border-radius: 3px; font-size: 0.75rem; font-family: monospace; margin-right: 0.4rem; }
+        pre { background: var(--code-bg); color: var(--code-fg); padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: "Source Code Pro", monospace; font-size: 0.9rem; line-height: 1.4; border: 1px solid var(--border); }
+        .doc-text { line-height: 1.6; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Astrolabe Book</h1>
+        <input type="text" class="search-box" id="search" placeholder="Search symbols..." onkeyup="filterSymbols()">
+
+        {% for lang, files in grouped|items %}
+            <div class="chapter-title">{{ lang }}</div>
+            {% for file, entities in files|items %}
+                <div style="margin-left: 0.5rem; font-weight: 600; font-size: 0.8rem; margin-top: 0.5rem; color: var(--fg);">{{ file }}</div>
+                {% for entity in entities %}
+                <a href="#{{ entity.fqsn }}" class="entity-item" data-name="{{ entity.name }}">{{ entity.name }}</a>
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+
+    <div id="nav-bar">
+        <span>Documentation</span>
+        <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+    </div>
+
+    <div id="content">
+        <div class="doc-section">
+            {% for lang, files in grouped|items %}
+                {% for file, entities in files|items %}
+                    {% for entity in entities %}
+                    <div class="card" id="{{ entity.fqsn }}">
+                        <h2>{{ entity.name }}</h2>
+                        <div class="badges">
+                            <span class="badge">{{ entity.kind }}</span>
+                            <span class="badge">{{ entity.language }}</span>
+                            <span class="badge">{{ entity.file }}:{{ entity.line }}</span>
+                        </div>
+                        {% if entity.signature %}
+                        <pre><code>{{ entity.signature }}</code></pre>
+                        {% endif %}
+                        {% if entity.docs %}
+                        <div class="doc-text">{{ entity.docs }}</div>
+                        {% else %}
+                        <div class="doc-text"><em>No documentation provided.</em></div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+        }
+
+        function filterSymbols() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const items = document.querySelectorAll('.entity-item');
+            items.forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                item.style.display = name.includes(query) ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>

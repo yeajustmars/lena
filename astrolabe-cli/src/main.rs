@@ -1,10 +1,13 @@
 // astrolabe-cli/src/main.rs
+//
+// TODO: rename project to leña
 
 #![deny(warnings)]
 #![warn(clippy::all, clippy::pedantic)]
 
 mod callees;
 mod callers;
+mod doc;
 mod index;
 mod prompt;
 mod query;
@@ -35,6 +38,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Generate static HTML documentation from the indexed codebase
+    Doc {
+        /// Output directory for the static site
+        #[arg(short, long, default_value = "dist")]
+        out: PathBuf,
+        /// Documentation theme: default or mdbook
+        #[arg(short, long, default_value = "mdbook")]
+        theme: String,
+    },
     /// Index a codebase by running available adapters
     Index {
         /// Target directory to index
@@ -112,6 +124,7 @@ async fn main() -> Result<()> {
     let db = Arc::new(AstrolabeDb::open(&cli.db_path)?);
 
     match cli.command {
+        Commands::Doc { out, theme } => doc::run(&db, &out, &theme).await?,
         Commands::Index {
             target,
             queries_dir: _,
