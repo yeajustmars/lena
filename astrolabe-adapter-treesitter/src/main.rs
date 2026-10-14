@@ -40,8 +40,8 @@ struct Args {
 
 #[derive(Debug, Default)]
 pub struct SymbolTable {
-    /// Maps raw symbol names (e.g., "processPayment") to their canonical FQSNs globally
-    pub global_symbols: HashMap<String, String>,
+    /// Maps raw symbol names (e.g., "processPayment") to a list of candidate FQSNs globally
+    pub global_symbols: HashMap<String, Vec<String>>,
 }
 
 pub struct ParsedFile {
@@ -175,7 +175,11 @@ pub fn discover_symbols(
             if capture_name.starts_with("symbol.") {
                 let name = capture.node.utf8_text(source_code.as_bytes())?;
                 let fqsn = format!("{lang_name}:{file_path}::{name}");
-                table.global_symbols.insert(name.to_string(), fqsn);
+                table
+                    .global_symbols
+                    .entry(name.to_string())
+                    .or_default()
+                    .push(fqsn);
             }
         }
     }
@@ -252,11 +256,15 @@ pub fn emit_facts(
             let caller_id = hash_id(&caller_fqsn);
 
             // Resolve using the global SymbolTable or fallback to file-local
-            let callee_fqsn = table
-                .global_symbols
-                .get(&callee_name)
-                .cloned()
-                .unwrap_or_else(|| format!("{lang_name}:{file_path}::{callee_name}"));
+            let callee_fqsn = if let Some(candidates) = table.global_symbols.get(&callee_name) {
+                if candidates.len() == 1 {
+                    candidates[0].clone()
+                } else {
+                    format!("{lang_name}:{file_path}::{callee_name}")
+                }
+            } else {
+                format!("{lang_name}:{file_path}::{callee_name}")
+            };
 
             let call_site_fqsn = format!("call:{caller_fqsn}->{callee_fqsn}");
             let call_site_id = hash_id(&call_site_fqsn);
@@ -551,5 +559,45 @@ mod tests {
         assert!(output.matches("[:db/add").count() > 50);
         assert!(output.contains(":symbol/fqsn \"javascript:express_application.js::init\""));
         assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_treesitter_cross_file_resolution() {
+        let mut table = SymbolTable::default();
+        let lang = &tree_sitter_python::LANGUAGE.into();
+        let query = Query::new(lang, PY_QUERY).unwrap();
+
+        // Pass 1: Parse first file (callee)
+        let mut parser1 = TsParser::new();
+        parser1.set_language(lang).unwrap();
+        let tree1 = parser1
+            .parse("def shared_target():\n    pass", None)
+            .unwrap();
+        discover_symbols(
+            &tree1,
+            "def shared_target():\n    pass",
+            &query,
+            "callee.py",
+            "python",
+            &mut table,
+        )
+        .unwrap();
+
+        // Pass 1: Parse second file (caller)
+        let mut parser2 = TsParser::new();
+        parser2.set_language(lang).unwrap();
+        let source2 = "def main():\n    shared_target()";
+        let tree2 = parser2.parse(source2, None).unwrap();
+        discover_symbols(&tree2, source2, &query, "caller.py", "python", &mut table).unwrap();
+
+        // Pass 2: Emit facts for the caller file
+        let facts = emit_facts(&tree2, source2, &query, "caller.py", "python", &table).unwrap();
+        let output = facts.join("\n");
+
+        let expected_caller = hash_id("python:caller.py::main");
+        let expected_callee = hash_id("python:callee.py::shared_target");
+
+        assert!(output.contains(&format!(":call/caller {expected_caller}")));
+        assert!(output.contains(&format!(":call/callee {expected_callee}")));
     }
 }
