@@ -44,8 +44,12 @@ git-repository-url = "https://github.com"
             summary.push_str(&format!("- [{lang_name}]()\n"));
             for (pkg_name, pkg) in &lang.packages {
                 summary.push_str(&format!("  - [{pkg_name}]()\n"));
+
                 for (mod_name, module) in &pkg.modules {
-                    let rel_path = format!("{lang_name}_{pkg_name}_{mod_name}.md");
+                    // Sanitize slashes out of the module name for flat file emission
+                    let safe_mod_name = mod_name.replace(['/', '\\'], "_");
+                    let rel_path = format!("{lang_name}_{pkg_name}_{safe_mod_name}.md");
+
                     summary.push_str(&format!("    - [{mod_name}]({rel_path})\n"));
 
                     let mut chapter = format!("# Module `{mod_name}`\n\n");

@@ -169,7 +169,16 @@ impl<'a> DocGraphBuilder<'a> {
                 Some(doc_raw.replace("\\n", "\n"))
             };
 
-            let file_path = extract_string(data, "location/file");
+            // Normalize file path by stripping leading "./" or "/"
+            let mut file_path = extract_string(data, "location/file");
+            while file_path.starts_with("./") || file_path.starts_with('/') {
+                if file_path.starts_with("./") {
+                    file_path = file_path[2..].to_string();
+                } else if file_path.starts_with('/') {
+                    file_path = file_path[1..].to_string();
+                }
+            }
+
             let line_val = extract_i64(data, "location/start-line");
             let line = if line_val > 0 {
                 Some(line_val as usize)
@@ -178,13 +187,19 @@ impl<'a> DocGraphBuilder<'a> {
             };
 
             let mut package = extract_string(data, "symbol/namespace");
-            let mut module = extract_string(data, "symbol/namespace");
             if package.is_empty() {
-                package = "root".to_string();
+                // Fallback: Use the top-level directory from the normalized file path
+                package = file_path.split('/').next().unwrap_or("root").to_string();
+                if package.is_empty() || package == "." {
+                    package = "root".to_string();
+                }
             }
-            if module.is_empty() {
-                module = "main".to_string();
-            }
+
+            let module = if file_path.is_empty() {
+                "main".to_string()
+            } else {
+                file_path.clone()
+            };
 
             symbols.push(RawSymbol {
                 fqsn,

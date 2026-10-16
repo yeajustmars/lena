@@ -43,8 +43,8 @@ enum Commands {
         /// Output directory for the static site
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
-        /// Documentation theme: default, mdbook, or single-page
-        #[arg(short, long, default_value = "mdbook")]
+        /// Documentation theme: lena-book, mdbook, or single-page
+        #[arg(short, long, default_value = "lena-book")]
         theme: String,
         /// Optional path to custom CSS file to override default styles
         #[arg(long)]

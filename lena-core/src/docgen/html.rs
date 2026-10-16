@@ -78,6 +78,12 @@ impl<'a> HtmlRenderer<'a> {
 
                 for (mod_name, module) in &pkg.modules {
                     let page_file = pkg_dir.join(format!("{mod_name}.html"));
+
+                    // Create intermediate directories if the module name contains slashes
+                    if let Some(parent) = page_file.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+
                     let content = self.render_module_page(module, lang_name, pkg_name)?;
                     fs::write(page_file, content)?;
                 }
@@ -96,6 +102,15 @@ impl<'a> HtmlRenderer<'a> {
         _lang: &str,
         _pkg: &str,
     ) -> Result<String> {
+        // Dynamically calculate the relative path back to the root directory
+        // Base depth is 2 (Language/Package/), plus 1 for every slash in the module file path
+        let slash_count = module
+            .name
+            .chars()
+            .filter(|&c| c == '/' || c == '\\')
+            .count();
+        let root_rel = "../".repeat(2 + slash_count);
+
         let tmpl = self.env.get_template("module.html")?;
         let rendered = tmpl.render(context! {
             project_name => self.graph.project_name,
@@ -103,7 +118,7 @@ impl<'a> HtmlRenderer<'a> {
             languages => self.graph.languages,
             module => module,
             page_title => module.name,
-            root_rel => "../../",
+            root_rel => root_rel,
             custom_css => self.custom_css.clone(),
         })?;
 
