@@ -15,6 +15,14 @@ pub struct HtmlRenderer<'a> {
 impl<'a> HtmlRenderer<'a> {
     pub fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self> {
         let mut env = Environment::new();
+
+        // Register the badge mapping as a MiniJinja filter
+        env.add_filter("badge_class", |kind: String| -> String {
+            crate::docgen::ir::SymbolKind::from_str(&kind)
+                .badge_class()
+                .to_string()
+        });
+
         env.add_template("base.html", include_str!("../../templates/base.html"))?;
         env.add_template(
             "single_page.html",

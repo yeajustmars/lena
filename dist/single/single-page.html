@@ -1,0 +1,3187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lena Project - Documentation</title>
+  <style>:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --border: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --badge-fn: #0284c7;
+  --badge-struct: #059669;
+  --badge-enum: #d97706;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --border: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  display: flex;
+}
+
+.layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 300px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.content {
+  flex: 1;
+  padding: 2.5rem 4rem;
+  max-width: 960px;
+}
+
+.symbol-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background: var(--bg-primary);
+}
+
+.symbol-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: #fff;
+  background-color: var(--badge-fn);
+}
+
+.badge-struct { background-color: var(--badge-struct); }
+.badge-enum { background-color: var(--badge-enum); }
+
+.symbol-sig {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+.neighborhood-graph {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+</style>
+  
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</head>
+<body class="theme-light">
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="#top">Lena Project</a>
+        <span class="version">0.1.0</span>
+      </div>
+      <ul class="nav-tree">
+        
+        <li class="nav-language">
+          <span class="group-title">clojure</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">edge-cases</span>
+            <ul class="nav-modules">
+              
+              <li><a href="#clojure-edge-cases-edge-cases">edge-cases</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">root</span>
+            <ul class="nav-modules">
+              
+              <li><a href="#clojure-root-main">main</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">go</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">root</span>
+            <ul class="nav-modules">
+              
+              <li><a href="#go-root-main">main</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">rust</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">root</span>
+            <ul class="nav-modules">
+              
+              <li><a href="#rust-root-main">main</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+      </ul>
+    </nav>
+    <main class="content" id="top">
+      <div class="hero">
+        <h1>Lena Project Documentation</h1>
+        <p class="subtitle">Version: 0.1.0</p>
+      </div>
+      
+        
+          
+          <div id="clojure-edge-cases-edge-cases">
+            <h2>edge-cases</h2>
+            <p class="file-path">Source: <code>.&#x2f;lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj</code></p>
+            
+            <hr />
+            <section class="symbols">
+              
+                <div class="symbol-card" id="clj:edge-cases&#x2f;private-fn">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">private-fn</h3>
+                    <span class="symbol-line">Line 4</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="clj:edge-cases&#x2f;public-fn">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">public-fn</h3>
+                    <span class="symbol-line">Line 8</span>
+                  </div>
+                  
+                  <div class="symbol-desc">This is a public function docstring.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="clj:edge-cases&#x2f;threaded-calls">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">threaded-calls</h3>
+                    <span class="symbol-line">Line 15</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+            </section>
+          </div>
+          
+        
+          
+          <div id="clojure-root-main">
+            <h2>main</h2>
+            <p class="file-path">Source: <code>.&#x2f;lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj</code></p>
+            
+            <hr />
+            <section class="symbols">
+              
+                <div class="symbol-card" id="clj:edge-cases">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">edge-cases</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+            </section>
+          </div>
+          
+        
+      
+        
+          
+          <div id="go-root-main">
+            <h2>main</h2>
+            <p class="file-path">Source: <code>lena-adapter-go&#x2f;src&#x2f;main_test.go</code></p>
+            
+            <hr />
+            <section class="symbols">
+              
+                <div class="symbol-card" id="go:main&#x2f;main_test.go">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;gin.go">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:edgecases&#x2f;edge_cases.go">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;main.go">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:edgecases&#x2f;StandaloneFunc">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">StandaloneFunc</h3>
+                    <span class="symbol-line">Line 8</span>
+                  </div>
+                  
+                  <div class="symbol-desc">StandaloneFunc is a standard function with a docstring.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;getFixturePath">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">getFixturePath</h3>
+                    <span class="symbol-line">Line 14</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;hashId">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">hashId</h3>
+                    <span class="symbol-line">Line 16</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:edgecases.MyStruct&#x2f;PointerReceiver">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">PointerReceiver</h3>
+                    <span class="symbol-line">Line 17</span>
+                  </div>
+                  
+                  <div class="symbol-desc">PointerReceiver method</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;countDbAdds">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">countDbAdds</h3>
+                    <span class="symbol-line">Line 19</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:edgecases.MyStruct&#x2f;ValueReceiver">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">ValueReceiver</h3>
+                    <span class="symbol-line">Line 22</span>
+                  </div>
+                  
+                  <div class="symbol-desc">ValueReceiver method</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;escapeString">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">escapeString</h3>
+                    <span class="symbol-line">Line 23</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoEdgeCasesParse">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoEdgeCasesParse</h3>
+                    <span class="symbol-line">Line 27</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoModuleEntityCreation">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoModuleEntityCreation</h3>
+                    <span class="symbol-line">Line 39</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;getFuncPrefix">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">getFuncPrefix</h3>
+                    <span class="symbol-line">Line 45</span>
+                  </div>
+                  
+                  <div class="symbol-desc">getFuncPrefix resolves the correct prefix (Package or Package.Struct) for a function</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.HandlersChain&#x2f;Last">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Last</h3>
+                    <span class="symbol-line">Line 54</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Last returns the last handler in the chain. i.e. the last handler is the main one.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoMethodReceiverCorrelation">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoMethodReceiverCorrelation</h3>
+                    <span class="symbol-line">Line 55</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;NewSymbolTable">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">NewSymbolTable</h3>
+                    <span class="symbol-line">Line 65</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoDocstringExtraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoDocstringExtraction</h3>
+                    <span class="symbol-line">Line 68</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoHashIdMasking">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoHashIdMasking</h3>
+                    <span class="symbol-line">Line 78</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;discoverSymbols">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">discoverSymbols</h3>
+                    <span class="symbol-line">Line 81</span>
+                  </div>
+                  
+                  <div class="symbol-desc">discoverSymbols (Pass 1) harvests imports and function declarations into the SymbolTable</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoEmptyFileGracefulHandling">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoEmptyFileGracefulHandling</h3>
+                    <span class="symbol-line">Line 98</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;emitFacts">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">emitFacts</h3>
+                    <span class="symbol-line">Line 104</span>
+                  </div>
+                  
+                  <div class="symbol-desc">emitFacts (Pass 2) walks the AST again, generating module, function, and call-site edges</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoMalformedSyntaxResilience">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoMalformedSyntaxResilience</h3>
+                    <span class="symbol-line">Line 115</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoFunctionPositions">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoFunctionPositions</h3>
+                    <span class="symbol-line">Line 128</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoMultipleFunctions">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoMultipleFunctions</h3>
+                    <span class="symbol-line">Line 138</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoGinStressAddCount">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoGinStressAddCount</h3>
+                    <span class="symbol-line">Line 153</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;TestGoCallSiteExtraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">TestGoCallSiteExtraction</h3>
+                    <span class="symbol-line">Line 171</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;New">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">New</h3>
+                    <span class="symbol-line">Line 183</span>
+                  </div>
+                  
+                  <div class="symbol-desc">New returns a new blank Engine instance without any middleware attached.
+By default, the configuration is:
+- RedirectTrailingSlash:  true
+- RedirectFixedPath:      false
+- HandleMethodNotAllowed: false
+- ForwardedByClientIP:    true
+- UseRawPath:             false
+- UnescapePathValues:     true</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;RunTwoPass">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">RunTwoPass</h3>
+                    <span class="symbol-line">Line 183</span>
+                  </div>
+                  
+                  <div class="symbol-desc">RunTwoPass orchestrates the two-pass extraction logic over a slice of file paths</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:main&#x2f;main">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">main</h3>
+                    <span class="symbol-line">Line 212</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;Default">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Default</h3>
+                    <span class="symbol-line">Line 216</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Default returns an Engine instance with the Logger and Recovery middleware already attached.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;Handler">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Handler</h3>
+                    <span class="symbol-line">Line 223</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;allocateContext">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">allocateContext</h3>
+                    <span class="symbol-line">Line 232</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;Delims">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Delims</h3>
+                    <span class="symbol-line">Line 239</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Delims sets template left and right delims and returns an Engine instance.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;SecureJsonPrefix">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">SecureJsonPrefix</h3>
+                    <span class="symbol-line">Line 245</span>
+                  </div>
+                  
+                  <div class="symbol-desc">SecureJsonPrefix sets the secureJSONPrefix used in Context.SecureJSON.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;LoadHTMLGlob">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">LoadHTMLGlob</h3>
+                    <span class="symbol-line">Line 252</span>
+                  </div>
+                  
+                  <div class="symbol-desc">LoadHTMLGlob loads HTML files identified by glob pattern
+and associates the result with HTML renderer.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;LoadHTMLFiles">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">LoadHTMLFiles</h3>
+                    <span class="symbol-line">Line 268</span>
+                  </div>
+                  
+                  <div class="symbol-desc">LoadHTMLFiles loads a slice of HTML files
+and associates the result with HTML renderer.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;SetHTMLTemplate">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">SetHTMLTemplate</h3>
+                    <span class="symbol-line">Line 279</span>
+                  </div>
+                  
+                  <div class="symbol-desc">SetHTMLTemplate associate a template with HTML renderer.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;SetFuncMap">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">SetFuncMap</h3>
+                    <span class="symbol-line">Line 288</span>
+                  </div>
+                  
+                  <div class="symbol-desc">SetFuncMap sets the FuncMap used for template.FuncMap.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;NoRoute">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">NoRoute</h3>
+                    <span class="symbol-line">Line 293</span>
+                  </div>
+                  
+                  <div class="symbol-desc">NoRoute adds handlers for NoRoute. It returns a 404 code by default.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;NoMethod">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">NoMethod</h3>
+                    <span class="symbol-line">Line 299</span>
+                  </div>
+                  
+                  <div class="symbol-desc">NoMethod sets the handlers called when Engine.HandleMethodNotAllowed = true.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;Use">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Use</h3>
+                    <span class="symbol-line">Line 307</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Use attaches a global middleware to the router. i.e. the middleware attached through Use() will be
+included in the handlers chain for every single request. Even 404, 405, static files...
+For example, this is the right place for a logger or error management middleware.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;rebuild404Handlers">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">rebuild404Handlers</h3>
+                    <span class="symbol-line">Line 314</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;rebuild405Handlers">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">rebuild405Handlers</h3>
+                    <span class="symbol-line">Line 318</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;addRoute">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">addRoute</h3>
+                    <span class="symbol-line">Line 322</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;Routes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Routes</h3>
+                    <span class="symbol-line">Line 349</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Routes returns a slice of registered routes, including some useful information, such as:
+the http method, path and the handler name.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;iterate">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">iterate</h3>
+                    <span class="symbol-line">Line 356</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;Run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Run</h3>
+                    <span class="symbol-line">Line 376</span>
+                  </div>
+                  
+                  <div class="symbol-desc">Run attaches the router to a http.Server and starts listening and serving HTTP requests.
+It is a shortcut for http.ListenAndServe(addr, router)
+Note: this method will block the calling goroutine indefinitely unless an error happens.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;prepareTrustedCIDRs">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">prepareTrustedCIDRs</h3>
+                    <span class="symbol-line">Line 390</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;SetTrustedProxies">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">SetTrustedProxies</h3>
+                    <span class="symbol-line">Line 427</span>
+                  </div>
+                  
+                  <div class="symbol-desc">SetTrustedProxies set a list of network origins (IPv4 addresses,
+IPv4 CIDRs, IPv6 addresses or IPv6 CIDRs) from which to trust
+request&#x27;s headers that contain alternative client IP when
+`(*gin.Engine).ForwardedByClientIP` is `true`. `TrustedProxies`
+feature is enabled by default, and it also trusts all proxies
+by default. If you want to disable this feature, use
+Engine.SetTrustedProxies(nil), then Context.ClientIP() will
+return the remote address directly.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;isUnsafeTrustedProxies">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">isUnsafeTrustedProxies</h3>
+                    <span class="symbol-line">Line 433</span>
+                  </div>
+                  
+                  <div class="symbol-desc">isUnsafeTrustedProxies checks if Engine.trustedCIDRs contains all IPs, it&#x27;s not safe if it has (returns true)</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;parseTrustedProxies">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">parseTrustedProxies</h3>
+                    <span class="symbol-line">Line 438</span>
+                  </div>
+                  
+                  <div class="symbol-desc">parseTrustedProxies parse Engine.trustedProxies to Engine.trustedCIDRs</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;isTrustedProxy">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">isTrustedProxy</h3>
+                    <span class="symbol-line">Line 445</span>
+                  </div>
+                  
+                  <div class="symbol-desc">isTrustedProxy will check whether the IP address is included in the trusted list according to Engine.trustedCIDRs</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;validateHeader">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">validateHeader</h3>
+                    <span class="symbol-line">Line 458</span>
+                  </div>
+                  
+                  <div class="symbol-desc">validateHeader will parse X-Forwarded-For header and return the trusted client IP address</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;parseIP">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">parseIP</h3>
+                    <span class="symbol-line">Line 481</span>
+                  </div>
+                  
+                  <div class="symbol-desc">parseIP parse a string representation of an IP and returns a net.IP with the
+minimum byte representation or nil if input is invalid.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;RunTLS">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">RunTLS</h3>
+                    <span class="symbol-line">Line 496</span>
+                  </div>
+                  
+                  <div class="symbol-desc">RunTLS attaches the router to a http.Server and starts listening and serving HTTPS (secure) requests.
+It is a shortcut for http.ListenAndServeTLS(addr, certFile, keyFile, router)
+Note: this method will block the calling goroutine indefinitely unless an error happens.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;RunUnix">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">RunUnix</h3>
+                    <span class="symbol-line">Line 512</span>
+                  </div>
+                  
+                  <div class="symbol-desc">RunUnix attaches the router to a http.Server and starts listening and serving HTTP requests
+through the specified unix socket (i.e. a file).
+Note: this method will block the calling goroutine indefinitely unless an error happens.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;RunFd">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">RunFd</h3>
+                    <span class="symbol-line">Line 535</span>
+                  </div>
+                  
+                  <div class="symbol-desc">RunFd attaches the router to a http.Server and starts listening and serving HTTP requests
+through the specified file descriptor.
+Note: this method will block the calling goroutine indefinitely unless an error happens.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;RunListener">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">RunListener</h3>
+                    <span class="symbol-line">Line 556</span>
+                  </div>
+                  
+                  <div class="symbol-desc">RunListener attaches the router to a http.Server and starts listening and serving HTTP requests
+through the specified net.Listener</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;ServeHTTP">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">ServeHTTP</h3>
+                    <span class="symbol-line">Line 570</span>
+                  </div>
+                  
+                  <div class="symbol-desc">ServeHTTP conforms to the http.Handler interface.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;HandleContext">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">HandleContext</h3>
+                    <span class="symbol-line">Line 584</span>
+                  </div>
+                  
+                  <div class="symbol-desc">HandleContext re-enters a context that has been rewritten.
+This can be done by setting c.Request.URL.Path to your new target.
+Disclaimer: You can loop yourself to deal with this, use wisely.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin.Engine&#x2f;handleHTTPRequest">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">handleHTTPRequest</h3>
+                    <span class="symbol-line">Line 592</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;serveError">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">serveError</h3>
+                    <span class="symbol-line">Line 654</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;redirectTrailingSlash">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">redirectTrailingSlash</h3>
+                    <span class="symbol-line">Line 671</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;redirectFixedPath">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">redirectFixedPath</h3>
+                    <span class="symbol-line">Line 687</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="go:gin&#x2f;redirectRequest">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">redirectRequest</h3>
+                    <span class="symbol-line">Line 699</span>
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+            </section>
+          </div>
+          
+        
+      
+        
+          
+          <div id="rust-root-main">
+            <h2>main</h2>
+            <p class="file-path">Source: <code>.&#x2f;lena-adapter-rust&#x2f;tests&#x2f;fixtures&#x2f;rust&#x2f;axum&#x2f;axum&#x2f;0.7.4&#x2f;axum&#x2f;src&#x2f;routing&#x2f;mod.rs</code></p>
+            
+            <hr />
+            <section class="symbols">
+              
+                <div class="symbol-card" id="rust:crate::callers">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::prompt">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::index">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mdbook">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::doc">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::callees">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::edge_cases">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::lib">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::query">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest_bench">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">Unnamed</h3>
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::add">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">add</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn add(
+        &amp;mut self,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;&amp;mut Self, fmt::Error&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Adds an assertion fact (`:db&#x2f;add`) to the transaction.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `fmt::Error` if string formatting fails.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::edge_cases::async_worker">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">async_worker</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn async_worker(payload: T)</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::badge_class">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">badge_class</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn badge_class(&amp;self) -&gt; &amp;&#x27;static str</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::bootstrap">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">bootstrap</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn bootstrap() -&gt; SchemaMap</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Bootstraps the complete Universal Intermediate Representation (UIR) schema.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::build">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">build</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn build(self) -&gt; Result&lt;DocGraph&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::build_indented">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">build_indented</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn build_indented(
+    node: &amp;str,
+    edges: &amp;[Edge],
+    depth: usize,
+    path_visited: &amp;mut HashSet&lt;String&gt;,
+    out: &amp;mut String,
+)</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::call">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">call</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn call(&amp;mut self, req: Request&lt;B&gt;) -&gt; Self::Future</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::call_with_state">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">call_with_state</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn call_with_state(&amp;mut self, req: Request, state: S) -&gt; RouteFuture&lt;E&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::clone">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">clone</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn clone(&amp;self) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::collect_files">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">collect_files</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn collect_files(dir: &amp;Path, files: &amp;mut Vec&lt;PathBuf&gt;) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::contains_rule_call">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">contains_rule_call</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn contains_rule_call(query: &amp;str) -&gt; bool</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Helper to detect if a query string invokes standard recursive rule predicates.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest_bench::criterion_benchmark">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">criterion_benchmark</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn criterion_benchmark(c: &amp;mut Criterion)</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::default">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">default</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn default() -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::discover_symbols">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">discover_symbols</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn discover_symbols(file: &amp;ParsedFile, table: &amp;mut SymbolTable)</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Pass 1 implementation: Harvest symbol definitions globally</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mdbook::emit">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">emit</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn emit(&amp;self, out_dir: &amp;Path) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::emit_call_site">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">emit_call_site</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn emit_call_site(
+    caller_fqsn: &amp;str,
+    caller_id: u64,
+    callee_fqsn: &amp;str,
+    filename: &amp;str,
+) -&gt; Result&lt;String&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::emit_facts">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">emit_facts</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn emit_facts(file: &amp;ParsedFile, table: &amp;SymbolTable) -&gt; Result&lt;Vec&lt;String&gt;&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Pass 2 implementation: Emit AST facts and resolve calls against the SymbolTable</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::emit_function_facts">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">emit_function_facts</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn emit_function_facts(
+    fn_def: &amp;ast::Fn,
+    filename: &amp;str,
+    module_fqsn: &amp;str,
+    module_id: u64,
+    local_imports: Option&lt;&amp;HashMap&lt;String, String&gt;&gt;,
+) -&gt; Result&lt;Vec&lt;String&gt;&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::execute_kondo">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">execute_kondo</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn execute_kondo(target: &amp;Path) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::export_prompt">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">export_prompt</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn export_prompt(
+    db: &amp;Arc&lt;LenaDb&gt;,
+    fqsn: &amp;str,
+    format: ExportFormat,
+) -&gt; Result&lt;String, ExporterError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Retrieves an entity by its FQSN and formats it for LLM context.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::extract_facts">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">extract_facts</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn extract_facts(
+    language: &amp;Language,
+    source_code: &amp;str,
+    query_source: &amp;str,
+    file_path: &amp;str,
+    lang_name: &amp;str,
+) -&gt; Result&lt;Vec&lt;String&gt;, Box&lt;dyn std::error::Error&gt;&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Wrapper to preserve unit test signatures. Acts as a single-file two-pass pipeline.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::extract_i64">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">extract_i64</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn extract_i64(val: &amp;Value, key: &amp;str) -&gt; i64</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Helper to extract an integer from either `:key` or `key` inside a JSON Value.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::extract_i64">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">extract_i64</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn extract_i64(val: &amp;Value, key: &amp;str) -&gt; i64</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::extract_string">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">extract_string</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn extract_string(val: &amp;Value, key: &amp;str) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::extract_string">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">extract_string</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn extract_string(val: &amp;Value, key: &amp;str) -&gt; String</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Helper to extract a string from either `:key` or `key` inside a JSON Value.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fallback">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fallback</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fallback(self, handler: H) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fallback_endpoint">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fallback_endpoint</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fallback_endpoint(self, endpoint: Endpoint&lt;S&gt;) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fallback_service">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fallback_service</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fallback_service(self, service: T) -&gt; Self</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Add a fallback [`Service`] to the router.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; See [`Router::fallback`] for more details.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fetch_all_symbols">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fetch_all_symbols</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fetch_all_symbols(&amp;self) -&gt; Result&lt;Vec&lt;RawSymbol&gt;&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fetch_call_graph_edges">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fetch_call_graph_edges</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fetch_call_graph_edges(
+        &amp;self,
+        symbols_map: &amp;HashMap&lt;String, RawSymbol&gt;,
+    ) -&gt; Result&lt;(
+        HashMap&lt;String, Vec&lt;NeighborRef&gt;&gt;,
+        HashMap&lt;String, Vec&lt;NeighborRef&gt;&gt;,
+    )&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::finish">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">finish</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn finish(mut self) -&gt; String</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Returns the finalized ND-EDN transaction string.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::fmt">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fmt</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;&#x27;_&gt;) -&gt; fmt::Result</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::fmt">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fmt</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;&#x27;_&gt;) -&gt; fmt::Result</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::fmt">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">fmt</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter&lt;&#x27;_&gt;) -&gt; std::fmt::Result</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::format_skeleton">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">format_skeleton</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn format_skeleton(root: &amp;str, edges: &amp;[Edge], format: SkeletonFormat) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::from_str">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">from_str</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn from_str(kind: &amp;str) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::generate_mermaid">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">generate_mermaid</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn generate_mermaid(&amp;mut self, current_name: &amp;str)</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::generate_skeleton">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">generate_skeleton</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn generate_skeleton(
+    db: &amp;Arc&lt;LenaDb&gt;,
+    root_fqsn: &amp;str,
+    max_depth: usize,
+    format: SkeletonFormat,
+) -&gt; Result&lt;String, SkeletonError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Iteratively queries the database to build a bounded subgraph, preventing infinite loops on cycles.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::get_fixture_path">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">get_fixture_path</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn get_fixture_path(file: &amp;str) -&gt; PathBuf</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::hash_id">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">hash_id</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn hash_id(key: &amp;str) -&gt; u64</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::ingest_stream">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">ingest_stream</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn ingest_stream(db: &amp;Arc&lt;LenaDb&gt;, reader: R) -&gt; Result&lt;usize, IngestError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Ingests ND-EDN lines from an asynchronous reader (like an adapter&#x27;s stdout)
+&#x2f;&#x2f;&#x2f; and streams them directly into the database.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `IngestError` if the underlying reader fails or if a transaction panics.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::inner">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">inner</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn inner(&amp;self) -&gt; &amp;MesoDb</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Access the underlying MesoDB engine directly.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::into_inner">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">into_inner</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn into_inner(self) -&gt; RouterInner&lt;S&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::into_make_service_with_connect_info">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">into_make_service_with_connect_info</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn into_make_service_with_connect_info(self) -&gt; IntoMakeServiceWithConnectInfo&lt;Self, C&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::into_service">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">into_service</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn into_service(self) -&gt; RouterIntoService&lt;B, S&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Convert the router into an owned [`Service`] with a fixed request body type, to aid type
+&#x2f;&#x2f;&#x2f; inference.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; This is the same as [`Router::as_service`] instead it returns an owned [`Service`]. See
+&#x2f;&#x2f;&#x2f; that method for more details.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::layer">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">layer</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn layer(self, layer: L) -&gt; Endpoint&lt;S&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::main">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">main</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn main() -&gt; anyhow::Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::map">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">map</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn map(self, f: F) -&gt; Fallback&lt;S, E2&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::map_inner">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">map_inner</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn map_inner(self, f: F) -&gt; Router&lt;S2&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::merge">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">merge</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn merge(self, other: Self) -&gt; Option&lt;Self&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::edge_cases::method_call">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">method_call</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn method_call(&amp;self)</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::nest">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">nest</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn nest(self, path: &amp;str, router: Router&lt;S&gt;) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::nest_service">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">nest_service</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn nest_service(self, path: &amp;str, service: T) -&gt; Self</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Like [`nest`](Self::nest), but accepts an arbitrary `Service`.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::new">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">new</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn new(graph: &amp;&#x27;a DocGraph, custom_css: Option&lt;String&gt;) -&gt; Result&lt;Self&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::new">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">new</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn new() -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mdbook::new">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">new</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn new(graph: &amp;&#x27;a DocGraph) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::new">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">new</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn new() -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::new">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">new</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn new(db: &amp;&#x27;a LenaDb, options: DocGenOptions) -&gt; Self</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Create a new `Router`.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; Unless you add additional routes this will respond with `404 Not Found` to
+&#x2f;&#x2f;&#x2f; all requests.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::open">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">open</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn open(path: impl AsRef&lt;Path&gt;) -&gt; Result&lt;Self, DbError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Opens or creates an Lena database at the specified path.
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `DbError::MesoDb` if the underlying database engine fails.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::poll_ready">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">poll_ready</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn poll_ready(&amp;mut self, cx: &amp;mut Context&lt;&#x27;_&gt;) -&gt; Poll&lt;Result&lt;(), Self::Error&gt;&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::process_kondo_output">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">process_kondo_output</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn process_kondo_output(kondo_data: KondoOutput) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Core processing logic extracted to allow isolated unit testing of the EDN generation</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::push_fact">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">push_fact</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn push_fact(
+        &amp;mut self,
+        op: &amp;str,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;(), fmt::Error&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::query_json">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">query_json</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn query_json(&amp;self, query_str: &amp;str) -&gt; Result&lt;String, DbError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Evaluates a raw Datalog query string directly without rule transformations.
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `DbError::MesoDb` if the underlying database engine fails.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::query_with_custom_rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">query_with_custom_rules</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn query_with_custom_rules(
+        &amp;self,
+        query_str: &amp;str,
+        rules_str: &amp;str,
+    ) -&gt; Result&lt;String, DbError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Evaluates a Datalog query with custom recursive rules provided as an EDN string.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::query_with_rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">query_with_rules</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn query_with_rules(&amp;self, query_str: &amp;str) -&gt; Result&lt;String, DbError&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Evaluates a Datalog query, automatically injecting `STANDARD_RULES` if rule
+&#x2f;&#x2f;&#x2f; predicates or rule bindings (`%`) are detected.
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `DbError::MesoDb` if the underlying database engine fails.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::render_landing_page">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">render_landing_page</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn render_landing_page(&amp;self, out_dir: &amp;Path) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::render_lena_book">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">render_lena_book</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn render_lena_book(&amp;self, out_dir: &amp;Path) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::render_module_page">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">render_module_page</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn render_module_page(
+        &amp;self,
+        module: &amp;crate::docgen::ir::DocModule,
+        _lang: &amp;str,
+        _pkg: &amp;str,
+    ) -&gt; Result&lt;String&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::render_single_page">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">render_single_page</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn render_single_page(&amp;self, out_dir: &amp;Path) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::index::resolve_binary">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">resolve_binary</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn resolve_binary(adapter_name: &amp;str) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::retract">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">retract</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn retract(
+        &amp;mut self,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;&amp;mut Self, fmt::Error&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Adds a retraction fact (`:db&#x2f;retract`) to the transaction.
+&#x2f;&#x2f;&#x2f;
+&#x2f;&#x2f;&#x2f; # Errors
+&#x2f;&#x2f;&#x2f; Returns `fmt::Error` if string formatting fails.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::route">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">route</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn route(self, path: &amp;str, method_router: MethodRouter&lt;S&gt;) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::route_layer">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">route_layer</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn route_layer(self, layer: L) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::route_service">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">route_service</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn route_service(self, path: &amp;str, service: T) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::callers::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::index::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(
+    target: PathBuf,
+    grammars_dir: &amp;Path,
+    concurrency: usize,
+    db: &amp;Arc&lt;LenaDb&gt;,
+) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::prompt::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(
+    db: &amp;Arc&lt;LenaDb&gt;,
+    fqsn: &amp;str,
+    format: &amp;str,
+    template_path: Option&lt;&amp;PathBuf&gt;,
+) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::callees::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str, depth: usize, format: &amp;str) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::query::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(db: &amp;Arc&lt;LenaDb&gt;, query: &amp;str) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::doc::run">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run(
+    db: &amp;Arc&lt;LenaDb&gt;,
+    out_dir: &amp;PathBuf,
+    theme: &amp;str,
+    css_path: Option&lt;&amp;PathBuf&gt;,
+    github_actions: bool,
+) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::run_fixture">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run_fixture</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run_fixture(file: &amp;str) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::index::run_native_adapter">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run_native_adapter</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run_native_adapter(
+    adapter_name: &amp;str,
+    target: PathBuf,
+    db: Arc&lt;LenaDb&gt;,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+) -&gt; Result&lt;usize&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::run_python">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run_python</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run_python() -&gt; Vec&lt;String&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::index::run_treesitter_directory">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run_treesitter_directory</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run_treesitter_directory(
+    target: PathBuf,
+    lang: &amp;str,
+    grammar_file: PathBuf,
+    db: Arc&lt;LenaDb&gt;,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+) -&gt; Result&lt;usize&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::run_two_pass_on_fixture">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">run_two_pass_on_fixture</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn run_two_pass_on_fixture(path: &amp;Path, content: &amp;str) -&gt; Vec&lt;String&gt;</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Simulates the two-pass architecture for a single file to support unit tests.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::sanitize_mermaid">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">sanitize_mermaid</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn sanitize_mermaid(s: &amp;str) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::setup_db">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">setup_db</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn setup_db() -&gt; Arc&lt;LenaDb&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::setup_db">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">setup_db</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn setup_db() -&gt; LenaDb</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::edge_cases::standard_function">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">standard_function</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn standard_function(x: i32) -&gt; bool</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; This is a docstring for a standard function.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::standard_rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">standard_rules</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn standard_rules() -&gt; &amp;&#x27;static str</code></pre>
+                  <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Exposes standard rules for caller-constructed queries.</div>
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::tap_inner_mut">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">tap_inner_mut</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn tap_inner_mut(self, f: F) -&gt; Self</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_1_based_line_indexing">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_1_based_line_indexing</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_1_based_line_indexing()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_bit_mask_verification">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bit_mask_verification</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bit_mask_verification()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_bootstrap_code_payload_attributes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bootstrap_code_payload_attributes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bootstrap_code_payload_attributes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_bootstrap_graph_edge_attributes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bootstrap_graph_edge_attributes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bootstrap_graph_edge_attributes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_bootstrap_identity_attributes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bootstrap_identity_attributes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bootstrap_identity_attributes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_bootstrap_location_attributes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bootstrap_location_attributes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bootstrap_location_attributes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_bootstrap_unknown_attribute">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_bootstrap_unknown_attribute</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_bootstrap_unknown_attribute()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_chained_method_calls">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_chained_method_calls</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_chained_method_calls()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_callsite_mapping">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_callsite_mapping</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_callsite_mapping()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_defn_and_private_facts">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_defn_and_private_facts</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_defn_and_private_facts()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_edge_cases_parse">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_edge_cases_parse</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_edge_cases_parse()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_graceful_empty_handling">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_graceful_empty_handling</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_graceful_empty_handling()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_hash_id_masking">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_hash_id_masking</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_hash_id_masking()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_metadata_extraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_metadata_extraction</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_metadata_extraction()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_module_definition">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_module_definition</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_module_definition()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_ring_stress_add_count">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_ring_stress_add_count</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_ring_stress_add_count()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_clj_threading_macro_callsites">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_clj_threading_macro_callsites</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_clj_threading_macro_callsites()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::test_contains_rule_call">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_contains_rule_call</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_contains_rule_call()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_deterministic_edge_ids">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_deterministic_edge_ids</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_deterministic_edge_ids()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::test_docgraph_builder_extraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_docgraph_builder_extraction</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_docgraph_builder_extraction()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::test_edn_value_formatting">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_edn_value_formatting</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_edn_value_formatting()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_enterprise_js_calls">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_enterprise_js_calls</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_enterprise_js_calls()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_enterprise_js_symbols">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_enterprise_js_symbols</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_enterprise_js_symbols()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_enterprise_python">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_enterprise_python</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_enterprise_python()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_export_prompt_not_found">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_export_prompt_not_found</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_export_prompt_not_found()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_export_prompt_success">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_export_prompt_success</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_export_prompt_success()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_extract_i64_with_and_without_colons">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_extract_i64_with_and_without_colons</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_extract_i64_with_and_without_colons()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_extract_string_with_and_without_colons">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_extract_string_with_and_without_colons</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_extract_string_with_and_without_colons()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::test_format_dot">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_dot</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_dot()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::test_format_indented_cycle">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_indented_cycle</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_indented_cycle()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::test_format_indented_empty">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_indented_empty</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_indented_empty()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_format_markdown">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_markdown</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_markdown()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::test_format_mermaid">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_mermaid</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_mermaid()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::test_format_xml">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_format_xml</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_format_xml()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::skeleton::test_generate_skeleton_depth_and_query">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_generate_skeleton_depth_and_query</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_generate_skeleton_depth_and_query()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_graceful_syntax_error_handling">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_graceful_syntax_error_handling</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_graceful_syntax_error_handling()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::html::test_html_renderer_emission">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_html_renderer_emission</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_html_renderer_emission()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream_basic">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream_basic</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream_basic()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream_clean_eof">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream_clean_eof</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream_clean_eof()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream_empty_transactions">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream_empty_transactions</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream_empty_transactions()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream_resilience_malformed_edn">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream_resilience_malformed_edn</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream_resilience_malformed_edn()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ingest::test_ingest_stream_skips_empty_lines">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_ingest_stream_skips_empty_lines</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_ingest_stream_skips_empty_lines()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_javascript_grammar_loading">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_javascript_grammar_loading</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_javascript_grammar_loading()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::test_lenadb_open_and_rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_lenadb_open_and_rules</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_lenadb_open_and_rules()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mdbook::test_mdbook_emission">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_mdbook_emission</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_mdbook_emission()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::test_mermaid_generation_escapes_quotes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_mermaid_generation_escapes_quotes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_mermaid_generation_escapes_quotes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_missing_optional_captures">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_missing_optional_captures</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_missing_optional_captures()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_multiple_captures_in_node">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_multiple_captures_in_node</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_multiple_captures_in_node()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_python_call_sites">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_python_call_sites</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_python_call_sites()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_python_symbol_captures">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_python_symbol_captures</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_python_symbol_captures()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::test_query_json_basic">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_query_json_basic</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_query_json_basic()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::test_query_with_custom_rules">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_query_with_custom_rules</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_query_with_custom_rules()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::db::test_query_with_rules_auto_injects">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_query_with_rules_auto_injects</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_query_with_rules_auto_injects()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_axum_stress_add_count">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_axum_stress_add_count</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_axum_stress_add_count()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_call_site_extraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_call_site_extraction</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_call_site_extraction()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_cross_file_resolution">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_cross_file_resolution</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_cross_file_resolution()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_edge_cases_parse">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_edge_cases_parse</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_edge_cases_parse()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_function_extraction">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_function_extraction</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_function_extraction()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_hash_id_masking">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_hash_id_masking</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_hash_id_masking()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_rust_module_entity">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_rust_module_entity</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_rust_module_entity()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::schema::test_schema_bootstrap_contains_all_attributes">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_schema_bootstrap_contains_all_attributes</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_schema_bootstrap_contains_all_attributes()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_stress_express_application">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_stress_express_application</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_stress_express_application()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_stress_fastapi_routing">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_stress_fastapi_routing</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_stress_fastapi_routing()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::ir::test_symbol_kind_parsing">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_symbol_kind_parsing</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_symbol_kind_parsing()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::emitter::test_transaction_builder">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_transaction_builder</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_transaction_builder()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::test_treesitter_cross_file_resolution">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">test_treesitter_cross_file_resolution</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn test_treesitter_cross_file_resolution()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::to_markdown">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">to_markdown</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn to_markdown(&amp;self) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::exporter::to_xml">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">to_xml</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn to_xml(&amp;self) -&gt; String</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::traits">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">traits</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn traits()</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::main::visit_dirs">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">visit_dirs</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn visit_dirs(dir: &amp;Path) -&gt; Result&lt;()&gt;</code></pre>
+                  
+                  
+                </div>
+              
+                <div class="symbol-card" id="rust:crate::mod::with_state">
+                  <div class="symbol-header">
+                    <span class="badge badge-unknown">Unknown</span>
+                    <h3 class="symbol-name">with_state</h3>
+                    <span class="symbol-line">Line 1</span>
+                  </div>
+                  <pre class="symbol-sig"><code>fn with_state(self, state: S) -&gt; Fallback&lt;S2, E&gt;</code></pre>
+                  
+                  
+                </div>
+              
+            </section>
+          </div>
+          
+        
+      
+    </main>
+  </div>
+</body>
+</html>

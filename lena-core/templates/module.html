@@ -10,7 +10,7 @@
     {% for sym in module.symbols %}
       <div class="symbol-card" id="{{ sym.name }}">
         <div class="symbol-header">
-          <span class="badge {{ sym.kind.badge_class() }}">{{ sym.kind }}</span>
+          <span class="badge {{ sym.kind | badge_class }}">{{ sym.kind }}</span>
           <h3 class="symbol-name">{{ sym.name }}</h3>
           {% if sym.line %}<span class="symbol-line">Line {{ sym.line }}</span>{% endif %}
         </div>
