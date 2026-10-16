@@ -2331,6 +2331,7 @@ dependencies = [
 name = "lena-core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "lena-protocol",
  "mesodb-core",
  "minijinja",
@@ -2340,6 +2341,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "which",
 ]
 
 [[package]]
@@ -4893,6 +4895,15 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "which"
+version = "8.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bae2f2b2b816647a1cab1acc91f5bd20812d53cb344382635ec2181940c8034f"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

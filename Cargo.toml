@@ -56,6 +56,8 @@ tree-sitter = "0.27.0"
 criterion = { version = "0.5.1", features = ["async_tokio"] }
 tempfile = "3.27.0"
 
+which = "8.0.6"
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
