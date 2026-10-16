@@ -21,7 +21,6 @@ impl<'a> MdBookEmitter<'a> {
             r#"[book]
 authors = ["Lena Graph Engine"]
 language = "en"
-multilingual = false
 src = "src"
 title = "{}"
 
@@ -30,6 +29,7 @@ git-repository-url = "https://github.com"
 "#,
             self.graph.project_name
         );
+
         fs::write(out_dir.join("book.toml"), book_toml)?;
 
         let mut summary = String::from("# Summary\n\n");

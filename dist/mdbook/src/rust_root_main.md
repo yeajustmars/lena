@@ -1,6 +1,6 @@
 # Module `main`
 
-**Source**: `./lena-adapter-rust/tests/fixtures/rust/axum/axum/0.7.4/axum/src/routing/mod.rs`
+**Source**: `./lena-protocol/src/schema.rs`
 
 ## `Unnamed`
 
@@ -225,12 +225,18 @@ fn extract_facts(
 fn extract_i64(val: &Value, key: &str) -> i64
 ```
 
-/// Helper to extract an integer from either `:key` or `key` inside a JSON Value.
-
 ## `extract_i64`
 
 ```rust
 fn extract_i64(val: &Value, key: &str) -> i64
+```
+
+/// Helper to extract an integer from either `:key` or `key` inside a JSON Value.
+
+## `extract_string`
+
+```rust
+fn extract_string(val: &Value, key: &str) -> String
 ```
 
 ## `extract_string`
@@ -240,12 +246,6 @@ fn extract_string(val: &Value, key: &str) -> String
 ```
 
 /// Helper to extract a string from either `:key` or `key` inside a JSON Value.
-
-## `extract_string`
-
-```rust
-fn extract_string(val: &Value, key: &str) -> String
-```
 
 ## `fallback`
 
@@ -298,13 +298,13 @@ fn finish(mut self) -> String
 ## `fmt`
 
 ```rust
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
 ```
 
 ## `fmt`
 
 ```rust
-fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
 ```
 
 ## `fmt`
@@ -453,7 +453,7 @@ fn nest_service(self, path: &str, service: T) -> Self
 ## `new`
 
 ```rust
-fn new() -> Self
+fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self>
 ```
 
 ## `new`
@@ -482,7 +482,7 @@ fn new(graph: &'a DocGraph) -> Self
 ## `new`
 
 ```rust
-fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self>
+fn new() -> Self
 ```
 
 ## `open`
@@ -626,19 +626,7 @@ fn route_service(self, path: &str, service: T) -> Self
 ## `run`
 
 ```rust
-fn run(
-    db: &Arc<LenaDb>,
-    out_dir: &PathBuf,
-    theme: &str,
-    css_path: Option<&PathBuf>,
-    github_actions: bool,
-) -> Result<()>
-```
-
-## `run`
-
-```rust
-fn run(db: &Arc<LenaDb>, query: &str) -> Result<()>
+fn run(db: &Arc<LenaDb>, fqsn: &str) -> Result<()>
 ```
 
 ## `run`
@@ -672,7 +660,19 @@ fn run(
 ## `run`
 
 ```rust
-fn run(db: &Arc<LenaDb>, fqsn: &str) -> Result<()>
+fn run(db: &Arc<LenaDb>, query: &str) -> Result<()>
+```
+
+## `run`
+
+```rust
+fn run(
+    db: &Arc<LenaDb>,
+    out_dir: &PathBuf,
+    theme: &str,
+    css_path: Option<&PathBuf>,
+    github_actions: bool,
+) -> Result<()>
 ```
 
 ## `run`

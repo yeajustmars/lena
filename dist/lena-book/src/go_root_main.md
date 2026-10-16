@@ -1,6 +1,6 @@
 # Module `main`
 
-**Source**: `lena-adapter-go/src/main_test.go`
+**Source**: `lena-adapter-go/tests/fixtures/go/gin/gin/1.9.1/gin.go`
 
 ## `Unnamed`
 

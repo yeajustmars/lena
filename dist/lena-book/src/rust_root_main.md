@@ -1,6 +1,6 @@
 # Module `main`
 
-**Source**: `./lena-adapter-rust/tests/fixtures/rust/axum/axum/0.7.4/axum/src/routing/mod.rs`
+**Source**: `./lena-adapter-rust/src/main.rs`
 
 ## `Unnamed`
 
@@ -225,13 +225,13 @@ fn extract_facts(
 fn extract_i64(val: &Value, key: &str) -> i64
 ```
 
-/// Helper to extract an integer from either `:key` or `key` inside a JSON Value.
-
 ## `extract_i64`
 
 ```rust
 fn extract_i64(val: &Value, key: &str) -> i64
 ```
+
+/// Helper to extract an integer from either `:key` or `key` inside a JSON Value.
 
 ## `extract_string`
 
@@ -298,19 +298,19 @@ fn finish(mut self) -> String
 ## `fmt`
 
 ```rust
+fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+```
+
+## `fmt`
+
+```rust
+fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+```
+
+## `fmt`
+
+```rust
 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-```
-
-## `fmt`
-
-```rust
-fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-```
-
-## `fmt`
-
-```rust
-fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
 ```
 
 ## `format_skeleton`
@@ -465,6 +465,12 @@ fn new() -> Self
 ## `new`
 
 ```rust
+fn new() -> Self
+```
+
+## `new`
+
+```rust
 fn new(db: &'a LenaDb, options: DocGenOptions) -> Self
 ```
 
@@ -472,12 +478,6 @@ fn new(db: &'a LenaDb, options: DocGenOptions) -> Self
 ///
 /// Unless you add additional routes this will respond with `404 Not Found` to
 /// all requests.
-
-## `new`
-
-```rust
-fn new() -> Self
-```
 
 ## `new`
 
@@ -632,6 +632,12 @@ fn run(db: &Arc<LenaDb>, query: &str) -> Result<()>
 ## `run`
 
 ```rust
+fn run(db: &Arc<LenaDb>, fqsn: &str, depth: usize, format: &str) -> Result<()>
+```
+
+## `run`
+
+```rust
 fn run(
     target: PathBuf,
     grammars_dir: &Path,
@@ -654,6 +660,12 @@ fn run(
 ## `run`
 
 ```rust
+fn run(db: &Arc<LenaDb>, fqsn: &str) -> Result<()>
+```
+
+## `run`
+
+```rust
 fn run(
     db: &Arc<LenaDb>,
     out_dir: &PathBuf,
@@ -667,18 +679,6 @@ fn run(
 
 ```rust
 fn run(db: &Arc<LenaDb>, fqsn: &str) -> Result<()>
-```
-
-## `run`
-
-```rust
-fn run(db: &Arc<LenaDb>, fqsn: &str) -> Result<()>
-```
-
-## `run`
-
-```rust
-fn run(db: &Arc<LenaDb>, fqsn: &str, depth: usize, format: &str) -> Result<()>
 ```
 
 ## `run_fixture`
@@ -733,13 +733,13 @@ fn sanitize_mermaid(s: &str) -> String
 ## `setup_db`
 
 ```rust
-fn setup_db() -> Arc<LenaDb>
+fn setup_db() -> LenaDb
 ```
 
 ## `setup_db`
 
 ```rust
-fn setup_db() -> LenaDb
+fn setup_db() -> Arc<LenaDb>
 ```
 
 ## `standard_function`
