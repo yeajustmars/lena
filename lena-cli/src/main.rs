@@ -14,8 +14,8 @@ mod query;
 mod skeleton;
 
 use anyhow::Result;
-use lena_core::db::LenaDb;
 use clap::{Parser, Subcommand};
+use lena_core::db::LenaDb;
 use std::{path::PathBuf, sync::Arc};
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
@@ -43,9 +43,15 @@ enum Commands {
         /// Output directory for the static site
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
-        /// Documentation theme: default or mdbook
+        /// Documentation theme: default, mdbook, or single-page
         #[arg(short, long, default_value = "mdbook")]
         theme: String,
+        /// Optional path to custom CSS file to override default styles
+        #[arg(long)]
+        css: Option<PathBuf>,
+        /// Generate a GitHub Pages deployment workflow
+        #[arg(long)]
+        github_actions: bool,
     },
     /// Index a codebase by running available adapters
     Index {
@@ -124,7 +130,12 @@ async fn main() -> Result<()> {
     let db = Arc::new(LenaDb::open(&cli.db_path)?);
 
     match cli.command {
-        Commands::Doc { out, theme } => doc::run(&db, &out, &theme).await?,
+        Commands::Doc {
+            out,
+            theme,
+            css,
+            github_actions,
+        } => doc::run(&db, &out, &theme, css.as_ref(), github_actions).await?,
         Commands::Index {
             target,
             queries_dir: _,

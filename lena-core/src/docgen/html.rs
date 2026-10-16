@@ -1,63 +1,48 @@
+// lena-core/src/docgen/html.rs
+
 use crate::docgen::ir::DocGraph;
 use anyhow::Result;
 use minijinja::{Environment, context};
 use std::fs;
 use std::path::Path;
 
-const BASE_PAGE_TEMPLATE: &str = r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ page_title }} - {{ project_name }}</title>
-  <link rel="stylesheet" href="{{ root_rel }}assets/modern.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
-</head>
-<body class="theme-light">
-  <div class="layout">
-    <nav class="sidebar">
-      <div class="sidebar-header">
-        <a href="{{ root_rel }}index.html">{{ project_name }}</a>
-        <span class="version">{{ version }}</span>
-      </div>
-      <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
-      <div id="search-results" class="search-popover hidden"></div>
-      <ul class="nav-tree">
-        {% for lang_name, lang in languages | items %}
-        <li class="nav-language">
-          <span class="group-title">{{ lang_name }}</span>
-          {% for pkg_name, pkg in lang.packages | items %}
-          <div class="nav-package">
-            <span class="pkg-title">{{ pkg_name }}</span>
-            <ul class="nav-modules">
-              {% for mod_name, mod in pkg.modules | items %}
-              <li><a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ mod_name }}.html">{{ mod_name }}</a></li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endfor %}
-        </li>
-        {% endfor %}
-      </ul>
-    </nav>
-    <main class="content">
-      {% block content %}{% endblock %}
-    </main>
-  </div>
-  <script src="{{ root_rel }}assets/search.js"></script>
-</body>
-</html>"#;
-
 pub struct HtmlRenderer<'a> {
     graph: &'a DocGraph,
     env: Environment<'static>,
+    custom_css: Option<String>,
 }
 
 impl<'a> HtmlRenderer<'a> {
-    pub fn new(graph: &'a DocGraph) -> Result<Self> {
+    pub fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self> {
         let mut env = Environment::new();
-        env.add_template("base.html", BASE_PAGE_TEMPLATE)?;
-        Ok(Self { graph, env })
+        env.add_template("base.html", include_str!("../../templates/base.html"))?;
+        env.add_template(
+            "single_page.html",
+            include_str!("../../templates/single_page.html"),
+        )?;
+        env.add_template("module.html", include_str!("../../templates/module.html"))?;
+        env.add_template("landing.html", include_str!("../../templates/landing.html"))?;
+        Ok(Self {
+            graph,
+            env,
+            custom_css,
+        })
+    }
+
+    pub fn render_single_page(&self, out_dir: &Path) -> Result<()> {
+        fs::create_dir_all(out_dir)?;
+
+        let tmpl = self.env.get_template("single_page.html")?;
+        let rendered = tmpl.render(context! {
+            project_name => self.graph.project_name,
+            version => self.graph.version,
+            languages => self.graph.languages,
+            builtin_css => include_str!("assets/modern.css"),
+            custom_css => self.custom_css.clone(),
+        })?;
+
+        fs::write(out_dir.join("single-page.html"), rendered)?;
+        Ok(())
     }
 
     pub fn render_lena_book(&self, out_dir: &Path) -> Result<()> {
@@ -103,46 +88,7 @@ impl<'a> HtmlRenderer<'a> {
         _lang: &str,
         _pkg: &str,
     ) -> Result<String> {
-        // MiniJinja renders module template extending base.html
-        let template_str = r#"
-        {% extends "base.html" %}
-        {% block content %}
-          <h1>{{ module.name }}</h1>
-          <p class="file-path">Source: <code>{{ module.path }}</code></p>
-          {% if module.docstring %}
-            <div class="module-doc">{{ module.docstring }}</div>
-          {% endif %}
-          <hr />
-          <section class="symbols">
-            {% for sym in module.symbols %}
-              <div class="symbol-card" id="{{ sym.name }}">
-                <div class="symbol-header">
-                  <span class="badge {{ sym.kind.badge_class() }}">{{ sym.kind }}</span>
-                  <h3 class="symbol-name">{{ sym.name }}</h3>
-                  {% if sym.line %}<span class="symbol-line">Line {{ sym.line }}</span>{% endif %}
-                </div>
-                {% if sym.signature %}
-                  <pre class="symbol-sig"><code>{{ sym.signature }}</code></pre>
-                {% endif %}
-                {% if sym.docstring %}
-                  <div class="symbol-desc">{{ sym.docstring }}</div>
-                {% endif %}
-                {% if sym.neighborhood.mermaid_chart %}
-                  <div class="neighborhood-graph">
-                    <h4>Call Neighborhood</h4>
-                    <pre class="mermaid">{{ sym.neighborhood.mermaid_chart }}</pre>
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </section>
-        {% endblock %}
-        "#;
-
-        let mut env = self.env.clone();
-        env.add_template("module.html", template_str)?;
-        let tmpl = env.get_template("module.html")?;
-
+        let tmpl = self.env.get_template("module.html")?;
         let rendered = tmpl.render(context! {
             project_name => self.graph.project_name,
             version => self.graph.version,
@@ -150,44 +96,21 @@ impl<'a> HtmlRenderer<'a> {
             module => module,
             page_title => module.name,
             root_rel => "../../",
+            custom_css => self.custom_css.clone(),
         })?;
 
         Ok(rendered)
     }
 
     fn render_landing_page(&self, out_dir: &Path) -> Result<()> {
-        let landing_tmpl = r#"
-        {% extends "base.html" %}
-        {% block content %}
-          <div class="hero">
-            <h1>{{ project_name }} Documentation</h1>
-            <p class="subtitle">Version: {{ version }}</p>
-          </div>
-          <div class="overview-grid">
-            {% for lang_name, lang in languages | items %}
-              <div class="card">
-                <h2>{{ lang_name }}</h2>
-                <ul>
-                  {% for pkg_name, pkg in lang.packages | items %}
-                    <li><strong>{{ pkg_name }}</strong> ({{ pkg.modules | length }} modules)</li>
-                  {% endfor %}
-                </ul>
-              </div>
-            {% endfor %}
-          </div>
-        {% endblock %}
-        "#;
-
-        let mut env = self.env.clone();
-        env.add_template("index.html", landing_tmpl)?;
-        let tmpl = env.get_template("index.html")?;
-
+        let tmpl = self.env.get_template("landing.html")?;
         let rendered = tmpl.render(context! {
             project_name => self.graph.project_name,
             version => self.graph.version,
             languages => self.graph.languages,
             page_title => "Overview",
             root_rel => "./",
+            custom_css => self.custom_css.clone(),
         })?;
 
         fs::write(out_dir.join("index.html"), rendered)?;
@@ -241,14 +164,29 @@ mod tests {
             search_index: vec![],
         };
 
-        let renderer = HtmlRenderer::new(&graph).unwrap();
+        // Initialize renderer with custom CSS
+        let renderer =
+            HtmlRenderer::new(&graph, Some("body { background: black; }".to_string())).unwrap();
         let dir = tempdir().unwrap();
 
+        // 1. Test Multi-page build
         renderer.render_lena_book(dir.path()).unwrap();
 
         assert!(dir.path().join("index.html").exists());
         assert!(dir.path().join("assets/modern.css").exists());
         assert!(dir.path().join("assets/search_index.json").exists());
         assert!(dir.path().join("Rust/crate/main.html").exists());
+
+        // Verify custom CSS injection in multi-page
+        let index_content = fs::read_to_string(dir.path().join("index.html")).unwrap();
+        assert!(index_content.contains("body { background: black; }"));
+
+        // 2. Test Single-page build
+        renderer.render_single_page(dir.path()).unwrap();
+        assert!(dir.path().join("single-page.html").exists());
+
+        // Verify custom CSS injection in single-page
+        let single_page_content = fs::read_to_string(dir.path().join("single-page.html")).unwrap();
+        assert!(single_page_content.contains("body { background: black; }"));
     }
 }

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ module.name }}</h1>
+  <p class="file-path">Source: <code>{{ module.path }}</code></p>
+  {% if module.docstring %}
+    <div class="module-doc">{{ module.docstring }}</div>
+  {% endif %}
+  <hr />
+  <section class="symbols">
+    {% for sym in module.symbols %}
+      <div class="symbol-card" id="{{ sym.name }}">
+        <div class="symbol-header">
+          <span class="badge {{ sym.kind.badge_class() }}">{{ sym.kind }}</span>
+          <h3 class="symbol-name">{{ sym.name }}</h3>
+          {% if sym.line %}<span class="symbol-line">Line {{ sym.line }}</span>{% endif %}
+        </div>
+        {% if sym.signature %}
+          <pre class="symbol-sig"><code>{{ sym.signature }}</code></pre>
+        {% endif %}
+        {% if sym.docstring %}
+          <div class="symbol-desc">{{ sym.docstring }}</div>
+        {% endif %}
+        {% if sym.neighborhood.mermaid_chart %}
+          <div class="neighborhood-graph">
+            <h4>Call Neighborhood</h4>
+            <pre class="mermaid">{{ sym.neighborhood.mermaid_chart }}</pre>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="hero">
+    <h1>{{ project_name }} Documentation</h1>
+    <p class="subtitle">Version: {{ version }}</p>
+  </div>
+  <div class="overview-grid">
+    {% for lang_name, lang in languages | items %}
+      <div class="card">
+        <h2>{{ lang_name }}</h2>
+        <ul>
+          {% for pkg_name, pkg in lang.packages | items %}
+            <li><strong>{{ pkg_name }}</strong> ({{ pkg.modules | length }} modules)</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

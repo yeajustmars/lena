@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page_title }} - {{ project_name }}</title>
+  <link rel="stylesheet" href="{{ root_rel }}assets/modern.css">
+  {% if custom_css %}<style>{{ custom_css }}</style>{% endif %}
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</head>
+<body class="theme-light">
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="{{ root_rel }}index.html">{{ project_name }}</a>
+        <span class="version">{{ version }}</span>
+      </div>
+      <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
+      <div id="search-results" class="search-popover hidden"></div>
+      <ul class="nav-tree">
+        {% for lang_name, lang in languages | items %}
+        <li class="nav-language">
+          <span class="group-title">{{ lang_name }}</span>
+          {% for pkg_name, pkg in lang.packages | items %}
+          <div class="nav-package">
+            <span class="pkg-title">{{ pkg_name }}</span>
+            <ul class="nav-modules">
+              {% for mod_name, mod in pkg.modules | items %}
+              <li><a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ mod_name }}.html">{{ mod_name }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="{{ root_rel }}assets/search.js"></script>
+</body>
+</html>
