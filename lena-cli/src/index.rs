@@ -5,11 +5,7 @@
 
 use anyhow::{Context, Result};
 use lena_core::{db::LenaDb, ingest::ingest_stream};
-use std::{
-    path::{Path, PathBuf},
-    process::Stdio,
-    sync::Arc,
-};
+use std::{path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{process::Command, sync::Semaphore, task::JoinSet};
 use tracing::{error, info, warn};
 

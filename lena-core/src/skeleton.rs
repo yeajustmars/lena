@@ -81,13 +81,16 @@ fn format_skeleton(root: &str, edges: &[Edge], format: SkeletonFormat) -> String
         SkeletonFormat::Mermaid => {
             let mut out = String::from("```mermaid\ngraph TD\n");
             for edge in edges {
+                let caller_id = sanitize_node_id(&edge.caller);
+                let callee_id = sanitize_node_id(&edge.callee);
                 out.push_str(&format!(
-                    "    \"{}\" --> \"{}\"\n",
+                    "    {caller_id}[\"{}\"] --> {callee_id}[\"{}\"]\n",
                     edge.caller, edge.callee
                 ));
             }
             if edges.is_empty() {
-                out.push_str(&format!("    \"{}\"\n", root));
+                let root_id = sanitize_node_id(root);
+                out.push_str(&format!("    {root_id}[\"{root}\"]\n"));
             }
             out.push_str("```");
             out
@@ -138,6 +141,18 @@ fn build_indented(
     path_visited.remove(node);
 }
 
+fn sanitize_node_id(fqsn: &str) -> String {
+    let mut safe = String::with_capacity(fqsn.len() + 3);
+    safe.push_str("id_");
+    for ch in fqsn.chars() {
+        match ch {
+            'a'..='z' | 'A'..='Z' | '0'..='9' => safe.push(ch),
+            _ => safe.push('_'),
+        }
+    }
+    safe
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,8 +172,8 @@ mod tests {
         ];
         let mermaid = format_skeleton("A", &edges, SkeletonFormat::Mermaid);
         assert!(mermaid.contains("graph TD"));
-        assert!(mermaid.contains("\"A\" --> \"B\""));
-        assert!(mermaid.contains("\"A\" --> \"C\""));
+        assert!(mermaid.contains("id_A[\"A\"] --> id_B[\"B\"]"));
+        assert!(mermaid.contains("id_A[\"A\"] --> id_C[\"C\"]"));
     }
 
     #[test]
