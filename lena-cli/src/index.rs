@@ -94,12 +94,7 @@ async fn run_treesitter_directory(
     Ok(facts_ingested)
 }
 
-pub async fn run(
-    target: PathBuf,
-    _grammars_dir: &Path,
-    concurrency: usize,
-    db: &Arc<LenaDb>,
-) -> Result<()> {
+pub async fn run(target: PathBuf, concurrency: usize, db: &Arc<LenaDb>) -> Result<()> {
     info!(
         "Beginning concurrent Lena indexing on: {}",
         target.display()

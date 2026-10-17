@@ -59,14 +59,6 @@ enum Commands {
         #[arg(default_value = ".")]
         target: PathBuf,
 
-        /// Path to the directory containing Tree-sitter .scm query files
-        #[arg(long, default_value = "queries")]
-        queries_dir: PathBuf,
-
-        /// Path to the directory containing Tree-sitter grammar binaries (.so, .dylib, .dll)
-        #[arg(long, default_value = "grammars")]
-        grammars_dir: PathBuf,
-
         /// Maximum number of concurrent subprocesses (default: 16)
         #[arg(long, default_value = "16")]
         concurrency: usize,
@@ -149,10 +141,8 @@ async fn main() -> Result<()> {
         } => doc::run(&db, &out, &theme, css.as_ref(), github_actions).await?,
         Commands::Index {
             target,
-            queries_dir: _,
-            grammars_dir,
             concurrency,
-        } => index::run(target, &grammars_dir, concurrency, &db).await?,
+        } => index::run(target, concurrency, &db).await?,
         Commands::Prompt {
             fqsn,
             format,
