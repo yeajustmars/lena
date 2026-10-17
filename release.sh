@@ -7,7 +7,14 @@
 # -------------------------------------------------------------------------------
 
 # The exact order matters here! Dependencies must be published before dependents.
-CRATES_TO_PUBLISH=("lena-protocol" "lena-core" "lena")
+CRATES_TO_PUBLISH=(
+    "lena-protocol"
+    "lena-core"
+    "lena"
+    "lena-adapter-clj"
+    "lena-adapter-rust"
+    "lena-adapter-treesitter"
+)
 
 LENA_LOGO=$(cat <<'EOF'
   _          _    __
