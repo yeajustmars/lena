@@ -23,8 +23,13 @@
           <div class="nav-package">
             <span class="pkg-title">{{ pkg_name }}</span>
             <ul class="nav-modules">
-              {% for mod_name, mod in pkg.modules | items %}
-              <li><a href="#{{ lang_name }}-{{ pkg_name }}-{{ mod_name }}">{{ mod_name }}</a></li>
+              {% for group_name, group_mods in pkg.modules | group_modules | items %}
+                {% if group_name != "/" %}
+                  <li class="mod-group-title">{{ group_name }}</li>
+                {% endif %}
+                {% for display_name, mod in group_mods | items %}
+                  <li><a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ mod.name }}.html">{{ display_name }}</a></li>
+                {% endfor %}
               {% endfor %}
             </ul>
           </div>

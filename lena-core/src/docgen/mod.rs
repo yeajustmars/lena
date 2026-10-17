@@ -152,6 +152,11 @@ impl<'a> DocGraphBuilder<'a> {
             }
 
             let name = extract_string(data, "symbol/name");
+            // Skip partial graph entities (like external library calls) that lack a parsed name
+            if name.is_empty() {
+                continue;
+            }
+
             let kind_str = extract_string(data, "symbol/kind")
                 .replace(":type/", "")
                 .replace(":kind/", "")

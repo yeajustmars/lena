@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+echo "==> Cleaning old database..."
+rm -rf .lena/db
+
 echo "==> Indexing Leña"
 cargo run --bin lena -- index .
 

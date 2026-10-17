@@ -23,6 +23,37 @@ impl<'a> HtmlRenderer<'a> {
                 .to_string()
         });
 
+        // Register the group_modules filter for the sidebar navigation
+        env.add_filter(
+            "group_modules",
+            |modules_val: minijinja::Value| -> minijinja::Value {
+                let mut grouped: std::collections::BTreeMap<
+                    String,
+                    std::collections::BTreeMap<String, minijinja::Value>,
+                > = std::collections::BTreeMap::new();
+
+                if let Ok(iter) = modules_val.try_iter() {
+                    for key in iter {
+                        if let Some(mod_name) = key.as_str() {
+                            let module = modules_val
+                                .get_item(&key)
+                                .unwrap_or(minijinja::Value::UNDEFINED);
+                            let parts: Vec<&str> = mod_name.splitn(2, '/').collect();
+
+                            // If there's a slash, group by the first directory. Otherwise, group under "/"
+                            let (group, display) = if parts.len() == 2 {
+                                (parts[0].to_string(), parts[1].to_string())
+                            } else {
+                                ("/".to_string(), mod_name.to_string())
+                            };
+                            grouped.entry(group).or_default().insert(display, module);
+                        }
+                    }
+                }
+                minijinja::Value::from_serialize(&grouped)
+            },
+        );
+
         env.add_template("base.html", include_str!("../../templates/base.html"))?;
         env.add_template(
             "single_page.html",

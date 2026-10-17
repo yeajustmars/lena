@@ -355,3 +355,21 @@ a:hover {
   text-align: center;
   font-size: 0.85rem;
 }
+
+.mod-group-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.nav-modules a {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: block;
+  padding-left: 0.5rem; /* Visually indents the files under the group title */
+}
