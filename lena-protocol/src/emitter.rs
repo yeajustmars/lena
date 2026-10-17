@@ -11,6 +11,7 @@ pub enum EdnValue<'a> {
     Bool(bool),
     Ref(u64),
     Keyword(&'a str),
+    Inst(&'a str), // Valid-time timestamp: YYYY-MM-DDTHH:MM:SS.sssZ
 }
 
 impl fmt::Display for EdnValue<'_> {
@@ -43,6 +44,11 @@ impl fmt::Display for EdnValue<'_> {
             Self::Float(fl) => write!(f, "{fl}"),
             Self::Bool(b) => write!(f, "{b}"),
             Self::Ref(r) => write!(f, "{r}"),
+            Self::Inst(ts) => {
+                f.write_str("#inst \"")?;
+                f.write_str(ts)?;
+                f.write_char('"')
+            }
         }
     }
 }
@@ -75,7 +81,22 @@ impl TransactionBuilder {
         attribute: &str,
         value: EdnValue,
     ) -> Result<&mut Self, fmt::Error> {
-        self.push_fact(":db/add", entity, attribute, value)?;
+        self.push_fact(":db/add", entity, attribute, value, None)?;
+        Ok(self)
+    }
+
+    /// Adds an assertion fact (`:db/add`) to the transaction with valid time
+    ///
+    /// # Errors
+    /// Returns `fmt::Error` if string formatting fails.
+    pub fn add_with_time(
+        &mut self,
+        entity: u64,
+        attribute: &str,
+        value: EdnValue,
+        valid_time: EdnValue,
+    ) -> Result<&mut Self, fmt::Error> {
+        self.push_fact(":db/add", entity, attribute, value, Some(valid_time))?;
         Ok(self)
     }
 
@@ -89,7 +110,7 @@ impl TransactionBuilder {
         attribute: &str,
         value: EdnValue,
     ) -> Result<&mut Self, fmt::Error> {
-        self.push_fact(":db/retract", entity, attribute, value)?;
+        self.push_fact(":db/retract", entity, attribute, value, None)?;
         Ok(self)
     }
 
@@ -99,11 +120,18 @@ impl TransactionBuilder {
         entity: u64,
         attribute: &str,
         value: EdnValue,
+        valid_time: Option<EdnValue>,
     ) -> Result<(), fmt::Error> {
         if self.fact_count > 0 {
             self.buffer.push(' ');
         }
-        write!(self.buffer, "[{op} {entity} {attribute} {value}]")?;
+        if let Some(vt) = valid_time {
+            // Note: MesoDB expects the 4th cell to be the transaction ID (or a placeholder like _ or -1)
+            // when specifying a 5th cell (valid-time). We use _ as a placeholder.
+            write!(self.buffer, "[{op} {entity} {attribute} {value} _ {vt}]")?;
+        } else {
+            write!(self.buffer, "[{op} {entity} {attribute} {value}]")?;
+        }
         self.fact_count += 1;
         Ok(())
     }
