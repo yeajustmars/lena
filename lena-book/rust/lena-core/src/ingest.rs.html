@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>src&#x2f;ingest.rs - Lena Project</title>
-  <link rel="stylesheet" href="..&#x2f;..&#x2f;..&#x2f;assets/modern.css">
+  <link rel="stylesheet" href="..&#x2f;..&#x2f;..&#x2f;assets/layout.css">
+  <link rel="stylesheet" href="..&#x2f;..&#x2f;..&#x2f;assets/themes.css">
   
+  <script src="..&#x2f;..&#x2f;..&#x2f;assets/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </head>
-<body class="theme-light">
+<body>
   <div class="layout">
     <nav class="sidebar">
       <div class="sidebar-header">
@@ -17,6 +19,16 @@
       </div>
       <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
       <div id="search-results" class="search-popover hidden"></div>
+      <div class="theme-controls">
+        <select id="theme-selector">
+          <option value="grayscale">Grayscale</option>
+          <option value="navy">Navy</option>
+          <option value="green">Green</option>
+          <option value="poimandres">Poimandres</option>
+          <option value="gruvbox">Gruvbox</option>
+        </select>
+        <button id="mode-toggle" title="Toggle Light/Dark Mode">🌓</button>
+      </div>
       <ul class="nav-tree">
         
         <li class="nav-language">

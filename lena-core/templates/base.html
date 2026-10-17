@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ page_title }} - {{ project_name }}</title>
-  <link rel="stylesheet" href="{{ root_rel }}assets/modern.css">
+  <link rel="stylesheet" href="{{ root_rel }}assets/layout.css">
+  <link rel="stylesheet" href="{{ root_rel }}assets/themes.css">
   {% if custom_css %}<style>{{ custom_css }}</style>{% endif %}
+  <script src="{{ root_rel }}assets/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </head>
-<body class="theme-light">
+<body>
   <div class="layout">
     <nav class="sidebar">
       <div class="sidebar-header">
@@ -17,6 +19,16 @@
       </div>
       <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
       <div id="search-results" class="search-popover hidden"></div>
+      <div class="theme-controls">
+        <select id="theme-selector">
+          <option value="grayscale">Grayscale</option>
+          <option value="navy">Navy</option>
+          <option value="green">Green</option>
+          <option value="poimandres">Poimandres</option>
+          <option value="gruvbox">Gruvbox</option>
+        </select>
+        <button id="mode-toggle" title="Toggle Light/Dark Mode">🌓</button>
+      </div>
       <ul class="nav-tree">
         {% for lang_name, lang in languages | items %}
         <li class="nav-language">

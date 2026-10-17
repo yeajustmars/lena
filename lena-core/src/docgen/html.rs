@@ -71,12 +71,18 @@ impl<'a> HtmlRenderer<'a> {
     pub fn render_single_page(&self, out_dir: &Path) -> Result<()> {
         fs::create_dir_all(out_dir)?;
 
+        let builtin_css = format!(
+            "{}\n{}",
+            include_str!("assets/layout.css"),
+            include_str!("assets/themes.css")
+        );
+
         let tmpl = self.env.get_template("single_page.html")?;
         let rendered = tmpl.render(context! {
             project_name => self.graph.project_name,
             version => self.graph.version,
             languages => self.graph.languages,
-            builtin_css => include_str!("assets/modern.css"),
+            builtin_css => builtin_css,
             custom_css => self.custom_css.clone(),
         })?;
 
@@ -93,8 +99,16 @@ impl<'a> HtmlRenderer<'a> {
 
         // 2. Write embedded static CSS and JS
         fs::write(
-            out_dir.join("assets/modern.css"),
-            include_str!("assets/modern.css"),
+            out_dir.join("assets/layout.css"),
+            include_str!("assets/layout.css"),
+        )?;
+        fs::write(
+            out_dir.join("assets/themes.css"),
+            include_str!("assets/themes.css"),
+        )?;
+        fs::write(
+            out_dir.join("assets/theme.js"),
+            include_str!("assets/theme.js"),
         )?;
         fs::write(
             out_dir.join("assets/search.js"),
@@ -227,7 +241,8 @@ mod tests {
         renderer.render_lena_book(dir.path()).unwrap();
 
         assert!(dir.path().join("index.html").exists());
-        assert!(dir.path().join("assets/modern.css").exists());
+        assert!(dir.path().join("assets/layout.css").exists());
+        assert!(dir.path().join("assets/themes.css").exists());
         assert!(dir.path().join("assets/search_index.json").exists());
         assert!(dir.path().join("Rust/crate/main.html").exists());
 
