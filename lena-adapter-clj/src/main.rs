@@ -4,6 +4,7 @@
 #![warn(clippy::all)]
 //#![warn(clippy::all, clippy::pedantic)]
 
+use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
     ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE, ATTR_ENTITY_TYPE,
@@ -11,7 +12,6 @@ use lena_protocol::schema::{
     ATTR_PARENT_ENTITY, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME,
     ATTR_SYMBOL_NAMESPACE, KIND_FN, LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
 };
-use clap::Parser;
 use serde::Deserialize;
 use std::{
     collections::hash_map::DefaultHasher,
