@@ -1,3 +1,0 @@
-# Lena Project
-
-System Documentation

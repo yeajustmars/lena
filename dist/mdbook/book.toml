@@ -1,8 +1,0 @@
-[book]
-authors = ["Lena Graph Engine"]
-language = "en"
-src = "src"
-title = "Lena Project"
-
-[output.html]
-git-repository-url = "https://github.com"
