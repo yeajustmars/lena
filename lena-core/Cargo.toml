@@ -1,13 +1,16 @@
 [package]
 name = "lena-core"
+description.workspace = true
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
+
 [dependencies]
-lena-protocol.workspace = true
+lena-protocol = { path = "../lena-protocol", version = "0.1.0" }
 
 anyhow.workspace = true
 mesodb-core.workspace = true

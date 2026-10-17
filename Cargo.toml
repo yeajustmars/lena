@@ -11,6 +11,7 @@ members = [
 ]
 
 [workspace.package]
+description = "A code-to-graph Swiss Army knife for interactive docs, call traces, and LLM context."
 version = "0.1.0"
 repository = "https://github.com/yeajustmars/lena"
 license = "AGPL-3.0-only"

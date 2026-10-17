@@ -1,14 +1,17 @@
 [package]
 name = "lena" # Explicit binary name
+description.workspace = true
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
+
 [dependencies]
-lena-protocol.workspace = true
-lena-core.workspace = true
+lena-core = { path = "../lena-core", version = "0.1.0" }
+lena-protocol = { path = "../lena-protocol", version = "0.1.0" }
 
 anyhow.workspace = true
 clap.workspace = true

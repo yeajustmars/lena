@@ -1,10 +1,13 @@
 [package]
 name = "lena-adapter-clj"
+description.workspace = true
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+
+exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
 
 [dependencies]
 lena-protocol.workspace = true

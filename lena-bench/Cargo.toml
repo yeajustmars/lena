@@ -1,10 +1,16 @@
 [package]
 name = "lena-bench"
+description.workspace = true
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+
+exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
+
+# TODO: finish this and happily publish it to crates.io
+publish = false
 
 [dependencies]
 lena-protocol.workspace = true
