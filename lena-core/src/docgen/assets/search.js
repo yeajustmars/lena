@@ -10,7 +10,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     const res = await fetch(rootRel + "assets/search_index.json");
-    if (res.ok) {
+    // Accept status 0 for local file:// access and dev servers
+    if (res.ok || res.status === 0) {
       index = await res.json();
     } else {
       console.warn("Doc search index returned status:", res.status);

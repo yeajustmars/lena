@@ -39,7 +39,7 @@
       {% block content %}{% endblock %}
     </main>
   </div>
-  <script>window.ROOT_REL = "{{ root_rel }}";</script>
+  <script>window.ROOT_REL = "{{ root_rel | safe }}";</script>
   <script src="{{ root_rel }}assets/search.js"></script>
 </body>
 </html>

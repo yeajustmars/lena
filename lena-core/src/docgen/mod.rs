@@ -198,11 +198,18 @@ impl<'a> DocGraphBuilder<'a> {
                 }
             }
 
-            let module = if file_path.is_empty() {
+            // Fallback: Use the file path as the module name to preserve the tree structure
+            let mut module = if file_path.is_empty() {
                 "main".to_string()
             } else {
                 file_path.clone()
             };
+
+            // Strip the redundant package prefix from the module name for a cleaner UI
+            if module.starts_with(&package) && module.len() > package.len() {
+                let stripped = module[package.len()..].trim_start_matches(['/', '\\']);
+                module = stripped.to_string();
+            }
 
             symbols.push(RawSymbol {
                 fqsn,
