@@ -12,7 +12,7 @@ Whether you want to generate documentation with interactive call graphs, export 
 
 ### 1. Ingest & Index Codebases into a Datalog Graph
 
-Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`).
+Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`).
 
 * **Current Adapters:** Rust, Go, Clojure (with Tree-sitter extensible adapters).
 

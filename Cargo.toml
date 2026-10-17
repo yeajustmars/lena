@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "lena-adapter-clj",
-    # TODO: "lena-adapter-go",
     "lena-adapter-rust",
     "lena-adapter-treesitter",
     "lena-bench",
@@ -13,9 +12,10 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
+repository = "https://github.com/yeajustmars/lena"
+license = "AGPL-3.0-only"
 edition = "2024"
-authors = ["Lena Contributors"]
-license = "MIT OR Apache-2.0"
+authors = ["yeajustmars"]
 
 [workspace.dependencies]
 lena-protocol = { path = "lena-protocol", version = "0.1.0" }
