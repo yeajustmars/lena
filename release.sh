@@ -68,7 +68,7 @@ publish_crate() {
 
     while true; do
         for ((i=1; i<=MAX_RETRIES; i++)); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/${CRATE_NAME}/${NEW_VERSION}")
+            HTTP_CODE=$(curl -A "lena-release-script" -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/${CRATE_NAME}/${NEW_VERSION}")
             if [ "$HTTP_CODE" -eq 200 ]; then
                 echo -e "${SUCCESS} ${BLUE}${CRATE_NAME} v${NEW_VERSION}${NC} is live!"
 

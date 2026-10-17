@@ -161,8 +161,9 @@ lena snapshot lena-core/src --format xml --out core-snapshot.xml
 Generate a bounded call graph starting from a root entry point:
 
 ```bash
-# ASCII Indented tree (depth 2)
-lena skeleton rust:crate::main --depth 2 --format indented
+# ASCII Indented tree (depth 5)
+lena skeleton "rust:crate::main::main" --depth 5 --format mermaid
+```
 
 # Mermaid diagram
 lena skeleton rust:crate::main --depth 3 --format mermaid
