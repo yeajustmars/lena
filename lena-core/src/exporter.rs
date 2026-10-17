@@ -4,6 +4,8 @@ use crate::db::LenaDb;
 use minijinja::Environment;
 use serde::Serialize;
 use serde_json::Value;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -295,6 +297,84 @@ pub async fn export_prompt(
                 .map_err(|e| ExporterError::Template(e.to_string()))
         }
     }
+}
+
+/// Exports an entire directory into a formatted string (Markdown or XML).
+pub fn export_directory(dir: &Path, format: ExportFormat) -> Result<String, ExporterError> {
+    let mut files = Vec::new();
+    collect_files(dir, &mut files).map_err(|e| ExporterError::Parse(e.to_string()))?;
+
+    // Sort to ensure deterministic output
+    files.sort();
+
+    let mut out = String::new();
+
+    match format {
+        ExportFormat::Xml => {
+            out.push_str(&format!("<directory path=\"{}\">\n", dir.display()));
+            for file in files {
+                if let Ok(content) = fs::read_to_string(&file) {
+                    out.push_str(&format!("  <file path=\"{}\">\n", file.display()));
+                    out.push_str(&format!("    <![CDATA[\n{}\n    ]]>\n", content));
+                    out.push_str("  </file>\n");
+                }
+            }
+            out.push_str("</directory>");
+        }
+        ExportFormat::Markdown => {
+            out.push_str(&format!("Project Path: {}\n\n", dir.display()));
+            for file in files {
+                if let Ok(content) = fs::read_to_string(&file) {
+                    let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("txt");
+                    out.push_str(&format!("`{}`:\n", file.display()));
+                    out.push_str(&format!("```{}\n{}\n```\n\n", ext, content));
+                }
+            }
+        }
+        ExportFormat::Template(_) => {
+            return Err(ExporterError::Template(
+                "Templates not supported for directory exports".into(),
+            ));
+        }
+    }
+
+    Ok(out.trim_end().to_string())
+}
+
+fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
+    if !dir.is_dir() {
+        if dir.is_file() {
+            files.push(dir.to_path_buf());
+        }
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            // Ignore build/cache directories, hidden folders, and lockfiles
+            if name == "target"
+                || name == ".git"
+                || name == "dist"
+                || name == ".lena"
+                || name == "node_modules"
+                || name == "Cargo.lock"
+            {
+                continue;
+            }
+        }
+
+        if path.is_dir() {
+            collect_files(&path, files)?;
+        } else {
+            // Only add files that can be read as UTF-8 text (skip binary files if possible,
+            // though read_to_string later will handle the safety check)
+            files.push(path);
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

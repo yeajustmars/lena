@@ -82,6 +82,17 @@ enum Commands {
         #[arg(short, long)]
         template: Option<PathBuf>,
     },
+    /// Export an entire directory of source code into a single context file
+    Snapshot {
+        /// The path to the directory (or file) to export
+        path: PathBuf,
+        /// The output format: markdown or xml
+        #[arg(short, long, default_value = "markdown")]
+        format: String,
+        /// Optional path to save the output file directly
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+    },
     /// Generate a call graph skeleton (indented, mermaid, or dot)
     Skeleton {
         /// The root Fully Qualified Symbol Name
@@ -155,6 +166,34 @@ async fn main() -> Result<()> {
         Commands::Query { query: q } => query::run(&db, &q).await?,
         Commands::Callers { fqsn } => callers::run(&db, &fqsn).await?,
         Commands::Callees { fqsn } => callees::run(&db, &fqsn).await?,
+        // TODO: move entire logic to exporter.rs file
+        Commands::Snapshot { path, format, out } => {
+            use lena_core::exporter::{ExportFormat, export_directory};
+
+            let export_fmt = match format.to_lowercase().as_str() {
+                "xml" => ExportFormat::Xml,
+                "markdown" | "md" => ExportFormat::Markdown,
+                _ => {
+                    eprintln!("Invalid format. Use 'markdown' or 'xml'.");
+                    std::process::exit(1);
+                }
+            };
+
+            match export_directory(&path, export_fmt) {
+                Ok(content) => {
+                    if let Some(out_path) = out {
+                        std::fs::write(&out_path, content)?;
+                        println!("Snapshot successfully exported to {}", out_path.display());
+                    } else {
+                        println!("{content}");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to generate snapshot: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
     }
 
     Ok(())

@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4d3edc5d.js";
+            window.path_to_searchindex_js = "searchindex-bc44e2d0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8d2a4bff.js"></script>
+        <script src="toc-e490b0d8.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,170 +192,98 @@
 <p><strong>Source</strong>: <code>lena-adapter-clj/tests/fixtures/clj/edge_cases.clj</code></p>
 <h2 id="edge-cases"><a class="header" href="#edge-cases"><code>edge-cases</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="module-lena-adapter-gosrcmaingo"><a class="header" href="#module-lena-adapter-gosrcmaingo">Module <code>lena-adapter-go/src/main.go</code></a></h1>
-<p><strong>Source</strong>: <code>lena-adapter-go/src/main.go</code></p>
+<h1 id="module-adaptersastrolabe-adapter-gosrcmaingo"><a class="header" href="#module-adaptersastrolabe-adapter-gosrcmaingo">Module <code>adapters/astrolabe-adapter-go/src/main.go</code></a></h1>
+<p><strong>Source</strong>: <code>adapters/astrolabe-adapter-go/src/main.go</code></p>
 <h2 id="unnamed"><a class="header" href="#unnamed"><code>Unnamed</code></a></h2>
 <h2 id="hashid"><a class="header" href="#hashid"><code>hashId</code></a></h2>
 <h2 id="escapestring"><a class="header" href="#escapestring"><code>escapeString</code></a></h2>
-<h2 id="getfuncprefix"><a class="header" href="#getfuncprefix"><code>getFuncPrefix</code></a></h2>
-<p>getFuncPrefix resolves the correct prefix (Package or Package.Struct) for a function</p>
-<h2 id="newsymboltable"><a class="header" href="#newsymboltable"><code>NewSymbolTable</code></a></h2>
-<h2 id="discoversymbols"><a class="header" href="#discoversymbols"><code>discoverSymbols</code></a></h2>
-<p>discoverSymbols (Pass 1) harvests imports and function declarations into the SymbolTable</p>
-<h2 id="emitfacts"><a class="header" href="#emitfacts"><code>emitFacts</code></a></h2>
-<p>emitFacts (Pass 2) walks the AST again, generating module, function, and call-site edges</p>
-<h2 id="runtwopass"><a class="header" href="#runtwopass"><code>RunTwoPass</code></a></h2>
-<p>RunTwoPass orchestrates the two-pass extraction logic over a slice of file paths</p>
+<h2 id="processfile"><a class="header" href="#processfile"><code>processFile</code></a></h2>
 <h2 id="main"><a class="header" href="#main"><code>main</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="module-lena-adapter-gosrcmain_testgo"><a class="header" href="#module-lena-adapter-gosrcmain_testgo">Module <code>lena-adapter-go/src/main_test.go</code></a></h1>
-<p><strong>Source</strong>: <code>lena-adapter-go/src/main_test.go</code></p>
+<h1 id="module-cratesastrolabe-protocolsrcemitterrs"><a class="header" href="#module-cratesastrolabe-protocolsrcemitterrs">Module <code>crates/astrolabe-protocol/src/emitter.rs</code></a></h1>
+<p><strong>Source</strong>: <code>crates/astrolabe-protocol/src/emitter.rs</code></p>
+<h2 id="add"><a class="header" href="#add"><code>add</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn add(
+        &amp;mut self,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;&amp;mut Self, fmt::Error&gt;
+<span class="boring">}</span></code></pre>
+<p>/// Adds an assertion fact (<code>:db/add</code>) to the transaction.
+///
+/// # Errors
+/// Returns <code>fmt::Error</code> if string formatting fails.</p>
+<h2 id="finish"><a class="header" href="#finish"><code>finish</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn finish(mut self) -&gt; String
+<span class="boring">}</span></code></pre>
+<p>/// Returns the finalized ND-EDN transaction string.</p>
+<h2 id="fmt"><a class="header" href="#fmt"><code>fmt</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result
+<span class="boring">}</span></code></pre>
+<h2 id="new"><a class="header" href="#new"><code>new</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn new() -&gt; Self
+<span class="boring">}</span></code></pre>
+<h2 id="push_fact"><a class="header" href="#push_fact"><code>push_fact</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn push_fact(
+        &amp;mut self,
+        op: &amp;str,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;(), fmt::Error&gt;
+<span class="boring">}</span></code></pre>
+<h2 id="retract"><a class="header" href="#retract"><code>retract</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn retract(
+        &amp;mut self,
+        entity: u64,
+        attribute: &amp;str,
+        value: EdnValue,
+    ) -&gt; Result&lt;&amp;mut Self, fmt::Error&gt;
+<span class="boring">}</span></code></pre>
+<p>/// Adds a retraction fact (<code>:db/retract</code>) to the transaction.
+///
+/// # Errors
+/// Returns <code>fmt::Error</code> if string formatting fails.</p>
+<h2 id="test_edn_value_formatting"><a class="header" href="#test_edn_value_formatting"><code>test_edn_value_formatting</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn test_edn_value_formatting()
+<span class="boring">}</span></code></pre>
+<h2 id="test_transaction_builder"><a class="header" href="#test_transaction_builder"><code>test_transaction_builder</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn test_transaction_builder()
+<span class="boring">}</span></code></pre>
 <h2 id="unnamed-1"><a class="header" href="#unnamed-1"><code>Unnamed</code></a></h2>
-<h2 id="getfixturepath"><a class="header" href="#getfixturepath"><code>getFixturePath</code></a></h2>
-<h2 id="countdbadds"><a class="header" href="#countdbadds"><code>countDbAdds</code></a></h2>
-<h2 id="testgoedgecasesparse"><a class="header" href="#testgoedgecasesparse"><code>TestGoEdgeCasesParse</code></a></h2>
-<h2 id="testgomoduleentitycreation"><a class="header" href="#testgomoduleentitycreation"><code>TestGoModuleEntityCreation</code></a></h2>
-<h2 id="testgomethodreceivercorrelation"><a class="header" href="#testgomethodreceivercorrelation"><code>TestGoMethodReceiverCorrelation</code></a></h2>
-<h2 id="testgodocstringextraction"><a class="header" href="#testgodocstringextraction"><code>TestGoDocstringExtraction</code></a></h2>
-<h2 id="testgohashidmasking"><a class="header" href="#testgohashidmasking"><code>TestGoHashIdMasking</code></a></h2>
-<h2 id="testgoemptyfilegracefulhandling"><a class="header" href="#testgoemptyfilegracefulhandling"><code>TestGoEmptyFileGracefulHandling</code></a></h2>
-<h2 id="testgomalformedsyntaxresilience"><a class="header" href="#testgomalformedsyntaxresilience"><code>TestGoMalformedSyntaxResilience</code></a></h2>
-<h2 id="testgofunctionpositions"><a class="header" href="#testgofunctionpositions"><code>TestGoFunctionPositions</code></a></h2>
-<h2 id="testgomultiplefunctions"><a class="header" href="#testgomultiplefunctions"><code>TestGoMultipleFunctions</code></a></h2>
-<h2 id="testgoginstressaddcount"><a class="header" href="#testgoginstressaddcount"><code>TestGoGinStressAddCount</code></a></h2>
-<h2 id="testgocallsiteextraction"><a class="header" href="#testgocallsiteextraction"><code>TestGoCallSiteExtraction</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="module-lena-adapter-gotestsfixturesgoedge_casesgo"><a class="header" href="#module-lena-adapter-gotestsfixturesgoedge_casesgo">Module <code>lena-adapter-go/tests/fixtures/go/edge_cases.go</code></a></h1>
-<p><strong>Source</strong>: <code>lena-adapter-go/tests/fixtures/go/edge_cases.go</code></p>
+<h1 id="module-cratesastrolabe-protocolsrclibrs"><a class="header" href="#module-cratesastrolabe-protocolsrclibrs">Module <code>crates/astrolabe-protocol/src/lib.rs</code></a></h1>
+<p><strong>Source</strong>: <code>crates/astrolabe-protocol/src/lib.rs</code></p>
 <h2 id="unnamed-2"><a class="header" href="#unnamed-2"><code>Unnamed</code></a></h2>
-<h2 id="standalonefunc"><a class="header" href="#standalonefunc"><code>StandaloneFunc</code></a></h2>
-<p>StandaloneFunc is a standard function with a docstring.</p>
-<h2 id="pointerreceiver"><a class="header" href="#pointerreceiver"><code>PointerReceiver</code></a></h2>
-<p>PointerReceiver method</p>
-<h2 id="valuereceiver"><a class="header" href="#valuereceiver"><code>ValueReceiver</code></a></h2>
-<p>ValueReceiver method</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="module-lena-adapter-gotestsfixturesgogingin191gingo"><a class="header" href="#module-lena-adapter-gotestsfixturesgogingin191gingo">Module <code>lena-adapter-go/tests/fixtures/go/gin/gin/1.9.1/gin.go</code></a></h1>
-<p><strong>Source</strong>: <code>lena-adapter-go/tests/fixtures/go/gin/gin/1.9.1/gin.go</code></p>
+<h1 id="module-cratesastrolabe-protocolsrcschemars"><a class="header" href="#module-cratesastrolabe-protocolsrcschemars">Module <code>crates/astrolabe-protocol/src/schema.rs</code></a></h1>
+<p><strong>Source</strong>: <code>crates/astrolabe-protocol/src/schema.rs</code></p>
 <h2 id="unnamed-3"><a class="header" href="#unnamed-3"><code>Unnamed</code></a></h2>
-<h2 id="last"><a class="header" href="#last"><code>Last</code></a></h2>
-<p>Last returns the last handler in the chain. i.e. the last handler is the main one.</p>
-<h2 id="new"><a class="header" href="#new"><code>New</code></a></h2>
-<p>New returns a new blank Engine instance without any middleware attached.
-By default, the configuration is:</p>
-<ul>
-<li>RedirectTrailingSlash:  true</li>
-<li>RedirectFixedPath:      false</li>
-<li>HandleMethodNotAllowed: false</li>
-<li>ForwardedByClientIP:    true</li>
-<li>UseRawPath:             false</li>
-<li>UnescapePathValues:     true</li>
-</ul>
-<h2 id="default"><a class="header" href="#default"><code>Default</code></a></h2>
-<p>Default returns an Engine instance with the Logger and Recovery middleware already attached.</p>
-<h2 id="handler"><a class="header" href="#handler"><code>Handler</code></a></h2>
-<h2 id="allocatecontext"><a class="header" href="#allocatecontext"><code>allocateContext</code></a></h2>
-<h2 id="delims"><a class="header" href="#delims"><code>Delims</code></a></h2>
-<p>Delims sets template left and right delims and returns an Engine instance.</p>
-<h2 id="securejsonprefix"><a class="header" href="#securejsonprefix"><code>SecureJsonPrefix</code></a></h2>
-<p>SecureJsonPrefix sets the secureJSONPrefix used in Context.SecureJSON.</p>
-<h2 id="loadhtmlglob"><a class="header" href="#loadhtmlglob"><code>LoadHTMLGlob</code></a></h2>
-<p>LoadHTMLGlob loads HTML files identified by glob pattern
-and associates the result with HTML renderer.</p>
-<h2 id="loadhtmlfiles"><a class="header" href="#loadhtmlfiles"><code>LoadHTMLFiles</code></a></h2>
-<p>LoadHTMLFiles loads a slice of HTML files
-and associates the result with HTML renderer.</p>
-<h2 id="sethtmltemplate"><a class="header" href="#sethtmltemplate"><code>SetHTMLTemplate</code></a></h2>
-<p>SetHTMLTemplate associate a template with HTML renderer.</p>
-<h2 id="setfuncmap"><a class="header" href="#setfuncmap"><code>SetFuncMap</code></a></h2>
-<p>SetFuncMap sets the FuncMap used for template.FuncMap.</p>
-<h2 id="noroute"><a class="header" href="#noroute"><code>NoRoute</code></a></h2>
-<p>NoRoute adds handlers for NoRoute. It returns a 404 code by default.</p>
-<h2 id="nomethod"><a class="header" href="#nomethod"><code>NoMethod</code></a></h2>
-<p>NoMethod sets the handlers called when Engine.HandleMethodNotAllowed = true.</p>
-<h2 id="use"><a class="header" href="#use"><code>Use</code></a></h2>
-<p>Use attaches a global middleware to the router. i.e. the middleware attached through Use() will be
-included in the handlers chain for every single request. Even 404, 405, static files…
-For example, this is the right place for a logger or error management middleware.</p>
-<h2 id="rebuild404handlers"><a class="header" href="#rebuild404handlers"><code>rebuild404Handlers</code></a></h2>
-<h2 id="rebuild405handlers"><a class="header" href="#rebuild405handlers"><code>rebuild405Handlers</code></a></h2>
-<h2 id="addroute"><a class="header" href="#addroute"><code>addRoute</code></a></h2>
-<h2 id="routes"><a class="header" href="#routes"><code>Routes</code></a></h2>
-<p>Routes returns a slice of registered routes, including some useful information, such as:
-the http method, path and the handler name.</p>
-<h2 id="iterate"><a class="header" href="#iterate"><code>iterate</code></a></h2>
-<h2 id="run"><a class="header" href="#run"><code>Run</code></a></h2>
-<p>Run attaches the router to a http.Server and starts listening and serving HTTP requests.
-It is a shortcut for http.ListenAndServe(addr, router)
-Note: this method will block the calling goroutine indefinitely unless an error happens.</p>
-<h2 id="preparetrustedcidrs"><a class="header" href="#preparetrustedcidrs"><code>prepareTrustedCIDRs</code></a></h2>
-<h2 id="settrustedproxies"><a class="header" href="#settrustedproxies"><code>SetTrustedProxies</code></a></h2>
-<p>SetTrustedProxies set a list of network origins (IPv4 addresses,
-IPv4 CIDRs, IPv6 addresses or IPv6 CIDRs) from which to trust
-request’s headers that contain alternative client IP when
-<code>(*gin.Engine).ForwardedByClientIP</code> is <code>true</code>. <code>TrustedProxies</code>
-feature is enabled by default, and it also trusts all proxies
-by default. If you want to disable this feature, use
-Engine.SetTrustedProxies(nil), then Context.ClientIP() will
-return the remote address directly.</p>
-<h2 id="isunsafetrustedproxies"><a class="header" href="#isunsafetrustedproxies"><code>isUnsafeTrustedProxies</code></a></h2>
-<p>isUnsafeTrustedProxies checks if Engine.trustedCIDRs contains all IPs, it’s not safe if it has (returns true)</p>
-<h2 id="parsetrustedproxies"><a class="header" href="#parsetrustedproxies"><code>parseTrustedProxies</code></a></h2>
-<p>parseTrustedProxies parse Engine.trustedProxies to Engine.trustedCIDRs</p>
-<h2 id="istrustedproxy"><a class="header" href="#istrustedproxy"><code>isTrustedProxy</code></a></h2>
-<p>isTrustedProxy will check whether the IP address is included in the trusted list according to Engine.trustedCIDRs</p>
-<h2 id="validateheader"><a class="header" href="#validateheader"><code>validateHeader</code></a></h2>
-<p>validateHeader will parse X-Forwarded-For header and return the trusted client IP address</p>
-<h2 id="parseip"><a class="header" href="#parseip"><code>parseIP</code></a></h2>
-<p>parseIP parse a string representation of an IP and returns a net.IP with the
-minimum byte representation or nil if input is invalid.</p>
-<h2 id="runtls"><a class="header" href="#runtls"><code>RunTLS</code></a></h2>
-<p>RunTLS attaches the router to a http.Server and starts listening and serving HTTPS (secure) requests.
-It is a shortcut for http.ListenAndServeTLS(addr, certFile, keyFile, router)
-Note: this method will block the calling goroutine indefinitely unless an error happens.</p>
-<h2 id="rununix"><a class="header" href="#rununix"><code>RunUnix</code></a></h2>
-<p>RunUnix attaches the router to a http.Server and starts listening and serving HTTP requests
-through the specified unix socket (i.e. a file).
-Note: this method will block the calling goroutine indefinitely unless an error happens.</p>
-<h2 id="runfd"><a class="header" href="#runfd"><code>RunFd</code></a></h2>
-<p>RunFd attaches the router to a http.Server and starts listening and serving HTTP requests
-through the specified file descriptor.
-Note: this method will block the calling goroutine indefinitely unless an error happens.</p>
-<h2 id="runlistener"><a class="header" href="#runlistener"><code>RunListener</code></a></h2>
-<p>RunListener attaches the router to a http.Server and starts listening and serving HTTP requests
-through the specified net.Listener</p>
-<h2 id="servehttp"><a class="header" href="#servehttp"><code>ServeHTTP</code></a></h2>
-<p>ServeHTTP conforms to the http.Handler interface.</p>
-<h2 id="handlecontext"><a class="header" href="#handlecontext"><code>HandleContext</code></a></h2>
-<p>HandleContext re-enters a context that has been rewritten.
-This can be done by setting c.Request.URL.Path to your new target.
-Disclaimer: You can loop yourself to deal with this, use wisely.</p>
-<h2 id="handlehttprequest"><a class="header" href="#handlehttprequest"><code>handleHTTPRequest</code></a></h2>
-<h2 id="serveerror"><a class="header" href="#serveerror"><code>serveError</code></a></h2>
-<h2 id="redirecttrailingslash"><a class="header" href="#redirecttrailingslash"><code>redirectTrailingSlash</code></a></h2>
-<h2 id="redirectfixedpath"><a class="header" href="#redirectfixedpath"><code>redirectFixedPath</code></a></h2>
-<h2 id="redirectrequest"><a class="header" href="#redirectrequest"><code>redirectRequest</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-adapter-cljsrcmainrs"><a class="header" href="#module-lena-adapter-cljsrcmainrs">Module <code>lena-adapter-clj/src/main.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-adapter-clj/src/main.rs</code></p>
-<h2 id="unnamed-4"><a class="header" href="#unnamed-4"><code>Unnamed</code></a></h2>
 <h2 id="execute_kondo"><a class="header" href="#execute_kondo"><code>execute_kondo</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn execute_kondo(target: &amp;Path) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt;
 <span class="boring">}</span></code></pre>
-<h2 id="get_fixture_path"><a class="header" href="#get_fixture_path"><code>get_fixture_path</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn get_fixture_path(file: &amp;str) -&gt; PathBuf
-<span class="boring">}</span></code></pre>
-<h2 id="hash_id"><a class="header" href="#hash_id"><code>hash_id</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn hash_id(key: &amp;str) -&gt; u64
-<span class="boring">}</span></code></pre>
-<h2 id="main-1"><a class="header" href="#main-1"><code>main</code></a></h2>
-<pre class="playground"><code class="language-rust">fn main() -&gt; anyhow::Result&lt;()&gt;</code></pre>
 <h2 id="process_kondo_output"><a class="header" href="#process_kondo_output"><code>process_kondo_output</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -453,6 +381,18 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
     local_imports: Option&lt;&amp;HashMap&lt;String, String&gt;&gt;,
 ) -&gt; Result&lt;Vec&lt;String&gt;&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="get_fixture_path"><a class="header" href="#get_fixture_path"><code>get_fixture_path</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn get_fixture_path(file: &amp;str) -&gt; PathBuf
+<span class="boring">}</span></code></pre>
+<h2 id="hash_id"><a class="header" href="#hash_id"><code>hash_id</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn hash_id(key: &amp;str) -&gt; u64
+<span class="boring">}</span></code></pre>
+<h2 id="main-1"><a class="header" href="#main-1"><code>main</code></a></h2>
+<pre class="playground"><code class="language-rust">fn main() -&gt; Result&lt;()&gt;</code></pre>
 <h2 id="new-1"><a class="header" href="#new-1"><code>new</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -504,6 +444,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn visit_dirs(dir: &amp;Path) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-4"><a class="header" href="#unnamed-4"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-adapter-rusttestsfixturesrustaxumaxum074axumsrcroutingmodrs"><a class="header" href="#module-lena-adapter-rusttestsfixturesrustaxumaxum074axumsrcroutingmodrs">Module <code>lena-adapter-rust/tests/fixtures/rust/axum/axum/0.7.4/axum/src/routing/mod.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-adapter-rust/tests/fixtures/rust/axum/axum/0.7.4/axum/src/routing/mod.rs</code></p>
@@ -522,7 +463,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn clone(&amp;self) -&gt; Self
 <span class="boring">}</span></code></pre>
-<h2 id="default-1"><a class="header" href="#default-1"><code>default</code></a></h2>
+<h2 id="default"><a class="header" href="#default"><code>default</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn default() -&gt; Self
@@ -545,7 +486,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 <p>/// Add a fallback [<code>Service</code>] to the router.
 ///
 /// See [<code>Router::fallback</code>] for more details.</p>
-<h2 id="fmt"><a class="header" href="#fmt"><code>fmt</code></a></h2>
+<h2 id="fmt-1"><a class="header" href="#fmt-1"><code>fmt</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result
@@ -601,6 +542,15 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span>fn nest_service(self, path: &amp;str, service: T) -&gt; Self
 <span class="boring">}</span></code></pre>
 <p>/// Like <a href="Self::nest"><code>nest</code></a>, but accepts an arbitrary <code>Service</code>.</p>
+<h2 id="new-2"><a class="header" href="#new-2"><code>new</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn new() -&gt; Self
+<span class="boring">}</span></code></pre>
+<p>/// Create a new <code>Router</code>.
+///
+/// Unless you add additional routes this will respond with <code>404 Not Found</code> to
+/// all requests.</p>
 <h2 id="poll_ready"><a class="header" href="#poll_ready"><code>poll_ready</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -636,10 +586,10 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn with_state(self, state: S) -&gt; Fallback&lt;S2, E&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-5"><a class="header" href="#unnamed-5"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-adapter-rusttestsfixturesrustedge_casesrs"><a class="header" href="#module-lena-adapter-rusttestsfixturesrustedge_casesrs">Module <code>lena-adapter-rust/tests/fixtures/rust/edge_cases.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-adapter-rust/tests/fixtures/rust/edge_cases.rs</code></p>
-<h2 id="unnamed-5"><a class="header" href="#unnamed-5"><code>Unnamed</code></a></h2>
 <h2 id="async_worker"><a class="header" href="#async_worker"><code>async_worker</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -656,6 +606,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span>fn standard_function(x: i32) -&gt; bool
 <span class="boring">}</span></code></pre>
 <p>/// This is a docstring for a standard function.</p>
+<h2 id="unnamed-6"><a class="header" href="#unnamed-6"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-adapter-treesittersrcmainrs"><a class="header" href="#module-lena-adapter-treesittersrcmainrs">Module <code>lena-adapter-treesitter/src/main.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-adapter-treesitter/src/main.rs</code></p>
@@ -759,35 +710,34 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-benchbenchesingest_benchrs"><a class="header" href="#module-lena-benchbenchesingest_benchrs">Module <code>lena-bench/benches/ingest_bench.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-bench/benches/ingest_bench.rs</code></p>
-<h2 id="unnamed-6"><a class="header" href="#unnamed-6"><code>Unnamed</code></a></h2>
 <h2 id="criterion_benchmark"><a class="header" href="#criterion_benchmark"><code>criterion_benchmark</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn criterion_benchmark(c: &amp;mut Criterion)
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-7"><a class="header" href="#unnamed-7"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrccalleesrs"><a class="header" href="#module-lena-clisrccalleesrs">Module <code>lena-cli/src/callees.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/callees.rs</code></p>
-<h2 id="unnamed-7"><a class="header" href="#unnamed-7"><code>Unnamed</code></a></h2>
+<h2 id="run"><a class="header" href="#run"><code>run</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str) -&gt; Result&lt;()&gt;
+<span class="boring">}</span></code></pre>
+<h2 id="unnamed-8"><a class="header" href="#unnamed-8"><code>Unnamed</code></a></h2>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="module-lena-clisrccallersrs"><a class="header" href="#module-lena-clisrccallersrs">Module <code>lena-cli/src/callers.rs</code></a></h1>
+<p><strong>Source</strong>: <code>lena-cli/src/callers.rs</code></p>
 <h2 id="run-1"><a class="header" href="#run-1"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="module-lena-clisrccallersrs"><a class="header" href="#module-lena-clisrccallersrs">Module <code>lena-cli/src/callers.rs</code></a></h1>
-<p><strong>Source</strong>: <code>lena-cli/src/callers.rs</code></p>
-<h2 id="unnamed-8"><a class="header" href="#unnamed-8"><code>Unnamed</code></a></h2>
-<h2 id="run-2"><a class="header" href="#run-2"><code>run</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str) -&gt; Result&lt;()&gt;
-<span class="boring">}</span></code></pre>
+<h2 id="unnamed-9"><a class="header" href="#unnamed-9"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrcdocrs"><a class="header" href="#module-lena-clisrcdocrs">Module <code>lena-cli/src/doc.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/doc.rs</code></p>
-<h2 id="unnamed-9"><a class="header" href="#unnamed-9"><code>Unnamed</code></a></h2>
-<h2 id="run-3"><a class="header" href="#run-3"><code>run</code></a></h2>
+<h2 id="run-2"><a class="header" href="#run-2"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(
@@ -798,16 +748,16 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
     github_actions: bool,
 ) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-10"><a class="header" href="#unnamed-10"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrcindexrs"><a class="header" href="#module-lena-clisrcindexrs">Module <code>lena-cli/src/index.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/index.rs</code></p>
-<h2 id="unnamed-10"><a class="header" href="#unnamed-10"><code>Unnamed</code></a></h2>
 <h2 id="resolve_binary"><a class="header" href="#resolve_binary"><code>resolve_binary</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn resolve_binary(adapter_name: &amp;str) -&gt; String
 <span class="boring">}</span></code></pre>
-<h2 id="run-4"><a class="header" href="#run-4"><code>run</code></a></h2>
+<h2 id="run-3"><a class="header" href="#run-3"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(
@@ -838,11 +788,11 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) -&gt; Result&lt;usize&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-11"><a class="header" href="#unnamed-11"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrcpromptrs"><a class="header" href="#module-lena-clisrcpromptrs">Module <code>lena-cli/src/prompt.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/prompt.rs</code></p>
-<h2 id="unnamed-11"><a class="header" href="#unnamed-11"><code>Unnamed</code></a></h2>
-<h2 id="run-5"><a class="header" href="#run-5"><code>run</code></a></h2>
+<h2 id="run-4"><a class="header" href="#run-4"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(
@@ -852,28 +802,28 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
     template_path: Option&lt;&amp;PathBuf&gt;,
 ) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-12"><a class="header" href="#unnamed-12"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrcqueryrs"><a class="header" href="#module-lena-clisrcqueryrs">Module <code>lena-cli/src/query.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/query.rs</code></p>
-<h2 id="unnamed-12"><a class="header" href="#unnamed-12"><code>Unnamed</code></a></h2>
-<h2 id="run-6"><a class="header" href="#run-6"><code>run</code></a></h2>
+<h2 id="run-5"><a class="header" href="#run-5"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(db: &amp;Arc&lt;LenaDb&gt;, query: &amp;str) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-13"><a class="header" href="#unnamed-13"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-clisrcskeletonrs"><a class="header" href="#module-lena-clisrcskeletonrs">Module <code>lena-cli/src/skeleton.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-cli/src/skeleton.rs</code></p>
-<h2 id="unnamed-13"><a class="header" href="#unnamed-13"><code>Unnamed</code></a></h2>
-<h2 id="run-7"><a class="header" href="#run-7"><code>run</code></a></h2>
+<h2 id="run-6"><a class="header" href="#run-6"><code>run</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn run(db: &amp;Arc&lt;LenaDb&gt;, fqsn: &amp;str, depth: usize, format: &amp;str) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-14"><a class="header" href="#unnamed-14"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcdbrs"><a class="header" href="#module-lena-coresrcdbrs">Module <code>lena-core/src/db.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/db.rs</code></p>
-<h2 id="unnamed-14"><a class="header" href="#unnamed-14"><code>Unnamed</code></a></h2>
 <h2 id="contains_rule_call"><a class="header" href="#contains_rule_call"><code>contains_rule_call</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -957,11 +907,11 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn test_query_with_rules_auto_injects()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-15"><a class="header" href="#unnamed-15"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcdocgenhtmlrs"><a class="header" href="#module-lena-coresrcdocgenhtmlrs">Module <code>lena-core/src/docgen/html.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/docgen/html.rs</code></p>
-<h2 id="unnamed-15"><a class="header" href="#unnamed-15"><code>Unnamed</code></a></h2>
-<h2 id="new-2"><a class="header" href="#new-2"><code>new</code></a></h2>
+<h2 id="new-3"><a class="header" href="#new-3"><code>new</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn new(graph: &amp;'a DocGraph, custom_css: Option&lt;String&gt;) -&gt; Result&lt;Self&gt;
@@ -996,16 +946,16 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn test_html_renderer_emission()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-16"><a class="header" href="#unnamed-16"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcdocgenirrs"><a class="header" href="#module-lena-coresrcdocgenirrs">Module <code>lena-core/src/docgen/ir.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/docgen/ir.rs</code></p>
-<h2 id="unnamed-16"><a class="header" href="#unnamed-16"><code>Unnamed</code></a></h2>
 <h2 id="badge_class"><a class="header" href="#badge_class"><code>badge_class</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn badge_class(&amp;self) -&gt; &amp;'static str
 <span class="boring">}</span></code></pre>
-<h2 id="fmt-1"><a class="header" href="#fmt-1"><code>fmt</code></a></h2>
+<h2 id="fmt-2"><a class="header" href="#fmt-2"><code>fmt</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter&lt;'_&gt;) -&gt; std::fmt::Result
@@ -1035,16 +985,16 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn test_symbol_kind_parsing()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-17"><a class="header" href="#unnamed-17"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcdocgenmdbookrs"><a class="header" href="#module-lena-coresrcdocgenmdbookrs">Module <code>lena-core/src/docgen/mdbook.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/docgen/mdbook.rs</code></p>
-<h2 id="unnamed-17"><a class="header" href="#unnamed-17"><code>Unnamed</code></a></h2>
 <h2 id="emit"><a class="header" href="#emit"><code>emit</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn emit(&amp;self, out_dir: &amp;Path) -&gt; Result&lt;()&gt;
 <span class="boring">}</span></code></pre>
-<h2 id="new-3"><a class="header" href="#new-3"><code>new</code></a></h2>
+<h2 id="new-4"><a class="header" href="#new-4"><code>new</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn new(graph: &amp;'a DocGraph) -&gt; Self
@@ -1054,10 +1004,10 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn test_mdbook_emission()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-18"><a class="header" href="#unnamed-18"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcdocgenmodrs"><a class="header" href="#module-lena-coresrcdocgenmodrs">Module <code>lena-core/src/docgen/mod.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/docgen/mod.rs</code></p>
-<h2 id="unnamed-18"><a class="header" href="#unnamed-18"><code>Unnamed</code></a></h2>
 <h2 id="build"><a class="header" href="#build"><code>build</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1089,15 +1039,6 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
         HashMap&lt;String, Vec&lt;NeighborRef&gt;&gt;,
     )&gt;
 <span class="boring">}</span></code></pre>
-<h2 id="new-4"><a class="header" href="#new-4"><code>new</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn new(db: &amp;'a LenaDb, options: DocGenOptions) -&gt; Self
-<span class="boring">}</span></code></pre>
-<p>/// Create a new <code>Router</code>.
-///
-/// Unless you add additional routes this will respond with <code>404 Not Found</code> to
-/// all requests.</p>
 <h2 id="test_docgraph_builder_extraction"><a class="header" href="#test_docgraph_builder_extraction"><code>test_docgraph_builder_extraction</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1106,7 +1047,17 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcexporterrs"><a class="header" href="#module-lena-coresrcexporterrs">Module <code>lena-core/src/exporter.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/exporter.rs</code></p>
-<h2 id="unnamed-19"><a class="header" href="#unnamed-19"><code>Unnamed</code></a></h2>
+<h2 id="collect_files-1"><a class="header" href="#collect_files-1"><code>collect_files</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn collect_files(dir: &amp;Path, files: &amp;mut Vec&lt;PathBuf&gt;) -&gt; std::io::Result&lt;()&gt;
+<span class="boring">}</span></code></pre>
+<h2 id="export_directory"><a class="header" href="#export_directory"><code>export_directory</code></a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn export_directory(dir: &amp;Path, format: ExportFormat) -&gt; Result&lt;String, ExporterError&gt;
+<span class="boring">}</span></code></pre>
+<p>/// Exports an entire directory into a formatted string (Markdown or XML).</p>
 <h2 id="export_prompt"><a class="header" href="#export_prompt"><code>export_prompt</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1169,10 +1120,10 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn to_xml(&amp;self) -&gt; String
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-19"><a class="header" href="#unnamed-19"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcingestrs"><a class="header" href="#module-lena-coresrcingestrs">Module <code>lena-core/src/ingest.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/ingest.rs</code></p>
-<h2 id="unnamed-20"><a class="header" href="#unnamed-20"><code>Unnamed</code></a></h2>
 <h2 id="ingest_stream"><a class="header" href="#ingest_stream"><code>ingest_stream</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1218,6 +1169,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn test_ingest_stream_skips_empty_lines()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-20"><a class="header" href="#unnamed-20"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-coresrcrulesrs"><a class="header" href="#module-lena-coresrcrulesrs">Module <code>lena-core/src/rules.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-core/src/rules.rs</code></p>
@@ -1319,8 +1271,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-protocolsrcemitterrs"><a class="header" href="#module-lena-protocolsrcemitterrs">Module <code>lena-protocol/src/emitter.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-protocol/src/emitter.rs</code></p>
-<h2 id="unnamed-22"><a class="header" href="#unnamed-22"><code>Unnamed</code></a></h2>
-<h2 id="add"><a class="header" href="#add"><code>add</code></a></h2>
+<h2 id="add-1"><a class="header" href="#add-1"><code>add</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn add(
@@ -1334,13 +1285,13 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 ///
 /// # Errors
 /// Returns <code>fmt::Error</code> if string formatting fails.</p>
-<h2 id="finish"><a class="header" href="#finish"><code>finish</code></a></h2>
+<h2 id="finish-1"><a class="header" href="#finish-1"><code>finish</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn finish(mut self) -&gt; String
 <span class="boring">}</span></code></pre>
 <p>/// Returns the finalized ND-EDN transaction string.</p>
-<h2 id="fmt-2"><a class="header" href="#fmt-2"><code>fmt</code></a></h2>
+<h2 id="fmt-3"><a class="header" href="#fmt-3"><code>fmt</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result
@@ -1350,7 +1301,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 </span><span class="boring">fn main() {
 </span>fn new() -&gt; Self
 <span class="boring">}</span></code></pre>
-<h2 id="push_fact"><a class="header" href="#push_fact"><code>push_fact</code></a></h2>
+<h2 id="push_fact-1"><a class="header" href="#push_fact-1"><code>push_fact</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn push_fact(
@@ -1361,7 +1312,7 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
         value: EdnValue,
     ) -&gt; Result&lt;(), fmt::Error&gt;
 <span class="boring">}</span></code></pre>
-<h2 id="retract"><a class="header" href="#retract"><code>retract</code></a></h2>
+<h2 id="retract-1"><a class="header" href="#retract-1"><code>retract</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn retract(
@@ -1375,16 +1326,17 @@ Disclaimer: You can loop yourself to deal with this, use wisely.</p>
 ///
 /// # Errors
 /// Returns <code>fmt::Error</code> if string formatting fails.</p>
-<h2 id="test_edn_value_formatting"><a class="header" href="#test_edn_value_formatting"><code>test_edn_value_formatting</code></a></h2>
+<h2 id="test_edn_value_formatting-1"><a class="header" href="#test_edn_value_formatting-1"><code>test_edn_value_formatting</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn test_edn_value_formatting()
 <span class="boring">}</span></code></pre>
-<h2 id="test_transaction_builder"><a class="header" href="#test_transaction_builder"><code>test_transaction_builder</code></a></h2>
+<h2 id="test_transaction_builder-1"><a class="header" href="#test_transaction_builder-1"><code>test_transaction_builder</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn test_transaction_builder()
 <span class="boring">}</span></code></pre>
+<h2 id="unnamed-22"><a class="header" href="#unnamed-22"><code>Unnamed</code></a></h2>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="module-lena-protocolsrclibrs"><a class="header" href="#module-lena-protocolsrclibrs">Module <code>lena-protocol/src/lib.rs</code></a></h1>
 <p><strong>Source</strong>: <code>lena-protocol/src/lib.rs</code></p>

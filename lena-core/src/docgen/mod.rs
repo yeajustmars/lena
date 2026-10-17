@@ -152,7 +152,10 @@ impl<'a> DocGraphBuilder<'a> {
             }
 
             let name = extract_string(data, "symbol/name");
-            let kind_str = extract_string(data, "symbol/kind").replace(":type/", "");
+            let kind_str = extract_string(data, "symbol/kind")
+                .replace(":type/", "")
+                .replace(":kind/", "")
+                .replace(':', "");
             let language = extract_string(data, "entity/language").replace(":lang/", "");
 
             let sig_raw = extract_string(data, "code/signature");

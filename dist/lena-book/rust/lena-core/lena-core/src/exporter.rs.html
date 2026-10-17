@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>lena-core&#x2f;src&#x2f;exporter.rs - Lena Project</title>
+  <link rel="stylesheet" href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;assets/modern.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</head>
+<body class="theme-light">
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;index.html">Lena Project</a>
+        <span class="version">0.1.0</span>
+      </div>
+      <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
+      <div id="search-results" class="search-popover hidden"></div>
+      <ul class="nav-tree">
+        
+        <li class="nav-language">
+          <span class="group-title">clojure</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">edge-cases</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;clojure/edge-cases/lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj.html">lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-clj</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;clojure/lena-adapter-clj/lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj.html">lena-adapter-clj&#x2f;tests&#x2f;fixtures&#x2f;clj&#x2f;edge_cases.clj</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">go</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">adapters</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;go/adapters/adapters&#x2f;astrolabe-adapter-go&#x2f;src&#x2f;main.go.html">adapters&#x2f;astrolabe-adapter-go&#x2f;src&#x2f;main.go</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">rust</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">crates</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/crates/crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;emitter.rs.html">crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;emitter.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/crates/crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;lib.rs.html">crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;lib.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/crates/crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;schema.rs.html">crates&#x2f;astrolabe-protocol&#x2f;src&#x2f;schema.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-clj</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-adapter-clj/lena-adapter-clj&#x2f;src&#x2f;main.rs.html">lena-adapter-clj&#x2f;src&#x2f;main.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-rust</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-adapter-rust/lena-adapter-rust&#x2f;src&#x2f;main.rs.html">lena-adapter-rust&#x2f;src&#x2f;main.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-adapter-rust/lena-adapter-rust&#x2f;tests&#x2f;fixtures&#x2f;rust&#x2f;axum&#x2f;axum&#x2f;0.7.4&#x2f;axum&#x2f;src&#x2f;routing&#x2f;mod.rs.html">lena-adapter-rust&#x2f;tests&#x2f;fixtures&#x2f;rust&#x2f;axum&#x2f;axum&#x2f;0.7.4&#x2f;axum&#x2f;src&#x2f;routing&#x2f;mod.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-adapter-rust/lena-adapter-rust&#x2f;tests&#x2f;fixtures&#x2f;rust&#x2f;edge_cases.rs.html">lena-adapter-rust&#x2f;tests&#x2f;fixtures&#x2f;rust&#x2f;edge_cases.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-treesitter</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-adapter-treesitter/lena-adapter-treesitter&#x2f;src&#x2f;main.rs.html">lena-adapter-treesitter&#x2f;src&#x2f;main.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-bench</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-bench/lena-bench&#x2f;benches&#x2f;ingest_bench.rs.html">lena-bench&#x2f;benches&#x2f;ingest_bench.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-cli</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;callees.rs.html">lena-cli&#x2f;src&#x2f;callees.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;callers.rs.html">lena-cli&#x2f;src&#x2f;callers.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;doc.rs.html">lena-cli&#x2f;src&#x2f;doc.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;index.rs.html">lena-cli&#x2f;src&#x2f;index.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;prompt.rs.html">lena-cli&#x2f;src&#x2f;prompt.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;query.rs.html">lena-cli&#x2f;src&#x2f;query.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-cli/lena-cli&#x2f;src&#x2f;skeleton.rs.html">lena-cli&#x2f;src&#x2f;skeleton.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-core</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;db.rs.html">lena-core&#x2f;src&#x2f;db.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;docgen&#x2f;html.rs.html">lena-core&#x2f;src&#x2f;docgen&#x2f;html.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;docgen&#x2f;ir.rs.html">lena-core&#x2f;src&#x2f;docgen&#x2f;ir.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;docgen&#x2f;mdbook.rs.html">lena-core&#x2f;src&#x2f;docgen&#x2f;mdbook.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;docgen&#x2f;mod.rs.html">lena-core&#x2f;src&#x2f;docgen&#x2f;mod.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;exporter.rs.html">lena-core&#x2f;src&#x2f;exporter.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;ingest.rs.html">lena-core&#x2f;src&#x2f;ingest.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;rules.rs.html">lena-core&#x2f;src&#x2f;rules.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;schema.rs.html">lena-core&#x2f;src&#x2f;schema.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-core/lena-core&#x2f;src&#x2f;skeleton.rs.html">lena-core&#x2f;src&#x2f;skeleton.rs</a></li>
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-protocol</span>
+            <ul class="nav-modules">
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-protocol/lena-protocol&#x2f;src&#x2f;emitter.rs.html">lena-protocol&#x2f;src&#x2f;emitter.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-protocol/lena-protocol&#x2f;src&#x2f;lib.rs.html">lena-protocol&#x2f;src&#x2f;lib.rs</a></li>
+              
+              <li><a href="..&#x2f;..&#x2f;..&#x2f;..&#x2f;rust/lena-protocol/lena-protocol&#x2f;src&#x2f;schema.rs.html">lena-protocol&#x2f;src&#x2f;schema.rs</a></li>
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+      </ul>
+    </nav>
+    <main class="content">
+      
+  <h1>lena-core&#x2f;src&#x2f;exporter.rs</h1>
+  <p class="file-path">Source: <code>lena-core&#x2f;src&#x2f;exporter.rs</code></p>
+  
+  <hr />
+  <section class="symbols">
+    
+      <div class="symbol-card" id="collect_files">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">collect_files</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn collect_files(dir: &amp;Path, files: &amp;mut Vec&lt;PathBuf&gt;) -&gt; std::io::Result&lt;()&gt;</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="export_directory">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">export_directory</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn export_directory(dir: &amp;Path, format: ExportFormat) -&gt; Result&lt;String, ExporterError&gt;</code></pre>
+        
+        
+          <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Exports an entire directory into a formatted string (Markdown or XML).</div>
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="export_prompt">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">export_prompt</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn export_prompt(
+    db: &amp;Arc&lt;LenaDb&gt;,
+    fqsn: &amp;str,
+    format: ExportFormat,
+) -&gt; Result&lt;String, ExporterError&gt;</code></pre>
+        
+        
+          <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Retrieves an entity by its FQSN and formats it for LLM context.</div>
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="extract_i64">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">extract_i64</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn extract_i64(val: &amp;Value, key: &amp;str) -&gt; i64</code></pre>
+        
+        
+          <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Helper to extract an integer from either `:key` or `key` inside a JSON Value.</div>
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="extract_string">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">extract_string</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn extract_string(val: &amp;Value, key: &amp;str) -&gt; String</code></pre>
+        
+        
+          <div class="symbol-desc">&#x2f;&#x2f;&#x2f; Helper to extract a string from either `:key` or `key` inside a JSON Value.</div>
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_export_prompt_not_found">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_export_prompt_not_found</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_export_prompt_not_found()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_export_prompt_success">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_export_prompt_success</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_export_prompt_success()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_extract_i64_with_and_without_colons">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_extract_i64_with_and_without_colons</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_extract_i64_with_and_without_colons()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_extract_string_with_and_without_colons">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_extract_string_with_and_without_colons</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_extract_string_with_and_without_colons()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_format_markdown">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_format_markdown</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_format_markdown()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_format_xml">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_format_xml</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_format_xml()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="to_markdown">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">to_markdown</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn to_markdown(&amp;self) -&gt; String</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="to_xml">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">to_xml</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn to_xml(&amp;self) -&gt; String</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="Unnamed">
+        <div class="symbol-header">
+          <span class="badge badge-unknown">Unknown</span>
+          <h3 class="symbol-name">Unnamed</h3>
+          
+        </div>
+        
+        
+        
+      </div>
+    
+  </section>
+
+    </main>
+  </div>
+  <script>window.ROOT_REL = "..&#x2f;..&#x2f;..&#x2f;..&#x2f;";</script>
+  <script src="..&#x2f;..&#x2f;..&#x2f;..&#x2f;assets/search.js"></script>
+</body>
+</html>
