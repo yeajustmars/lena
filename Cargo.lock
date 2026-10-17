@@ -2256,7 +2256,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lena"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2273,7 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "lena-adapter-clj"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2286,7 +2286,7 @@ dependencies = [
 
 [[package]]
 name = "lena-adapter-rust"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2305,7 +2305,7 @@ dependencies = [
 
 [[package]]
 name = "lena-adapter-treesitter"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "lena-protocol",
@@ -2318,7 +2318,7 @@ dependencies = [
 
 [[package]]
 name = "lena-bench"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "criterion",
  "lena-core",
@@ -2329,7 +2329,7 @@ dependencies = [
 
 [[package]]
 name = "lena-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "lena-protocol",
@@ -2346,7 +2346,7 @@ dependencies = [
 
 [[package]]
 name = "lena-protocol"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "serde",
