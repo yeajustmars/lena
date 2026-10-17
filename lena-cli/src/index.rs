@@ -65,7 +65,6 @@ async fn run_native_adapter(
 async fn run_treesitter_directory(
     target: PathBuf,
     lang: &str,
-    grammar_file: PathBuf,
     db: Arc<LenaDb>,
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) -> Result<usize> {
@@ -75,8 +74,6 @@ async fn run_treesitter_directory(
         .arg(&target)
         .arg("--lang")
         .arg(lang)
-        .arg("--grammar")
-        .arg(&grammar_file)
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -99,7 +96,7 @@ async fn run_treesitter_directory(
 
 pub async fn run(
     target: PathBuf,
-    grammars_dir: &Path,
+    _grammars_dir: &Path,
     concurrency: usize,
     db: &Arc<LenaDb>,
 ) -> Result<()> {
@@ -111,11 +108,7 @@ pub async fn run(
     let mut join_set = JoinSet::new();
     let semaphore = Arc::new(Semaphore::new(concurrency));
 
-    let native_adapters = [
-        "lena-adapter-clj",
-        "lena-adapter-go",
-        "lena-adapter-rust",
-    ];
+    let native_adapters = ["lena-adapter-clj", "lena-adapter-go", "lena-adapter-rust"];
     for adapter in native_adapters {
         let permit = Arc::clone(&semaphore).acquire_owned().await?;
         let db_clone = Arc::clone(db);
@@ -123,28 +116,19 @@ pub async fn run(
         join_set.spawn(run_native_adapter(adapter, target_clone, db_clone, permit));
     }
 
-    let dylib_ext = std::env::consts::DLL_EXTENSION;
-    let ts_languages = [
-        ("python", format!("tree_sitter_python.{dylib_ext}")),
-        ("javascript", format!("tree_sitter_javascript.{dylib_ext}")),
-    ];
+    let ts_languages = ["python", "javascript"];
 
-    for (lang, grammar_name) in ts_languages {
-        let grammar_path = grammars_dir.join(grammar_name);
-        if grammar_path.exists() {
-            let permit = Arc::clone(&semaphore).acquire_owned().await?;
-            let db_clone = Arc::clone(db);
-            let target_clone = target.clone();
-            join_set.spawn(run_treesitter_directory(
-                target_clone,
-                lang,
-                grammar_path,
-                db_clone,
-                permit,
-            ));
-        } else {
-            warn!("Skipping {lang} indexing: Grammar file {grammar_path:?} not found.");
-        }
+    for lang in ts_languages {
+        let permit = Arc::clone(&semaphore).acquire_owned().await?;
+        let db_clone = Arc::clone(db);
+        let target_clone = target.clone();
+
+        join_set.spawn(run_treesitter_directory(
+            target_clone,
+            lang,
+            db_clone,
+            permit,
+        ));
     }
 
     let mut total_facts = 0;

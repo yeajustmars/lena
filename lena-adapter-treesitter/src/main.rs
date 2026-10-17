@@ -11,8 +11,8 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser as TsParser, Query, QueryCursor, StreamingIterator};
 
-const DEFAULT_PYTHON_SCM: &str = include_str!("../tests/fixtures/python.scm");
-const DEFAULT_JAVASCRIPT_SCM: &str = include_str!("../tests/fixtures/javascript.scm");
+const DEFAULT_PYTHON_SCM: &str = include_str!("queries/python.scm");
+const DEFAULT_JAVASCRIPT_SCM: &str = include_str!("queries/javascript.scm");
 
 #[derive(Parser, Debug)]
 #[command(
@@ -32,10 +32,6 @@ struct Args {
     /// Optional: Path to a custom Tree-sitter query file (.scm)
     #[arg(short, long)]
     query: Option<PathBuf>,
-
-    /// The path to the compiled dynamic Tree-sitter grammar (.so, .dylib, or .dll)
-    #[arg(short, long)]
-    grammar: PathBuf,
 }
 
 #[derive(Debug, Default)]
@@ -80,13 +76,17 @@ fn visit_dirs(dir: &Path, ext: &str, files: &mut Vec<PathBuf>) -> Result<(), std
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Load the dynamic grammar
-    let lib = unsafe { libloading::Library::new(&args.grammar)? };
-    let symbol_name = format!("tree_sitter_{}", args.lang);
-    let language = unsafe {
-        let func: libloading::Symbol<unsafe extern "C" fn() -> Language> =
-            lib.get(symbol_name.as_bytes())?;
-        func()
+    // Determine the statically compiled language
+    let language = match args.lang.as_str() {
+        "python" => tree_sitter_python::LANGUAGE.into(),
+        "javascript" => tree_sitter_javascript::LANGUAGE.into(),
+        _ => {
+            return Err(format!(
+                "Unsupported language: {}. Supported: python, javascript",
+                args.lang
+            )
+            .into());
+        }
     };
 
     // Determine query source
@@ -151,7 +151,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    std::mem::forget(lib);
     Ok(())
 }
 
@@ -323,16 +322,13 @@ mod tests {
     use super::*;
 
     const PY_SOURCE: &str = include_str!("../tests/fixtures/python/edge_cases.py");
-    const PY_QUERY: &str = include_str!("../tests/fixtures/python.scm");
-
     const JS_SOURCE: &str = include_str!("../tests/fixtures/javascript/edge_cases.js");
-    const JS_QUERY: &str = include_str!("../tests/fixtures/javascript.scm");
 
     fn run_python() -> Vec<String> {
         extract_facts(
             &tree_sitter_python::LANGUAGE.into(),
             PY_SOURCE,
-            PY_QUERY,
+            DEFAULT_PYTHON_SCM,
             "edge_cases.py",
             "python",
         )
@@ -363,7 +359,7 @@ mod tests {
         let facts = extract_facts(
             &tree_sitter_javascript::LANGUAGE.into(),
             JS_SOURCE,
-            JS_QUERY,
+            DEFAULT_JAVASCRIPT_SCM,
             "edge_cases.js",
             "javascript",
         )
@@ -488,7 +484,7 @@ mod tests {
         let facts = extract_facts(
             &tree_sitter_javascript::LANGUAGE.into(),
             JS_SOURCE,
-            JS_QUERY,
+            DEFAULT_JAVASCRIPT_SCM,
             "edge_cases.js",
             "javascript",
         )
@@ -503,7 +499,7 @@ mod tests {
         let facts = extract_facts(
             &tree_sitter_javascript::LANGUAGE.into(),
             JS_SOURCE,
-            JS_QUERY,
+            DEFAULT_JAVASCRIPT_SCM,
             "edge_cases.js",
             "javascript",
         )
@@ -527,7 +523,7 @@ mod tests {
         let facts = extract_facts(
             &tree_sitter_python::LANGUAGE.into(),
             FASTAPI_SOURCE,
-            PY_QUERY,
+            DEFAULT_PYTHON_SCM,
             "fastapi_routing.py",
             "python",
         )
@@ -549,7 +545,7 @@ mod tests {
         let facts = extract_facts(
             &tree_sitter_javascript::LANGUAGE.into(),
             EXPRESS_SOURCE,
-            JS_QUERY,
+            DEFAULT_JAVASCRIPT_SCM,
             "express_application.js",
             "javascript",
         )
@@ -565,7 +561,7 @@ mod tests {
     fn test_treesitter_cross_file_resolution() {
         let mut table = SymbolTable::default();
         let lang = &tree_sitter_python::LANGUAGE.into();
-        let query = Query::new(lang, PY_QUERY).unwrap();
+        let query = Query::new(lang, DEFAULT_PYTHON_SCM).unwrap();
 
         // Pass 1: Parse first file (callee)
         let mut parser1 = TsParser::new();

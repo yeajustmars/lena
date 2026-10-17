@@ -15,7 +15,5 @@ clap.workspace = true
 libloading.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true
-
-[dev-dependencies]
 tree-sitter-python = "0.23"
 tree-sitter-javascript = "0.23"
