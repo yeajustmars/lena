@@ -175,4 +175,37 @@ mod tests {
             .expect("Ingestion should cleanly exit on EOF");
         assert_eq!(facts_written, 0);
     }
+
+    #[tokio::test]
+    async fn test_ingest_stream_with_escaped_quotes() {
+        let db = setup_db().await;
+
+        // This stream simulates an adapter emitting a docstring or signature with embedded quotes and spaces.
+        // In older versions of mesodb (pre v0.2.1), the lexer would stop at the first escaped quote,
+        // treat the rest of the string as separate tokens, and crash looking for an #inst timestamp.
+        let edn_stream =
+            b"[[:db/add 100 :code/signature \"fn test() { println!(\\\"Hello\\\"); }\"]]\n";
+
+        let facts_written = ingest_stream(&db, &edn_stream[..])
+            .await
+            .expect("Ingestion failed on escaped quotes");
+
+        assert_eq!(
+            facts_written, 1,
+            "Should successfully parse and transact the fact without `#inst` serialization errors"
+        );
+
+        // Verify the data was stored correctly
+        let results = db
+            .inner()
+            .query("[:find ?sig :where [100 :code/signature ?sig]]")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            results[0].num_rows(),
+            1,
+            "The escaped string fact must be retrievable"
+        );
+    }
 }
