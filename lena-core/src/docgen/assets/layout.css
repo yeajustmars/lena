@@ -361,3 +361,47 @@ a:hover {
 }
 .theme-controls select { flex: 1; outline: none; }
 .theme-controls button { cursor: pointer; }
+
+/* Containerize graphs to prevent horizontal viewport blowout */
+.neighborhood-graph {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.neighborhood-graph pre.mermaid {
+  min-width: 600px; /* Forces wide render, allowing the container to handle the scroll */
+}
+
+/* Force line breaks on massive generic signatures */
+.symbol-sig {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Mobile-First Viewport Adjustments */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 40vh;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .content {
+    padding: 1.5rem;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  .search-popover {
+    position: fixed;
+    top: 15rem;
+    left: 1rem;
+    width: calc(100% - 2rem);
+  }
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}

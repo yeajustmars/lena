@@ -44,9 +44,9 @@ enum Commands {
         /// Output directory for the static site
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
-        /// Documentation theme: lena-book, mdbook, or single-page
-        #[arg(short, long, default_value = "lena-book")]
-        theme: String,
+        /// Documentation format: book, single-page, or mdbook
+        #[arg(short, long, default_value = "book")]
+        format: String,
         /// Optional path to custom CSS file to override default styles
         #[arg(long)]
         css: Option<PathBuf>,
@@ -157,10 +157,10 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Doc {
             out,
-            theme,
+            format,
             css,
             github_actions,
-        } => doc::run(&db, &out, &theme, css.as_ref(), github_actions).await?,
+        } => doc::run(&db, &out, &format, css.as_ref(), github_actions).await?,
         Commands::Index {
             target,
             concurrency,

@@ -10,18 +10,18 @@ use lena_core::docgen::{
     DocGenOptions, DocGraphBuilder, html::HtmlRenderer, mdbook::MdBookEmitter,
 };
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub async fn run(
     db: &Arc<LenaDb>,
-    out_dir: &PathBuf,
-    theme: &str,
+    out_dir: &Path,
+    format: &str,
     css_path: Option<&PathBuf>,
     github_actions: bool,
 ) -> Result<()> {
     println!(
-        "Generating static documentation ({theme} theme) to {}...",
+        "Generating static documentation ({format} format) to {}...",
         out_dir.display()
     );
 
@@ -40,13 +40,14 @@ pub async fn run(
     let builder = DocGraphBuilder::new(db, options);
     let graph = builder.build().await?;
 
-    if theme == "mdbook" || theme == "book" {
+    if format == "mdbook" {
         let emitter = MdBookEmitter::new(&graph);
         emitter.emit(out_dir)?;
-    } else if theme == "single-page" {
+    } else if format == "single-page" {
         let renderer = HtmlRenderer::new(&graph, custom_css)?;
         renderer.render_single_page(out_dir)?;
     } else {
+        // Defaults to "book" (the mobile-first responsive lena-book)
         let renderer = HtmlRenderer::new(&graph, custom_css)?;
         renderer.render_lena_book(out_dir)?;
     }
