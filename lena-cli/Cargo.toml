@@ -19,6 +19,8 @@ dirs.workspace = true
 tokio = { workspace = true, features = ["process", "rt-multi-thread", "io-util", "fs"] }
 minijinja = "2.0"
 comfy-table.workspace = true
+regex.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true

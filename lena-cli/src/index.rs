@@ -4,7 +4,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result};
-use dirs;
 use lena_core::{db::LenaDb, ingest::ingest_stream};
 use std::{path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{process::Command, sync::Semaphore, task::JoinSet};
