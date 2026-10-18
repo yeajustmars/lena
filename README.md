@@ -137,7 +137,7 @@ pub async fn export_prompt(db: &Arc<LenaDb>, fqsn: &str, format: ExportFormat) -
 Pack an entire directory tree into a clean XML bundle to feed into an LLM:
 
 ```bash
-lena snapshot lena-core/src --format xml --out core-snapshot.xml
+lena snapshot lena-core/src --format xml --out target/core-snapshot.xml
 
 ```
 
