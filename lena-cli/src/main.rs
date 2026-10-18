@@ -68,6 +68,9 @@ enum Commands {
         /// Optional regex pattern to filter the symbol list
         #[arg(short, long)]
         filter: Option<String>,
+        /// List all symbols in the database (warning: output can be very large)
+        #[arg(short, long)]
+        all: bool,
     },
     /// Index a codebase by running available adapters
     Index {
@@ -170,7 +173,7 @@ async fn main() -> Result<()> {
     let db = Arc::new(LenaDb::open(&cli.db_path)?);
 
     match cli.command {
-        Commands::List { filter } => list::run(&db, filter.as_deref()).await?,
+        Commands::List { filter, all } => list::run(&db, filter.as_deref(), all).await?,
         Commands::Adapter { action, name } => adapter::run(&action, name.as_deref()).await?,
         Commands::Doc {
             out,

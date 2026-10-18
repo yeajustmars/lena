@@ -8,7 +8,20 @@ use lena_core::db::LenaDb;
 use regex::Regex;
 use std::sync::Arc;
 
-pub async fn run(db: &Arc<LenaDb>, filter: Option<&str>) -> Result<()> {
+pub async fn run(db: &Arc<LenaDb>, filter: Option<&str>, all: bool) -> Result<()> {
+    if filter.is_none() && !all {
+        println!(
+            "By default, `lena list` requires a filter to prevent overwhelming the terminal on large codebases.\n"
+        );
+        println!("Examples:");
+        println!("  lena list --filter \"^rust:.*::test_\"    # Find all Rust test functions");
+        println!(
+            "  lena list -f \"go:edgecases\"             # Find all Go edgecases module symbols"
+        );
+        println!("  lena list --all                         # Dump the entire database");
+        return Ok(());
+    }
+
     let query = "[:find ?fqsn :where [_ :symbol/fqsn ?fqsn]]";
 
     let json_result = db.query_json(query).await?;
