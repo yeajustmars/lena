@@ -10,7 +10,13 @@ use lena_core::{
 };
 use std::sync::Arc;
 
-pub async fn run(db: &Arc<LenaDb>, fqsn: &str, depth: usize, format: &str) -> Result<()> {
+pub async fn run(
+    db: &Arc<LenaDb>,
+    fqsn: &str,
+    depth: usize,
+    format: &str,
+    by_callee: bool,
+) -> Result<()> {
     let skel_format = match format.to_lowercase().as_str() {
         "mermaid" => SkeletonFormat::Mermaid,
         "dot" => SkeletonFormat::Dot,
@@ -21,7 +27,7 @@ pub async fn run(db: &Arc<LenaDb>, fqsn: &str, depth: usize, format: &str) -> Re
         }
     };
 
-    match generate_skeleton(db, fqsn, depth, skel_format).await {
+    match generate_skeleton(db, fqsn, depth, skel_format, by_callee).await {
         Ok(output) => println!("{output}"),
         Err(e) => eprintln!("Failed to generate skeleton: {e}"),
     }

@@ -32,6 +32,7 @@ pub async fn generate_skeleton(
     root_fqsn: &str,
     max_depth: usize,
     format: SkeletonFormat,
+    invert: bool, // NEW: if true, traverse upwards (callers)
 ) -> Result<String, SkeletonError> {
     let mut edges: Vec<Edge> = Vec::new();
     let mut visited: HashSet<String> = HashSet::new();
@@ -45,16 +46,24 @@ pub async fn generate_skeleton(
         }
         visited.insert(current_fqsn.clone());
 
-        // Single-hop query for direct callees
-        let query = format!(
-            "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{current_fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
-        );
+        // Select the traversal direction
+        let query = if invert {
+            // Find who calls the current symbol
+            format!(
+                "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{current_fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
+            )
+        } else {
+            // Find who the current symbol calls
+            format!(
+                "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{current_fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
+            )
+        };
 
         if let Ok(json_result) = db.query_with_rules(&query).await
             && let Ok(rows) = serde_json::from_str::<Vec<serde_json::Value>>(&json_result)
         {
             for row in rows {
-                let callee = if let Some(arr) = row.as_array() {
+                let adjacent = if let Some(arr) = row.as_array() {
                     arr.first().and_then(|v| v.as_str())
                 } else if let Some(obj) = row.as_object() {
                     obj.values().next().and_then(|v| v.as_str())
@@ -62,21 +71,30 @@ pub async fn generate_skeleton(
                     None
                 };
 
-                if let Some(callee_str) = callee {
-                    edges.push(Edge {
-                        caller: current_fqsn.clone(),
-                        callee: callee_str.to_string(),
-                    });
-                    queue.push_back((callee_str.to_string(), depth + 1));
+                if let Some(adjacent_str) = adjacent {
+                    if invert {
+                        // The discovered node is the Caller, current is Callee
+                        edges.push(Edge {
+                            caller: adjacent_str.to_string(),
+                            callee: current_fqsn.clone(),
+                        });
+                    } else {
+                        // Current is Caller, discovered node is Callee
+                        edges.push(Edge {
+                            caller: current_fqsn.clone(),
+                            callee: adjacent_str.to_string(),
+                        });
+                    }
+                    queue.push_back((adjacent_str.to_string(), depth + 1));
                 }
             }
         }
     }
 
-    Ok(format_skeleton(root_fqsn, &edges, format))
+    Ok(format_skeleton(root_fqsn, &edges, format, invert))
 }
 
-fn format_skeleton(root: &str, edges: &[Edge], format: SkeletonFormat) -> String {
+fn format_skeleton(root: &str, edges: &[Edge], format: SkeletonFormat, invert: bool) -> String {
     match format {
         SkeletonFormat::Mermaid => {
             let mut out = String::from("```mermaid\ngraph TD\n");
@@ -112,30 +130,62 @@ fn format_skeleton(root: &str, edges: &[Edge], format: SkeletonFormat) -> String
         SkeletonFormat::Indented => {
             let mut out = String::new();
             let mut path_visited = HashSet::new();
-            build_indented(root, edges, 0, &mut path_visited, &mut out);
+            build_indented(root, root, edges, 0, &mut path_visited, &mut out, invert);
             out.trim_end().to_string()
         }
     }
 }
 
 fn build_indented(
+    root: &str,
     node: &str,
     edges: &[Edge],
     depth: usize,
     path_visited: &mut HashSet<String>,
     out: &mut String,
+    invert: bool,
 ) {
     let indent = "  ".repeat(depth);
+    let label = if node == root {
+        format!("\x1b[1m{node}\x1b[0m")
+    } else {
+        node.to_string()
+    };
+
     if path_visited.contains(node) {
-        out.push_str(&format!("{indent}└── {node} (recursive cycle)\n"));
+        out.push_str(&format!("{indent}└── {label} (recursive cycle)\n"));
         return;
     }
 
-    out.push_str(&format!("{indent}└── {node}\n"));
+    out.push_str(&format!("{indent}└── {label}\n"));
     path_visited.insert(node.to_string());
 
-    for edge in edges.iter().filter(|e| e.caller == node) {
-        build_indented(&edge.callee, edges, depth + 1, path_visited, out);
+    if invert {
+        // Walk UP the graph (who called this node)
+        for edge in edges.iter().filter(|e| e.callee == node) {
+            build_indented(
+                root,
+                &edge.caller,
+                edges,
+                depth + 1,
+                path_visited,
+                out,
+                invert,
+            );
+        }
+    } else {
+        // Walk DOWN the graph (who this node calls)
+        for edge in edges.iter().filter(|e| e.caller == node) {
+            build_indented(
+                root,
+                &edge.callee,
+                edges,
+                depth + 1,
+                path_visited,
+                out,
+                invert,
+            );
+        }
     }
 
     path_visited.remove(node);
@@ -170,7 +220,7 @@ mod tests {
                 callee: "C".into(),
             },
         ];
-        let mermaid = format_skeleton("A", &edges, SkeletonFormat::Mermaid);
+        let mermaid = format_skeleton("A", &edges, SkeletonFormat::Mermaid, false);
         assert!(mermaid.contains("graph TD"));
         assert!(mermaid.contains("id_A[\"A\"] --> id_B[\"B\"]"));
         assert!(mermaid.contains("id_A[\"A\"] --> id_C[\"C\"]"));
@@ -182,7 +232,7 @@ mod tests {
             caller: "A".into(),
             callee: "B".into(),
         }];
-        let dot = format_skeleton("A", &edges, SkeletonFormat::Dot);
+        let dot = format_skeleton("A", &edges, SkeletonFormat::Dot, false);
         assert!(dot.contains("digraph G {"));
         assert!(dot.contains("\"A\" -> \"B\";"));
     }
@@ -199,16 +249,19 @@ mod tests {
                 callee: "A".into(),
             },
         ];
-        let indented = format_skeleton("A", &edges, SkeletonFormat::Indented);
-        assert!(indented.contains("└── A"));
-        assert!(indented.contains("  └── B"));
-        assert!(indented.contains("    └── A (recursive cycle)"));
+        let indented = format_skeleton("A", &edges, SkeletonFormat::Indented, false);
+        assert!(indented.contains("└── \x1b[1mA\x1b[0m"));
+        assert!(indented.contains("  └── B"), "Callee B must not be bold");
+        assert!(
+            indented.contains("    └── \x1b[1mA\x1b[0m (recursive cycle)"),
+            "Cycle of A must be bold"
+        );
     }
 
     #[test]
     fn test_format_indented_empty() {
-        let indented = format_skeleton("RootOnly", &[], SkeletonFormat::Indented);
-        assert_eq!(indented, "└── RootOnly");
+        let indented = format_skeleton("RootOnly", &[], SkeletonFormat::Indented, false);
+        assert_eq!(indented, "└── \x1b[1mRootOnly\x1b[0m");
     }
 
     #[tokio::test]
@@ -216,7 +269,6 @@ mod tests {
         let dir = tempdir().unwrap();
         let db = Arc::new(LenaDb::open(dir.path().join("skeleton.db")).unwrap());
 
-        // Use the native EDN ingestion pipeline to guarantee identical internal representations
         let edn = b"\
             [[:db/add 10 :symbol/fqsn \"root\"]]\n\
             [[:db/add 11 :symbol/fqsn \"child1\"]]\n\
@@ -227,19 +279,19 @@ mod tests {
 
         crate::ingest::ingest_stream(&db, &edn[..]).await.unwrap();
 
-        // Depth 1: Should only traverse from root to child1.
-        let skel_d1 = generate_skeleton(&db, "root", 1, SkeletonFormat::Indented)
+        // Depth 1: Root is bold; child1 is normal text
+        let skel_d1 = generate_skeleton(&db, "root", 1, SkeletonFormat::Indented, false)
             .await
             .unwrap();
-        assert!(skel_d1.contains("└── root"));
+        assert!(skel_d1.contains("└── \x1b[1mroot\x1b[0m"));
         assert!(skel_d1.contains("  └── child1"));
         assert!(
             !skel_d1.contains("child2"),
             "Depth 1 should not reveal child2"
         );
 
-        // Depth 2: Should traverse all the way to child2.
-        let skel_d2 = generate_skeleton(&db, "root", 2, SkeletonFormat::Indented)
+        // Depth 2: Should traverse all the way to child2
+        let skel_d2 = generate_skeleton(&db, "root", 2, SkeletonFormat::Indented, false)
             .await
             .unwrap();
         assert!(

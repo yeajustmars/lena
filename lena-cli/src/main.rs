@@ -125,16 +125,19 @@ enum Commands {
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
-    /// Generate a call graph skeleton (indented, mermaid, or dot)
+    /// Generate a hierarchical call-graph skeleton for a symbol
     Skeleton {
-        /// The root Fully Qualified Symbol Name
+        /// Fully Qualified Symbol Name (e.g., rust:crate::module::func)
         fqsn: String,
-        /// Max depth to traverse
-        #[arg(long, default_value = "1")]
+        /// Maximum traversal depth (default: 3)
+        #[arg(short, long, default_value_t = 3)]
         depth: usize,
-        /// Output format: indented, mermaid, or dot
-        #[arg(short, long, default_value = "indented")]
+        /// Output format: indented (default), mermaid, or dot
+        #[arg(long, default_value = "indented")]
         format: String,
+        /// Invert traversal: show who calls this symbol (upstream) rather than who it calls
+        #[arg(long)]
+        by_callee: bool,
     },
     /// Query the graph using Datalog
     Query {
@@ -230,7 +233,8 @@ async fn main() -> Result<()> {
             fqsn,
             depth,
             format,
-        } => skeleton::run(&db, &fqsn, depth, &format).await?,
+            by_callee,
+        } => skeleton::run(&db, &fqsn, depth, &format, by_callee).await?,
         Commands::Query { query: q } => query::run(&db, &q).await?,
         Commands::Callers { fqsn } => callers::run(&db, &fqsn).await?,
         Commands::Callees { fqsn } => callees::run(&db, &fqsn).await?,
