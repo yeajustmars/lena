@@ -2556,9 +2556,9 @@ dependencies = [
 
 [[package]]
 name = "mesodb-core"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2de897d34c06cdc1c1d409946f547b67547231e5aa67029bd7325cce8e4f4db4"
+checksum = "422037afafb1c0be911ed430affa0de41b6d9328bc7504670dbb3bc93f6f3355"
 dependencies = [
  "ahash",
  "arrow",
