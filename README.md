@@ -12,75 +12,65 @@ Whether you want to generate documentation with interactive call graphs, export 
 
 ### 1. Ingest & Index Codebases into a Datalog Graph
 
-Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`).
+Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`)[cite: 2, 8, 11].
 
-* **Current Adapters:** Rust, Go, Clojure (with Tree-sitter extensible adapters).
-
-
+* **Current Adapters:** Rust (`lena-adapter-rust`), Clojure (`lena-adapter-clj`), Go (`lena-adapter-go`), and Tree-sitter for Python and JavaScript (`lena-adapter-treesitter`)[cite: 1, 11].
 
 ### 2. Beautiful, Modern Static Documentation (`lena doc`)
 
-Turn your indexed codebase into clean, searchable static documentation with a single command:
+Turn your indexed codebase into clean, searchable static documentation with a single command[cite: 11]:
 
-* **`lena-book` Theme:** Multi-page documentation site with instant, offline client-side symbol search.
-
-
-* **Call Neighborhood Graphs:** Every documented function or struct automatically generates an interactive [Mermaid.js](https://mermaid.js.org/) graph showing who calls it and what it calls.
-
-
-* **Built-in Themes:** Built-in support for Grayscale, Navy, Green, Poimandres, and Gruvbox, complete with light/dark auto-detection and a UI mode toggle.
-* **Alternative Formats:** Also supports single-page standalone HTML exports and `mdbook` generation.
-
-
+* **`lena-book` Theme:** Multi-page documentation site with instant, offline client-side symbol search[cite: 1, 2, 11].
+* **Call Neighborhood Graphs:** Every documented function or struct automatically generates an interactive [Mermaid.js](https://mermaid.js.org/) graph showing who calls it and what it calls[cite: 2, 11].
+* **Built-in Themes:** Support for Grayscale, Navy, Green, Poimandres, and Gruvbox, complete with light/dark auto-detection and a UI mode toggle[cite: 2, 11].
+* **Alternative Formats:** Also supports single-page standalone HTML exports and `mdbook` generation[cite: 1, 2, 11].
 
 ### 3. Precise LLM Context Windows (`lena prompt`)
 
-Stop dumping thousands of tokens of irrelevant source code into chat windows. With `lena prompt`, target a specific Fully Qualified Symbol Name (FQSN) to extract a surgical prompt bundle containing:
+Stop dumping thousands of tokens of irrelevant source code into chat windows. With `lena prompt`, target a specific Fully Qualified Symbol Name (FQSN) to extract a surgical prompt bundle containing[cite: 1, 2, 11]:
 
-* The symbol’s exact source location, signature, and docstrings.
-
-
-* A resolved list of callers and callees pulled directly from the graph.
-
-
-* Output formatted as clean XML or Markdown ready for LLM system prompts.
-
-
+* The symbol’s exact source location, signature, and docstrings[cite: 2, 11].
+* A resolved list of callers and callees pulled directly from the graph[cite: 2, 11].
+* Output formatted as clean XML or Markdown ready for LLM system prompts[cite: 1, 2, 11].
 
 ### 4. Deterministic Code Snapshots (`lena snapshot`)
 
-When you *do* need full directory context for an LLM, standard markdown snippets often break when embedded files contain backticks. Leña walks your directories (respecting `.gitignore`, `target/`, and vendor directories) and bundles files safely into CDATA-wrapped XML or Markdown.
+When you *do* need full directory context for an LLM, standard markdown snippets often break when embedded files contain backticks. Leña walks your directories (respecting `.gitignore`, `target/`, and vendor directories) and bundles files safely into CDATA-wrapped XML or Markdown[cite: 1, 2, 11].
 
 ### 5. Call Graph Skeletons (`lena skeleton`)
 
-Trace recursive call graphs from any symbol down to a bounded depth. Export the trace as:
+Trace recursive call graphs from any symbol down to a bounded depth[cite: 1, 2, 11]. Export the trace as:
 
-* An indented ASCII tree for quick CLI debugging.
-
-
-* A Mermaid diagram ready to paste into documentation.
-
-
-* A Graphviz DOT graph for deep architectural analysis.
-
-
+* An indented ASCII tree for quick terminal inspection[cite: 1, 2, 11].
+* A Mermaid diagram ready to paste into documentation[cite: 1, 2, 11].
+* A Graphviz DOT graph for deep architectural analysis[cite: 1, 2, 11].
 
 ---
 
 ## Quickstart
 
-### Installation & Building
+### Installation
 
-Leña is written in Rust. You can build the toolchain with `cargo`:
+Install `lena` and the language adapters via `cargo`:
 
 ```bash
-git clone https://github.com/yourusername/lena.git
-cd lena
-cargo build --release
-
+cargo install lena
+cargo install lena-adapter-rust
+cargo install lena-adapter-clj
+cargo install lena-adapter-treesitter
 ```
 
-The compiled binary will be available at `target/release/lena`.
+### Building from Source
+
+You can also build the entire workspace locally:
+
+```bash
+git clone [https://github.com/yourusername/lena.git](https://github.com/yourusername/lena.git)
+cd lena
+cargo build --release
+```
+
+The compiled binaries will be available in `target/release/`.
 
 ---
 
@@ -92,64 +82,59 @@ Run Leña against your project root to scan files and populate the local graph d
 
 ```bash
 lena index .
-
 ```
 
-### 2. Generating Documentation (`lena-book`)
+### 2. Generating Documentation (`lena doc`)
 
 Generate the multi-page static documentation book:
 
 ```bash
-# Generate the book into dist/
-lena doc --theme lena-book --out dist/lena-book
+# Generate the book into dist/ (default)
+lena doc --theme lena-book --out dist/
 
 # Or generate a single self-contained HTML file
 lena doc --theme single-page --out dist/
-
 ```
 
-Open `dist/lena-book/index.html` in your browser to browse symbols, view neighborhood call charts, and toggle themes.
+Open `dist/index.html` in your browser to browse symbols, view neighborhood call charts, and toggle themes.
 
 ### 3. Exporting Context for an LLM Prompt
 
 Target a specific function or struct and get its entire immediate call neighborhood formatted for an AI model:
 
 ```bash
-# Get markdown context for a function
+# Export markdown context for a function
 lena prompt rust:crate::exporter::export_prompt --format markdown
 
-# Or get structured XML
+# Export structured XML
 lena prompt rust:crate::exporter::export_prompt --format xml
-
 ```
 
 Example Markdown output:
 
-```markdown
+````markdown
 ### `export_prompt`
+
 - **Language:** `Rust`
 - **Location:** `lena-core/src/exporter.rs:188`
 
 **Signature:**
 ```rust
 pub async fn export_prompt(db: &Arc<LenaDb>, fqsn: &str, format: ExportFormat) -> Result<String, ExporterError>
-
 ```
 
 **Called By:**
-
-* `rust:crate::main::handle_prompt`
+- `rust:crate::main::main`
 
 **Makes Calls To:**
-
-* `rust:crate::db::LenaDb::query_with_rules`
-* `rust:crate::exporter::LenaContext::to_markdown`
-* `rust:crate::exporter::LenaContext::to_xml`
-
-```
+- `rust:crate::db::LenaDb::query_with_rules`
+- `rust:crate::exporter::LenaContext::to_markdown`
+- `rust:crate::exporter::LenaContext::to_xml`
+````
 
 ### 4. Taking a Directory Snapshot
-Pack an entire directory tree into a clean XML bundle to feed into an LLM[cite: 6]:
+
+Pack an entire directory tree into a clean XML bundle to feed into an LLM:
 
 ```bash
 lena snapshot lena-core/src --format xml --out core-snapshot.xml
@@ -160,13 +145,40 @@ lena snapshot lena-core/src --format xml --out core-snapshot.xml
 
 Generate a bounded call graph starting from a root entry point:
 
+**Indented Tree Format:**
+
 ```bash
-# ASCII Indented tree (depth 5)
-lena skeleton "rust:crate::main::main" --depth 5 --format mermaid
+lena skeleton "rust:crate::main::main" --depth 3 --format indented
+
 ```
 
-# Mermaid diagram
-lena skeleton rust:crate::main --depth 3 --format mermaid
+```text
+└── rust:crate::main::main
+  └── rust:crate::cli::run
+    └── rust:crate::fs::traverse_dir
+    └── rust:crate::parser::parse_ast
+
+```
+
+**Mermaid Diagram Format:**
+
+```bash
+lena skeleton "rust:crate::main::main" --depth 5 --format mermaid
+
+```
+
+```mermaid
+graph TD
+    id_rust_crate__main__main["rust:crate::main::main"]
+    id_rust_crate__cli__run["rust:crate::cli::run"]
+    id_rust_crate__fs__traverse["rust:crate::fs::traverse_dir"]
+    id_rust_crate__parser__parse_ast["rust:crate::parser::parse_ast"]
+    id_rust_crate__symbol__hash["rust:crate::symbol::compute_hash"]
+
+    id_rust_crate__main__main --> id_rust_crate__cli__run
+    id_rust_crate__cli__run --> id_rust_crate__fs__traverse
+    id_rust_crate__cli__run --> id_rust_crate__parser__parse_ast
+    id_rust_crate__parser__parse_ast --> id_rust_crate__symbol__hash
 
 ```
 
@@ -175,30 +187,30 @@ lena skeleton rust:crate::main --depth 3 --format mermaid
 ## Architecture at a Glance
 
 ```text
-Source Files (.rs, .go, .clj, ...)
-              │
-              ▼
-   [ Language Adapters ]
-              │ (Streams ND-EDN facts)
-              ▼
-    [ MesoDB Graph Engine ]  ◄─── Evaluates recursive Datalog rules
-              │
-     [ DocGraph / UIR ]
-              │
-  ┌───────────┼───────────────┬────────────────┐
+Source Files (.rs, .go, .clj, .py, .js, ...)
+                     │
+                     ▼
+           [ Language Adapters ]
+                     │ (Streams ND-EDN facts)
+                     ▼
+           [ MesoDB Graph Engine ]  ◄─── Evaluates recursive Datalog rules
+                     │
+            [ DocGraph / UIR ]
+                     │
+  ┌───────────┬──────┴────────┬────────────────┐
   ▼           ▼               ▼                ▼
 lena doc   lena prompt   lena snapshot   lena skeleton
 (HTML/CSS)  (LLM Context) (Dir Bundles)   (Graphviz/Mermaid)
 
 ```
 
-1. **Adapters:** Independent binaries parse ASTs and emit newline-delimited EDN transaction facts.
+1. **Adapters:** Standalone binaries parse ASTs and emit newline-delimited EDN transaction facts.
 
 
 2. **Database Engine (`lena-core`):** MesoDB transacts facts into a unified graph schema tracking identities, parents, signatures, and call sites.
 
 
-3. **Consumers:** Frontends and CLI tools query the graph to build views, markdown files, search indexes, or prompt contexts.
+3. **Consumers:** Frontends and CLI tools query the graph to build views, search indexes, or prompt contexts.
 
 
 
@@ -213,3 +225,4 @@ Leña is open source and built to be approachable. If you would like to add a la
 3. Commit your changes (`git commit -m 'Add cool idea'`)
 4. Push to the branch (`git push origin feature/cool-idea`)
 5. Open a Pull Request
+
