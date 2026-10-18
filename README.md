@@ -65,7 +65,7 @@ cargo install lena-adapter-treesitter
 You can also build the entire workspace locally:
 
 ```bash
-git clone [https://github.com/yourusername/lena.git](https://github.com/yourusername/lena.git)
+git clone https://github.com/yourusername/lena.git
 cd lena
 cargo build --release
 ```
