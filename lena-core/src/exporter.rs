@@ -293,9 +293,11 @@ pub async fn export_prompt(
         let signature = extract_string(&entity_data, "code/signature");
 
         // Tier 2: Full source (we map this to signature/raw code presence for now)
+        // TODO: organize comments
+
         // Tier 1: Docs
         let mut docs = String::new();
-        if config.include_docs || is_root {
+        if config.include_docs {
             docs = extract_string(&entity_data, "doc/text");
         }
 
@@ -312,14 +314,18 @@ pub async fn export_prompt(
                 && let Ok(c_rows) = serde_json::from_str::<Vec<serde_json::Value>>(&caller_json)
             {
                 for r in c_rows {
-                    if let Some(c) = r
-                        .as_array()
-                        .and_then(|a| a.first())
-                        .and_then(|v| v.as_str())
-                    {
-                        callers.push(c.to_string());
+                    let c = if let Some(arr) = r.as_array() {
+                        arr.first().and_then(|v| v.as_str())
+                    } else if let Some(obj) = r.as_object() {
+                        obj.values().next().and_then(|v| v.as_str())
+                    } else {
+                        None
+                    };
+
+                    if let Some(c_str) = c {
+                        callers.push(c_str.to_string());
                         if current_depth < config.depth {
-                            queue.push_back((c.to_string(), current_depth + 1));
+                            queue.push_back((c_str.to_string(), current_depth + 1));
                         }
                     }
                 }
@@ -333,14 +339,18 @@ pub async fn export_prompt(
                 && let Ok(c_rows) = serde_json::from_str::<Vec<serde_json::Value>>(&callee_json)
             {
                 for r in c_rows {
-                    if let Some(c) = r
-                        .as_array()
-                        .and_then(|a| a.first())
-                        .and_then(|v| v.as_str())
-                    {
-                        callees.push(c.to_string());
+                    let c = if let Some(arr) = r.as_array() {
+                        arr.first().and_then(|v| v.as_str())
+                    } else if let Some(obj) = r.as_object() {
+                        obj.values().next().and_then(|v| v.as_str())
+                    } else {
+                        None
+                    };
+
+                    if let Some(c_str) = c {
+                        callees.push(c_str.to_string());
                         if current_depth < config.depth {
-                            queue.push_back((c.to_string(), current_depth + 1));
+                            queue.push_back((c_str.to_string(), current_depth + 1));
                         }
                     }
                 }
@@ -641,5 +651,178 @@ mod tests {
         assert!(xml_res.contains("name=\"success_func\""));
         assert!(xml_res.contains("language=\"Rust\""));
         assert!(xml_res.contains("line=\"42\""));
+    }
+
+    #[tokio::test]
+    async fn test_brutal_prompt_tiered_extraction_and_budget() {
+        use crate::config::PromptConfig;
+        use mesodb_core::transactor::Fact;
+        use mesodb_core::types::Value;
+
+        let dir = tempdir().unwrap();
+        let db = Arc::new(LenaDb::open(dir.path().join("brutal_prompt.db")).unwrap());
+
+        // Setup a 3-hop graph directly via Fact structs to guarantee Value::Ref typing
+        let facts = vec![
+            Fact {
+                e: 1,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:root".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 1,
+                ident: ":symbol/name".into(),
+                v: Value::String("root_fn".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 1,
+                ident: ":doc/text".into(),
+                v: Value::String("root doc".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 2,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:target1".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 2,
+                ident: ":symbol/name".into(),
+                v: Value::String("match_target1".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 2,
+                ident: ":doc/text".into(),
+                v: Value::String("target 1 doc".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 3,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:target2".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 3,
+                ident: ":symbol/name".into(),
+                v: Value::String("miss_target2".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 3,
+                ident: ":doc/text".into(),
+                v: Value::String("target 2 doc".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            // Explicitly cast the edges as Value::Ref to ensure Datalog traversal works
+            Fact {
+                e: 10,
+                ident: ":entity/type".into(),
+                v: Value::String(":type/call-site".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 10,
+                ident: ":call/caller".into(),
+                v: Value::Ref(1),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 10,
+                ident: ":call/callee".into(),
+                v: Value::Ref(2),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 11,
+                ident: ":entity/type".into(),
+                v: Value::String(":type/call-site".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 11,
+                ident: ":call/caller".into(),
+                v: Value::Ref(2),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 11,
+                ident: ":call/callee".into(),
+                v: Value::Ref(3),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+        ];
+
+        db.inner().transact(facts).await.unwrap();
+
+        let mut config = PromptConfig::default();
+        config.depth = 1;
+        config.include_docs = false; // Strip docs
+        config.source_patterns = vec!["^match_".to_string()]; // Force source on specific patterns
+
+        // 1. Strict Boundary Check (Depth 1 limits to root + target1)
+        let md = export_prompt(&db, "rust:root", ExportFormat::Markdown, &config)
+            .await
+            .unwrap();
+        assert!(md.contains("root_fn"));
+        assert!(
+            md.contains("match_target1"),
+            "Depth 1 must include first hop"
+        );
+        assert!(
+            !md.contains("miss_target2"),
+            "Depth 2 must be strictly excluded"
+        );
+        assert!(
+            !md.contains("root doc"),
+            "Docstrings must be stripped when disabled"
+        );
+
+        // 2. Token Budget Guardrail Check
+        config.max_tokens = Some(2); // Artificially low limit
+        let md_truncated = export_prompt(&db, "rust:root", ExportFormat::Markdown, &config)
+            .await
+            .unwrap();
+
+        // Even though depth=1, the budget is blown immediately after the root node.
+        assert!(md_truncated.contains("root_fn"));
+        assert!(
+            !md_truncated.contains("match_target1"),
+            "Must abort traversal if token budget is exceeded"
+        );
     }
 }

@@ -45,7 +45,8 @@ where
 
         // Parse the EDN transaction array
         match parse_transaction(trimmed) {
-            Ok(facts) => {
+            Ok(raw_facts) => {
+                let facts = sanitize_batch(raw_facts);
                 let fact_count = facts.len();
                 if fact_count > 0 {
                     // Transact directly into MesoDB
@@ -55,8 +56,8 @@ where
                             total_txs += 1;
                         }
                         Err(e) => {
-                            error!("Failed to transact batch: {e}");
-                            return Err(IngestError::Database(e.to_string()));
+                            // Log and skip malformed transactions without crashing the whole pipeline
+                            error!("Failed to transact batch (skipping): {e}");
                         }
                     }
                 }
@@ -70,6 +71,69 @@ where
 
     info!("Ingestion complete. Transacted {total_facts} facts across {total_txs} transactions.");
     Ok(total_facts)
+}
+
+/// Intercepts and sanitizes a batch of facts before transacting them into MesoDB.
+/// 1. Coalesces temporary entity IDs if multiple nodes assert the same unique `:symbol/fqsn`.
+/// 2. Remaps all `Value::Ref` edges to point to the coalesced entity IDs.
+/// 3. Removes exact duplicate fact assertions to prevent batch conflicts.
+fn sanitize_batch(facts: Vec<mesodb_core::transactor::Fact>) -> Vec<mesodb_core::transactor::Fact> {
+    use mesodb_core::types::Value;
+    use std::collections::{HashMap, HashSet};
+
+    let mut fqsn_to_e = HashMap::new();
+    let mut e_replacements = HashMap::new();
+
+    // 1. Identify entity ID collisions based on the unique `:symbol/fqsn`
+    for fact in &facts {
+        if (fact.ident == ":symbol/fqsn" || fact.ident == "symbol/fqsn")
+            && let Value::String(s) = &fact.v
+        {
+            if let Some(&target_e) = fqsn_to_e.get(s) {
+                if target_e != fact.e {
+                    e_replacements.insert(fact.e, target_e);
+                }
+            } else {
+                fqsn_to_e.insert(s.clone(), fact.e);
+            }
+        }
+    }
+
+    let mut unique_fingerprints = HashSet::new();
+    let mut sanitized = Vec::new();
+
+    // 2. Apply replacements and deduplicate
+    for mut fact in facts {
+        // Remap subject entity ID
+        let mut current_e = fact.e;
+        while let Some(&target_e) = e_replacements.get(&current_e) {
+            if current_e == target_e {
+                break;
+            } // prevent infinite loop
+            current_e = target_e;
+        }
+        fact.e = current_e;
+
+        // Remap object entity ID if it's a reference (graph edge)
+        if let Value::Ref(r) = fact.v {
+            let mut current_r = r;
+            while let Some(&target_r) = e_replacements.get(&current_r) {
+                if current_r == target_r {
+                    break;
+                }
+                current_r = target_r;
+            }
+            fact.v = Value::Ref(current_r);
+        }
+
+        // Fingerprint to remove exact duplicate assertions
+        let fingerprint = format!("{}:{}:{:?}:{}", fact.e, fact.ident, fact.v, fact.op);
+        if unique_fingerprints.insert(fingerprint) {
+            sanitized.push(fact);
+        }
+    }
+
+    sanitized
 }
 
 #[cfg(test)]
@@ -206,6 +270,117 @@ mod tests {
             results[0].num_rows(),
             1,
             "The escaped string fact must be retrievable"
+        );
+    }
+
+    #[test]
+    fn test_brutal_sanitize_batch_collisions() {
+        use mesodb_core::transactor::Fact;
+        use mesodb_core::types::Value;
+
+        // Create a chaotic batch with severe FQSN collisions and duplicate facts
+        let raw_batch = vec![
+            // ID 100, 101, and 102 all assert the EXACT SAME unique FQSN
+            Fact {
+                e: 100,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:dup".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 101,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:dup".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 102,
+                ident: ":symbol/fqsn".into(),
+                v: Value::String("rust:dup".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            // ID 200 calls ID 101 AND 102 (which are aliases of 100)
+            Fact {
+                e: 200,
+                ident: ":call/callee".into(),
+                v: Value::Ref(101),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 200,
+                ident: ":call/callee".into(),
+                v: Value::Ref(102),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            // Exact duplicate spam for ID 100 to test fingerprint deduplication
+            Fact {
+                e: 100,
+                ident: ":entity/language".into(),
+                v: Value::String("Rust".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+            Fact {
+                e: 100,
+                ident: ":entity/language".into(),
+                v: Value::String("Rust".into()),
+                op: true,
+                cas_old_v: None,
+                valid_time: None,
+            },
+        ];
+
+        let sanitized = sanitize_batch(raw_batch);
+
+        // 1. Only ONE FQSN assertion should remain
+        let fqsn_facts: Vec<_> = sanitized
+            .iter()
+            .filter(|f| f.ident == ":symbol/fqsn")
+            .collect();
+        assert_eq!(
+            fqsn_facts.len(),
+            1,
+            "Should mathematically collapse identical FQSN assertions"
+        );
+        let surviving_e = fqsn_facts[0].e;
+
+        // 2. The edge references to 101 and 102 MUST be remapped to the surviving entity ID,
+        // and because they are identical post-remap, they must deduplicate into a single edge.
+        let call_facts: Vec<_> = sanitized
+            .iter()
+            .filter(|f| f.ident == ":call/callee")
+            .collect();
+        assert_eq!(
+            call_facts.len(),
+            1,
+            "Should collapse identical remapped references"
+        );
+        assert_eq!(
+            call_facts[0].v,
+            Value::Ref(surviving_e),
+            "Edge must be remapped to surviving entity"
+        );
+
+        // 3. Exact duplicates of the language attribute must be reduced to 1
+        let lang_facts: Vec<_> = sanitized
+            .iter()
+            .filter(|f| f.ident == ":entity/language")
+            .collect();
+        assert_eq!(
+            lang_facts.len(),
+            1,
+            "Should strip exact duplicate assertions via fingerprinting"
         );
     }
 }

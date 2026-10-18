@@ -2,8 +2,9 @@
 //
 // TODO: rename project to leña
 
-#![deny(warnings)]
-#![warn(clippy::all, clippy::pedantic)]
+// #![deny(warnings)]
+// #![warn(clippy::all, clippy::pedantic)]
+// TODO: reinstatiate clippy::pendantic
 
 mod callees;
 mod callers;

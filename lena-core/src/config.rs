@@ -259,4 +259,46 @@ mod tests {
         assert_eq!(config.prompt.depth, 1);
         assert!(config.adapters.installed.contains_key("rust"));
     }
+
+    #[test]
+    fn test_brutal_merge_deep_maps_and_arrays() {
+        let mut base = toml::Value::try_from(LenaConfig::default()).unwrap();
+
+        // Simulate a chaotic user TOML overriding arrays, adding new map keys,
+        // and overriding existing map keys simultaneously.
+        let override_toml = r#"
+        [prompt]
+        source_patterns = ["^critical_"] # Should completely replace the empty default array
+
+        [adapters.installed]
+        python = "/usr/bin/python-adapter" # New key
+        rust = "custom-path"               # Override existing key
+        "#;
+
+        let override_val: toml::Value = toml::from_str(override_toml).unwrap();
+        merge_values(&mut base, override_val);
+
+        let merged: LenaConfig = base.try_into().unwrap();
+
+        // Arrays must be strictly replaced, not concatenated
+        assert_eq!(
+            merged.prompt.source_patterns,
+            vec!["^critical_".to_string()]
+        );
+
+        // Maps must be deeply merged (python added, rust overwritten, clj retained)
+        assert_eq!(
+            merged.adapters.installed.get("python").unwrap(),
+            "/usr/bin/python-adapter"
+        );
+        assert_eq!(
+            merged.adapters.installed.get("rust").unwrap(),
+            "custom-path"
+        );
+        assert_eq!(merged.adapters.installed.get("clj").unwrap(), "native");
+        assert_eq!(
+            merged.adapters.installed.get("treesitter").unwrap(),
+            "native"
+        );
+    }
 }
