@@ -77,6 +77,8 @@ impl<'a> HtmlRenderer<'a> {
             include_str!("assets/themes.css")
         );
 
+        let search_index_json = serde_json::to_string(&self.graph.search_index)?;
+
         let tmpl = self.env.get_template("single_page.html")?;
         let rendered = tmpl.render(context! {
             project_name => self.graph.project_name,
@@ -84,6 +86,8 @@ impl<'a> HtmlRenderer<'a> {
             languages => self.graph.languages,
             builtin_css => builtin_css,
             custom_css => self.custom_css.clone(),
+            theme_js => include_str!("assets/theme.js"),
+            search_index_json => search_index_json,
         })?;
 
         fs::write(out_dir.join("single-page.html"), rendered)?;

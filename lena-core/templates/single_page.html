@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ project_name }} - Documentation</title>
-  <style>{{ builtin_css }}</style>
-  {% if custom_css %}<style>{{ custom_css }}</style>{% endif %}
+  <style>{{ builtin_css | safe }}</style>
+  {% if custom_css %}<style>{{ custom_css | safe }}</style>{% endif %}
+  <script>{{ theme_js | safe }}</script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </head>
@@ -14,6 +15,18 @@
       <div class="sidebar-header">
         <a href="#top">{{ project_name }}</a>
         <span class="version">{{ version }}</span>
+      </div>
+      <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
+      <div id="search-results" class="search-popover hidden"></div>
+      <div class="theme-controls">
+        <select id="theme-selector">
+          <option value="grayscale">Grayscale</option>
+          <option value="navy">Navy</option>
+          <option value="green">Green</option>
+          <option value="poimandres">Poimandres</option>
+          <option value="gruvbox">Gruvbox</option>
+        </select>
+        <button id="mode-toggle" title="Toggle Light/Dark Mode">🌓</button>
       </div>
       <ul class="nav-tree">
         {% for lang_name, lang in languages | items %}
@@ -28,7 +41,7 @@
                   <li class="mod-group-title">{{ group_name }}</li>
                 {% endif %}
                 {% for display_name, mod in group_mods | items %}
-                  <li><a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ mod.name }}.html">{{ display_name }}</a></li>
+                  <li><a href="#{{ lang_name }}-{{ pkg_name }}-{{ mod.name }}">{{ display_name }}</a></li>
                 {% endfor %}
               {% endfor %}
             </ul>
@@ -76,5 +89,73 @@
       {% endfor %}
     </main>
   </div>
+  <script>
+    window.SEARCH_INDEX = {{ search_index_json | safe }};
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("search-box");
+      const popover = document.getElementById("search-results");
+      if (!input || !popover) return;
+
+      const index = window.SEARCH_INDEX || [];
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "/" && document.activeElement !== input) {
+          e.preventDefault();
+          input.focus();
+        }
+        if (e.key === "Escape" && !popover.classList.contains("hidden")) {
+          popover.classList.add("hidden");
+          input.blur();
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!input.contains(e.target) && !popover.contains(e.target)) {
+          popover.classList.add("hidden");
+        }
+      });
+
+      input.addEventListener("focus", (e) => {
+        if (e.target.value.trim() !== "") {
+          input.dispatchEvent(new Event("input"));
+        }
+      });
+
+      input.addEventListener("input", (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        if (!query) {
+          popover.classList.add("hidden");
+          popover.innerHTML = "";
+          return;
+        }
+
+        const matches = index
+          .filter((s) => {
+            const name = s.name ? s.name.toLowerCase() : "";
+            const fqsn = s.fqsn ? s.fqsn.toLowerCase() : "";
+            return name.includes(query) || fqsn.includes(query);
+          })
+          .slice(0, 15);
+
+        if (matches.length === 0) {
+          popover.innerHTML = `<div class="search-empty">No results found for "${e.target.value}"</div>`;
+        } else {
+          popover.innerHTML = matches
+            .map(
+              (m) => `
+              <a class="search-result-item" href="#${m.fqsn}" onclick="document.getElementById('search-results').classList.add('hidden')">
+                <div class="result-header">
+                  <span class="result-name">${m.name}</span>
+                  <span class="result-kind">${m.kind}</span>
+                </div>
+                <div class="result-summary">${m.summary || m.module}</div>
+              </a>`
+            )
+            .join("");
+        }
+        popover.classList.remove("hidden");
+      });
+    });
+  </script>
 </body>
 </html>
