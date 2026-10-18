@@ -12,38 +12,38 @@ Whether you want to generate documentation with interactive call graphs, export 
 
 ### 1. Ingest & Index Codebases into a Datalog Graph
 
-Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`)[cite: 2, 8, 11].
+Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`).
 
-* **Current Adapters:** Rust (`lena-adapter-rust`), Clojure (`lena-adapter-clj`), Go (`lena-adapter-go`), and Tree-sitter for Python and JavaScript (`lena-adapter-treesitter`)[cite: 1, 11].
+* **Current Adapters:** Rust (`lena-adapter-rust`), Clojure (`lena-adapter-clj`), Go (`lena-adapter-go`), and Tree-sitter for Python and JavaScript (`lena-adapter-treesitter`).
 
 ### 2. Beautiful, Modern Static Documentation (`lena doc`)
 
-Turn your indexed codebase into clean, searchable static documentation with a single command[cite: 11]:
+Turn your indexed codebase into clean, searchable static documentation with a single command:
 
-* **`lena-book` Theme:** Multi-page documentation site with instant, offline client-side symbol search[cite: 1, 2, 11].
-* **Call Neighborhood Graphs:** Every documented function or struct automatically generates an interactive [Mermaid.js](https://mermaid.js.org/) graph showing who calls it and what it calls[cite: 2, 11].
-* **Built-in Themes:** Support for Grayscale, Navy, Green, Poimandres, and Gruvbox, complete with light/dark auto-detection and a UI mode toggle[cite: 2, 11].
-* **Alternative Formats:** Also supports single-page standalone HTML exports and `mdbook` generation[cite: 1, 2, 11].
+* **`lena-book` Theme:** Multi-page documentation site with instant, offline client-side symbol search.
+* **Call Neighborhood Graphs:** Every documented function or struct automatically generates an interactive [Mermaid.js](https://mermaid.js.org/) graph showing who calls it and what it calls.
+* **Built-in Themes:** Support for Grayscale, Navy, Green, Poimandres, and Gruvbox, complete with light/dark auto-detection and a UI mode toggle.
+* **Alternative Formats:** Also supports single-page standalone HTML exports and `mdbook` generation.
 
 ### 3. Precise LLM Context Windows (`lena prompt`)
 
-Stop dumping thousands of tokens of irrelevant source code into chat windows. With `lena prompt`, target a specific Fully Qualified Symbol Name (FQSN) to extract a surgical prompt bundle containing[cite: 1, 2, 11]:
+Stop dumping thousands of tokens of irrelevant source code into chat windows. With `lena prompt`, target a specific Fully Qualified Symbol Name (FQSN) to extract a surgical prompt bundle containing:
 
-* The symbol’s exact source location, signature, and docstrings[cite: 2, 11].
-* A resolved list of callers and callees pulled directly from the graph[cite: 2, 11].
-* Output formatted as clean XML or Markdown ready for LLM system prompts[cite: 1, 2, 11].
+* The symbol’s exact source location, signature, and docstrings.
+* A resolved list of callers and callees pulled directly from the graph.
+* Output formatted as clean XML or Markdown ready for LLM system prompts.
 
 ### 4. Deterministic Code Snapshots (`lena snapshot`)
 
-When you *do* need full directory context for an LLM, standard markdown snippets often break when embedded files contain backticks. Leña walks your directories (respecting `.gitignore`, `target/`, and vendor directories) and bundles files safely into CDATA-wrapped XML or Markdown[cite: 1, 2, 11].
+When you *do* need full directory context for an LLM, standard markdown snippets often break when embedded files contain backticks. Leña walks your directories (respecting `.gitignore`, `target/`, and vendor directories) and bundles files safely into CDATA-wrapped XML or Markdown.
 
 ### 5. Call Graph Skeletons (`lena skeleton`)
 
-Trace recursive call graphs from any symbol down to a bounded depth[cite: 1, 2, 11]. Export the trace as:
+Trace recursive call graphs from any symbol down to a bounded depth. Export the trace as:
 
-* An indented ASCII tree for quick terminal inspection[cite: 1, 2, 11].
-* A Mermaid diagram ready to paste into documentation[cite: 1, 2, 11].
-* A Graphviz DOT graph for deep architectural analysis[cite: 1, 2, 11].
+* An indented ASCII tree for quick terminal inspection.
+* A Mermaid diagram ready to paste into documentation.
+* A Graphviz DOT graph for deep architectural analysis.
 
 ---
 
