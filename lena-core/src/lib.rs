@@ -2,6 +2,7 @@
 //#![warn(clippy::all, clippy::pedantic)]
 // TODO: turn on pedantic and fix all warnings and issues
 
+pub mod config;
 pub mod db;
 pub mod docgen;
 pub mod exporter;

@@ -58,6 +58,7 @@ criterion = { version = "0.5.1", features = ["async_tokio"] }
 tempfile = "3.27.0"
 
 which = "8.0.6"
+dirs = "5.0"
 
 [profile.release]
 lto = "fat"
