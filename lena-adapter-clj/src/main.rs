@@ -48,8 +48,8 @@ struct Analysis {
 struct NsDef {
     name: String,
     filename: String,
-    row: i64,
-    col: i64,
+    row: Option<i64>,
+    col: Option<i64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -57,8 +57,8 @@ struct VarDef {
     ns: String,
     name: String,
     filename: String,
-    row: i64,
-    col: i64,
+    row: Option<i64>,
+    col: Option<i64>,
     #[serde(rename = "end-row")]
     end_row: Option<i64>,
     #[serde(rename = "end-col")]
@@ -74,8 +74,8 @@ struct VarUsage {
     to: Option<String>,
     name: String,
     filename: String,
-    row: i64,
-    col: i64,
+    row: Option<i64>,
+    col: Option<i64>,
 }
 
 fn hash_id(key: &str) -> u64 {
@@ -99,8 +99,12 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
             tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&ns.name))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
-            tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(ns.row))?;
-            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(ns.col))?;
+            tx.add(
+                e_id,
+                ATTR_LOC_START_LINE,
+                EdnValue::Int(ns.row.unwrap_or(1)),
+            )?;
+            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(ns.col.unwrap_or(1)))?;
 
             facts.push(tx.finish());
         }
@@ -121,8 +125,8 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
             tx.add(e_id, ATTR_PARENT_ENTITY, EdnValue::Ref(parent_id))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&v.filename))?;
-            tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(v.row))?;
-            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(v.col))?;
+            tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(v.row.unwrap_or(1)))?;
+            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(v.col.unwrap_or(1)))?;
 
             if let Some(end_row) = v.end_row {
                 tx.add(e_id, ATTR_LOC_END_LINE, EdnValue::Int(end_row))?;
@@ -150,7 +154,9 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
 
                 let call_site_id = hash_id(&format!(
                     "{}:{}:{}:{caller_fqsn}->{callee_fqsn}",
-                    u.filename, u.row, u.col
+                    u.filename,
+                    u.row.unwrap_or(1),
+                    u.col.unwrap_or(1)
                 ));
 
                 tx.add(
@@ -161,8 +167,16 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
                 tx.add(call_site_id, ATTR_CALL_CALLER, EdnValue::Ref(caller_id))?;
                 tx.add(call_site_id, ATTR_CALL_CALLEE, EdnValue::Ref(callee_id))?;
                 tx.add(call_site_id, ATTR_LOC_FILE, EdnValue::String(&u.filename))?;
-                tx.add(call_site_id, ATTR_LOC_START_LINE, EdnValue::Int(u.row))?;
-                tx.add(call_site_id, ATTR_LOC_START_COL, EdnValue::Int(u.col))?;
+                tx.add(
+                    call_site_id,
+                    ATTR_LOC_START_LINE,
+                    EdnValue::Int(u.row.unwrap_or(1)),
+                )?;
+                tx.add(
+                    call_site_id,
+                    ATTR_LOC_START_COL,
+                    EdnValue::Int(u.col.unwrap_or(1)),
+                )?;
 
                 facts.push(tx.finish());
             }
