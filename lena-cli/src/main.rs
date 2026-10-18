@@ -6,6 +6,7 @@
 // #![warn(clippy::all, clippy::pedantic)]
 // TODO: reinstatiate clippy::pendantic
 
+mod adapter;
 mod callees;
 mod callers;
 mod doc;
@@ -39,6 +40,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Manage language adapters (list, install)
+    Adapter {
+        /// Action to perform: 'list' or 'install'
+        action: String,
+        /// Adapter name to install (e.g., 'rust', 'go')
+        name: Option<String>,
+    },
     /// Generate static HTML documentation from the indexed codebase
     Doc {
         /// Output directory for the static site
@@ -155,6 +163,7 @@ async fn main() -> Result<()> {
     let db = Arc::new(LenaDb::open(&cli.db_path)?);
 
     match cli.command {
+        Commands::Adapter { action, name } => adapter::run(&action, name.as_deref()).await?,
         Commands::Doc {
             out,
             format,

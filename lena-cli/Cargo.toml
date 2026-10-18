@@ -15,6 +15,7 @@ lena-protocol = { path = "../lena-protocol", version = "0.1.0" }
 
 anyhow.workspace = true
 clap.workspace = true
+dirs.workspace = true
 tokio = { workspace = true, features = ["process", "rt-multi-thread", "io-util", "fs"] }
 minijinja = "2.0"
 comfy-table.workspace = true

@@ -4,22 +4,33 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result};
+use dirs;
 use lena_core::{db::LenaDb, ingest::ingest_stream};
 use std::{path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{process::Command, sync::Semaphore, task::JoinSet};
 use tracing::{error, info, warn};
 
 fn resolve_binary(adapter_name: &str) -> String {
-    let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("lena"));
-    current_exe.pop();
-
     let exe_suffix = std::env::consts::EXE_SUFFIX;
     let adapter_filename = format!("{adapter_name}{exe_suffix}");
+
+    // 1. Highest Priority: Managed ~/.lena/bin/ directory
+    if let Some(home) = dirs::home_dir() {
+        let lena_bin = home.join(".lena").join("bin").join(&adapter_filename);
+        if lena_bin.exists() {
+            return lena_bin.to_string_lossy().to_string();
+        }
+    }
+
+    // 2. Fallback: Adjacent to the current executing `lena` binary
+    let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("lena"));
+    current_exe.pop();
     let local_adapter_path = current_exe.join(&adapter_filename);
 
     if local_adapter_path.exists() {
         local_adapter_path.to_string_lossy().to_string()
     } else {
+        // 3. Absolute Fallback: System $PATH
         adapter_filename
     }
 }

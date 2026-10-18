@@ -2282,6 +2282,7 @@ dependencies = [
  "anyhow",
  "clap",
  "comfy-table",
+ "dirs",
  "lena-core",
  "lena-protocol",
  "minijinja",
