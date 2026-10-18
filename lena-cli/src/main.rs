@@ -73,6 +73,27 @@ enum Commands {
         /// Path to custom Jinja2 template file (required if format is 'template')
         #[arg(short, long)]
         template: Option<PathBuf>,
+        /// Override prompt traversal depth
+        #[arg(long)]
+        depth: Option<usize>,
+        /// Determines which symbols get full source (e.g., "root", "all", "none")
+        #[arg(long)]
+        include_source: Option<String>,
+        /// Regex patterns matching symbol names to include full source
+        #[arg(long)]
+        source_pattern: Option<Vec<String>>,
+        /// Namespace prefixes to include full source
+        #[arg(long)]
+        source_ns: Option<Vec<String>>,
+        /// Omit docstrings from the prompt context
+        #[arg(long)]
+        no_docs: bool,
+        /// Omit call-site linkages from the prompt context
+        #[arg(long)]
+        no_call_sites: bool,
+        /// Hard token limit guardrail
+        #[arg(long)]
+        max_tokens: Option<usize>,
     },
     /// Export an entire directory of source code into a single context file
     Snapshot {
@@ -147,7 +168,43 @@ async fn main() -> Result<()> {
             fqsn,
             format,
             template,
-        } => prompt::run(&db, &fqsn, &format, template.as_ref()).await?,
+            depth,
+            include_source,
+            source_pattern,
+            source_ns,
+            no_docs,
+            no_call_sites,
+            max_tokens,
+        } => {
+            let mut config =
+                lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?
+                    .prompt;
+
+            // Apply CLI flag overrides
+            if let Some(d) = depth {
+                config.depth = d;
+            }
+            if let Some(i) = include_source {
+                config.include_source = i;
+            }
+            if let Some(p) = source_pattern {
+                config.source_patterns = p;
+            }
+            if let Some(ns) = source_ns {
+                config.source_namespaces = ns;
+            }
+            if no_docs {
+                config.include_docs = false;
+            }
+            if no_call_sites {
+                config.call_sites = false;
+            }
+            if let Some(m) = max_tokens {
+                config.max_tokens = Some(m);
+            }
+
+            prompt::run(&db, &fqsn, &format, template.as_ref(), config).await?
+        }
         Commands::Skeleton {
             fqsn,
             depth,

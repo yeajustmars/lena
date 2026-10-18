@@ -16,13 +16,14 @@ anyhow.workspace = true
 dirs.workspace = true
 mesodb-core.workspace = true
 minijinja = "2.0"
+regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
-which.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["process", "rt-multi-thread", "io-util", "fs"] }
 toml.workspace = true
 tracing.workspace = true
+which.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

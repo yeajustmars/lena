@@ -2357,6 +2357,7 @@ dependencies = [
  "lena-protocol",
  "mesodb-core",
  "minijinja",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",

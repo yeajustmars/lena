@@ -1,9 +1,11 @@
 //! Prompt Exporting Engine
 
+use crate::config::PromptConfig;
 use crate::db::LenaDb;
-use minijinja::Environment;
+use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -26,6 +28,36 @@ pub enum ExportFormat {
     Xml,
     Markdown,
     Template(String),
+}
+
+/// Represents the collective prompt context across multiple graph nodes.
+#[derive(Debug, Clone, Serialize)]
+pub struct PromptGraph {
+    pub root_fqsn: String,
+    pub nodes: Vec<LenaContext>,
+}
+
+impl PromptGraph {
+    pub fn to_markdown(&self) -> String {
+        let mut out = String::new();
+        for node in &self.nodes {
+            out.push_str(&node.to_markdown());
+            out.push_str("\n\n---\n\n");
+        }
+        out.trim_end_matches("\n\n---\n\n").to_string()
+    }
+
+    pub fn to_xml(&self) -> String {
+        let mut out = String::from("<prompt>\n");
+        for node in &self.nodes {
+            let xml = node.to_xml();
+            for line in xml.lines() {
+                out.push_str(&format!("  {line}\n"));
+            }
+        }
+        out.push_str("</prompt>");
+        out
+    }
 }
 
 /// The Canonical Context Intermediate Representation (IR).
@@ -177,123 +209,198 @@ fn extract_i64(val: &Value, key: &str) -> i64 {
         .unwrap_or(0)
 }
 
-/// Retrieves an entity by its FQSN and formats it for LLM context.
+/// Retrieves a subgraph of entities starting from `root_fqsn` and formats them for LLM context,
+/// respecting the token budget and payload rules defined in `PromptConfig`.
 pub async fn export_prompt(
     db: &Arc<LenaDb>,
-    fqsn: &str,
+    root_fqsn: &str,
     format: ExportFormat,
+    config: &PromptConfig,
 ) -> Result<String, ExporterError> {
-    let query = format!("[:find (pull ?e [*]) :where [?e :symbol/fqsn \"{fqsn}\"]]");
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+    let mut nodes = Vec::new();
+    let mut estimated_tokens = 0;
 
-    let json_result = db
-        .inner()
-        .query_json(&query)
-        .await
-        .map_err(|e| ExporterError::Database(e.to_string()))?;
+    // Compile regexes once
+    let patterns: Vec<Regex> = config
+        .source_patterns
+        .iter()
+        .filter_map(|p| Regex::new(p).ok())
+        .collect();
 
-    let rows: Vec<Value> =
-        serde_json::from_str(&json_result).map_err(|e| ExporterError::Parse(e.to_string()))?;
+    queue.push_back((root_fqsn.to_string(), 0));
 
-    if rows.is_empty() {
-        return Err(ExporterError::NotFound(fqsn.to_string()));
-    }
+    while let Some((current_fqsn, current_depth)) = queue.pop_front() {
+        if visited.contains(&current_fqsn) || current_depth > config.depth {
+            continue;
+        }
+        visited.insert(current_fqsn.clone());
 
-    // MesoDB returns rows as `[{"e": {":symbol/name": "add", ...}}]`
-    let entity_data = rows[0].get("e").cloned().unwrap_or_else(|| rows[0].clone());
+        let query = format!("[:find (pull ?e [*]) :where [?e :symbol/fqsn \"{current_fqsn}\"]]");
+        let json_result = db
+            .inner()
+            .query_json(&query)
+            .await
+            .map_err(|e| ExporterError::Database(e.to_string()))?;
 
-    let raw_name = extract_string(&entity_data, "symbol/name");
-    let raw_lang = extract_string(&entity_data, "entity/language");
-    let raw_file = extract_string(&entity_data, "location/file");
+        let rows: Vec<Value> =
+            serde_json::from_str(&json_result).map_err(|e| ExporterError::Parse(e.to_string()))?;
 
-    let name = if raw_name.is_empty() {
-        "Unknown".to_string()
-    } else {
-        raw_name
-    };
-    let language = if raw_lang.is_empty() {
-        "Unknown".to_string()
-    } else {
-        raw_lang
-    };
-    let file = if raw_file.is_empty() {
-        "Unknown".to_string()
-    } else {
-        raw_file
-    };
-    let line = extract_i64(&entity_data, "location/start-line");
-    let signature = extract_string(&entity_data, "code/signature");
-    let docs = extract_string(&entity_data, "doc/text");
+        if rows.is_empty() {
+            if current_depth == 0 {
+                return Err(ExporterError::NotFound(current_fqsn.clone()));
+            }
+            continue;
+        }
 
-    // Fetch callers
-    let callers_query = format!(
-        "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
-    );
-    let mut callers = Vec::new();
-    if let Ok(caller_json) = db.query_with_rules(&callers_query).await
-        && let Ok(rows) = serde_json::from_str::<Vec<serde_json::Value>>(&caller_json)
-    {
-        for row in rows {
-            let caller = if let Some(arr) = row.as_array() {
-                arr.first().and_then(|v| v.as_str())
-            } else if let Some(obj) = row.as_object() {
-                obj.values().next().and_then(|v| v.as_str())
-            } else {
-                None
-            };
-            if let Some(caller_str) = caller {
-                callers.push(caller_str.to_string());
+        let entity_data = rows[0].get("e").cloned().unwrap_or_else(|| rows[0].clone());
+
+        let raw_name = extract_string(&entity_data, "symbol/name");
+        let name = if raw_name.is_empty() {
+            "Unknown".to_string()
+        } else {
+            raw_name
+        };
+
+        let raw_lang = extract_string(&entity_data, "entity/language");
+        let language = if raw_lang.is_empty() {
+            "Unknown".to_string()
+        } else {
+            raw_lang
+        };
+
+        let raw_file = extract_string(&entity_data, "location/file");
+        let file = if raw_file.is_empty() {
+            "Unknown".to_string()
+        } else {
+            raw_file
+        };
+
+        let line = extract_i64(&entity_data, "location/start-line");
+        let namespace = extract_string(&entity_data, "symbol/namespace");
+
+        // Determine inclusion tier
+        let is_root = current_depth == 0;
+        let force_source = is_root && config.include_source == "root"
+            || config.include_source == "all"
+            || config
+                .source_namespaces
+                .iter()
+                .any(|ns| namespace.starts_with(ns))
+            || patterns.iter().any(|re| re.is_match(&name));
+
+        let signature = extract_string(&entity_data, "code/signature");
+
+        // Tier 2: Full source (we map this to signature/raw code presence for now)
+        // Tier 1: Docs
+        let mut docs = String::new();
+        if config.include_docs || is_root {
+            docs = extract_string(&entity_data, "doc/text");
+        }
+
+        // Tier 0: Skeleton / Linkage
+        let mut callers = Vec::new();
+        let mut callees = Vec::new();
+
+        if config.call_sites {
+            // Fetch callers
+            let callers_query = format!(
+                "[:find ?caller_fqsn :where [?callee :symbol/fqsn \"{current_fqsn}\"] (calls_rule ?caller ?callee) [?caller :symbol/fqsn ?caller_fqsn]]"
+            );
+            if let Ok(caller_json) = db.query_with_rules(&callers_query).await
+                && let Ok(c_rows) = serde_json::from_str::<Vec<serde_json::Value>>(&caller_json)
+            {
+                for r in c_rows {
+                    if let Some(c) = r
+                        .as_array()
+                        .and_then(|a| a.first())
+                        .and_then(|v| v.as_str())
+                    {
+                        callers.push(c.to_string());
+                        if current_depth < config.depth {
+                            queue.push_back((c.to_string(), current_depth + 1));
+                        }
+                    }
+                }
+            }
+
+            // Fetch callees
+            let callees_query = format!(
+                "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{current_fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
+            );
+            if let Ok(callee_json) = db.query_with_rules(&callees_query).await
+                && let Ok(c_rows) = serde_json::from_str::<Vec<serde_json::Value>>(&callee_json)
+            {
+                for r in c_rows {
+                    if let Some(c) = r
+                        .as_array()
+                        .and_then(|a| a.first())
+                        .and_then(|v| v.as_str())
+                    {
+                        callees.push(c.to_string());
+                        if current_depth < config.depth {
+                            queue.push_back((c.to_string(), current_depth + 1));
+                        }
+                    }
+                }
             }
         }
-    }
 
-    // Fetch callees
-    let callees_query = format!(
-        "[:find ?callee_fqsn :where [?caller :symbol/fqsn \"{fqsn}\"] (calls_rule ?caller ?callee) [?callee :symbol/fqsn ?callee_fqsn]]"
-    );
-    let mut callees = Vec::new();
-    if let Ok(callee_json) = db.query_with_rules(&callees_query).await
-        && let Ok(rows) = serde_json::from_str::<Vec<serde_json::Value>>(&callee_json)
-    {
-        for row in rows {
-            let callee = if let Some(arr) = row.as_array() {
-                arr.first().and_then(|v| v.as_str())
-            } else if let Some(obj) = row.as_object() {
-                obj.values().next().and_then(|v| v.as_str())
-            } else {
-                None
-            };
-            if let Some(callee_str) = callee {
-                callees.push(callee_str.to_string());
-            }
+        callers.sort();
+        callers.dedup();
+        callees.sort();
+        callees.dedup();
+
+        let node_signature = signature;
+        if !force_source {
+            // If not Tier 2, we could truncate full body to just the signature head if we had AST body separation.
+            // For now, if we had full source, we'd omit it. Since we only have `signature` in the schema mapping currently,
+            // we leave it as is, but this is the hook where `raw_code` would be omitted.
         }
+
+        let context = LenaContext {
+            fqsn: current_fqsn.clone(),
+            name,
+            language,
+            location: SourceLocation { file, line },
+            payload: Payload {
+                signature: node_signature,
+                docs,
+            },
+            callers,
+            callees,
+        };
+
+        // Rough token estimation (1 token ~= 4 chars)
+        estimated_tokens += context.to_markdown().len() / 4;
+        if let Some(max) = config.max_tokens
+            && estimated_tokens > max
+        {
+            // Return early with what we have to respect the budget
+            nodes.push(context);
+            break;
+        }
+
+        nodes.push(context);
     }
 
-    callers.sort();
-    callers.dedup();
-    callees.sort();
-    callees.dedup();
-
-    let context = LenaContext {
-        fqsn: fqsn.to_string(),
-        name,
-        language,
-        location: SourceLocation { file, line },
-        payload: Payload { signature, docs },
-        callers,
-        callees,
+    let graph = PromptGraph {
+        root_fqsn: root_fqsn.to_string(),
+        nodes,
     };
 
     match format {
-        ExportFormat::Xml => Ok(context.to_xml()),
-        ExportFormat::Markdown => Ok(context.to_markdown()),
+        ExportFormat::Xml => Ok(graph.to_xml()),
+        ExportFormat::Markdown => Ok(graph.to_markdown()),
         ExportFormat::Template(tpl_str) => {
-            let mut env = Environment::new();
+            let mut env = minijinja::Environment::new();
             env.add_template("prompt", &tpl_str)
                 .map_err(|e| ExporterError::Template(e.to_string()))?;
             let tmpl = env
                 .get_template("prompt")
                 .map_err(|e| ExporterError::Template(e.to_string()))?;
-            tmpl.render(&context)
+            tmpl.render(&graph)
                 .map_err(|e| ExporterError::Template(e.to_string()))
         }
     }
@@ -469,8 +576,9 @@ mod tests {
     async fn test_export_prompt_not_found() {
         let dir = tempdir().unwrap();
         let db = Arc::new(LenaDb::open(dir.path().join("not_found.db")).unwrap());
+        let config = PromptConfig::default();
 
-        let res = export_prompt(&db, "rust:missing::func", ExportFormat::Xml).await;
+        let res = export_prompt(&db, "rust:missing::func", ExportFormat::Xml, &config).await;
         assert!(matches!(res, Err(ExporterError::NotFound(_))));
     }
 
@@ -525,9 +633,11 @@ mod tests {
             .await
             .unwrap();
 
-        let xml_res = export_prompt(&db, "rust:test::success", ExportFormat::Xml)
+        let config = PromptConfig::default();
+        let xml_res = export_prompt(&db, "rust:test::success", ExportFormat::Xml, &config)
             .await
             .unwrap();
+        assert!(xml_res.contains("name=\"success_func\""));
         assert!(xml_res.contains("name=\"success_func\""));
         assert!(xml_res.contains("language=\"Rust\""));
         assert!(xml_res.contains("line=\"42\""));
