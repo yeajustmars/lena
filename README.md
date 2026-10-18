@@ -98,7 +98,29 @@ lena doc --theme single-page --out dist/
 
 Open `dist/index.html` in your browser to browse symbols, view neighborhood call charts, and toggle themes.
 
-### 3. Exporting Context for an LLM Prompt
+### 3.  Discovering Symbols (`lena list`)
+
+To assemble context using `lena prompt` or `lena skeleton`, you need the _exact Fully Qualified Symbol Name (FQSN)_. Rather than memorizing them, you can interactively explore the indexed database using the `list` command.
+To prevent overwhelming your terminal on large codebases, `lena list` requires either a regex filter or an explicit `--all` flag.
+
+```bash
+# Show the help menu and examples
+lena list
+
+# Filter symbols using a regular expression
+lena list --filter "^rust:.*::test_"
+lena list -f "go:edgecases"
+
+# Dump every FQSN in the database
+lena list --all
+```
+
+#### Typical Workflow:
+
+- Run `lena list -f "my_function"` to find the exact FQSN (e.g., `rust:my_crate::module::my_function`).
+- Pass that FQSN to `lena prompt rust:my_crate::module::my_function` to generate token-budgeted LLM context.
+
+### 4. Exporting Context for an LLM Prompt
 
 Target a specific function or struct and get its entire immediate call neighborhood formatted for an AI model:
 
@@ -132,7 +154,7 @@ pub async fn export_prompt(db: &Arc<LenaDb>, fqsn: &str, format: ExportFormat) -
 - `rust:crate::exporter::LenaContext::to_xml`
 ````
 
-### 4. Taking a Directory Snapshot
+### 5. Taking a Directory Snapshot
 
 Pack an entire directory tree into a clean XML bundle to feed into an LLM:
 
@@ -141,7 +163,7 @@ lena snapshot lena-core/src --format xml --out target/core-snapshot.xml
 
 ```
 
-### 5. Visualizing a Call Skeleton
+### 6. Visualizing a Call Skeleton
 
 Generate a bounded call graph starting from a root entry point:
 
