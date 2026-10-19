@@ -12,15 +12,15 @@ members = [
 
 [workspace.package]
 description = "A code-to-graph Swiss Army knife for interactive docs, call traces, and LLM context."
-version = "0.1.4"
+version = "0.1.5"
 repository = "https://github.com/yeajustmars/lena"
 license = "AGPL-3.0-only"
 edition = "2024"
 authors = ["yeajustmars"]
 
 [workspace.dependencies]
-lena-protocol = { path = "lena-protocol", version = "0.1.4" }
-lena-core = { path = "lena-core", version = "0.1.4" }
+lena-protocol = { path = "lena-protocol", version = "0.1.5" }
+lena-core = { path = "lena-core", version = "0.1.5" }
 mesodb-core = "0.2.1"
 
 anyhow = "1.0.102"
