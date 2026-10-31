@@ -91,7 +91,11 @@ async fn run_adapter(
 
     let status = child.wait().await?;
     if status.success() {
-        info!("Adapter [{lang}] finished. Ingested {facts_ingested} facts.");
+        if facts_ingested > 0 {
+            info!("Adapter [{lang}] finished. Ingested {facts_ingested} facts.");
+        } else {
+            debug!("Adapter [{lang}] finished (0 facts).");
+        }
     } else {
         warn!("Adapter [{lang}] exited with non-zero status: {status}");
     }

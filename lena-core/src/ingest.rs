@@ -5,7 +5,7 @@ use mesodb_core::edn::parse_transaction;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tracing::{error, info, warn};
+use tracing::{debug, error, warn};
 
 use crate::db::LenaDb;
 
@@ -69,7 +69,7 @@ where
         }
     }
 
-    info!("Ingestion complete. Transacted {total_facts} facts across {total_txs} transactions.");
+    debug!("Ingestion complete. Transacted {total_facts} facts across {total_txs} transactions.");
     Ok(total_facts)
 }
 
