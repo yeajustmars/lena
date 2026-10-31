@@ -1,43 +1,41 @@
 // lena-core/src/docgen/html.rs
 
-use crate::docgen::ir::DocGraph;
 use anyhow::Result;
-use minijinja::{Environment, context};
+use minijinja::{Environment as MiniJinjaEnvironment, Value as MiniJinjaValue, context};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
+use crate::docgen::ir::{DocGraph, DocModule, SymbolKind};
+
 pub struct HtmlRenderer<'a> {
     graph: &'a DocGraph,
-    env: Environment<'static>,
+    env: MiniJinjaEnvironment<'static>,
     custom_css: Option<String>,
 }
 
 impl<'a> HtmlRenderer<'a> {
     pub fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self> {
-        let mut env = Environment::new();
+        let mut env = MiniJinjaEnvironment::new();
 
         // Register the badge mapping as a MiniJinja filter
         env.add_filter("badge_class", |kind: String| -> String {
-            crate::docgen::ir::SymbolKind::from_str(&kind)
-                .badge_class()
-                .to_string()
+            SymbolKind::from_str(&kind).badge_class().to_string()
         });
 
         // Register the group_modules filter for the sidebar navigation
         env.add_filter(
             "group_modules",
-            |modules_val: minijinja::Value| -> minijinja::Value {
-                let mut grouped: std::collections::BTreeMap<
-                    String,
-                    std::collections::BTreeMap<String, minijinja::Value>,
-                > = std::collections::BTreeMap::new();
+            |modules_val: MiniJinjaValue| -> MiniJinjaValue {
+                let mut grouped: BTreeMap<String, BTreeMap<String, MiniJinjaValue>> =
+                    BTreeMap::new();
 
                 if let Ok(iter) = modules_val.try_iter() {
                     for key in iter {
                         if let Some(mod_name) = key.as_str() {
                             let module = modules_val
                                 .get_item(&key)
-                                .unwrap_or(minijinja::Value::UNDEFINED);
+                                .unwrap_or(MiniJinjaValue::UNDEFINED);
                             let parts: Vec<&str> = mod_name.splitn(2, '/').collect();
 
                             // If there's a slash, group by the first directory. Otherwise, group under "/"
@@ -50,7 +48,7 @@ impl<'a> HtmlRenderer<'a> {
                         }
                     }
                 }
-                minijinja::Value::from_serialize(&grouped)
+                MiniJinjaValue::from_serialize(&grouped)
             },
         );
 
@@ -146,12 +144,7 @@ impl<'a> HtmlRenderer<'a> {
         Ok(())
     }
 
-    fn render_module_page(
-        &self,
-        module: &crate::docgen::ir::DocModule,
-        _lang: &str,
-        _pkg: &str,
-    ) -> Result<String> {
+    fn render_module_page(&self, module: &DocModule, _lang: &str, _pkg: &str) -> Result<String> {
         // Dynamically calculate the relative path back to the root directory
         // Base depth is 2 (Language/Package/), plus 1 for every slash in the module file path
         let slash_count = module
