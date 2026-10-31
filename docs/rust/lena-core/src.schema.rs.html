@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>src.schema.rs - Lena Project</title>
+  <link rel="stylesheet" href="..&#x2f;..&#x2f;assets/layout.css">
+  <link rel="stylesheet" href="..&#x2f;..&#x2f;assets/themes.css">
+  
+  <script src="..&#x2f;..&#x2f;assets/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="..&#x2f;..&#x2f;assets/search_index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="..&#x2f;..&#x2f;index.html">Lena Project</a>
+        <span class="version">0.1.5</span>
+      </div>
+      <input type="text" id="search-box" placeholder="Search symbols (/) ..." autocomplete="off" />
+      <div id="search-results" class="search-popover hidden"></div>
+      <div class="theme-controls">
+        <select id="theme-selector">
+          <option value="grayscale">Grayscale</option>
+          <option value="navy">Navy</option>
+          <option value="green">Green</option>
+          <option value="poimandres">Poimandres</option>
+          <option value="gruvbox">Gruvbox</option>
+        </select>
+        <button id="mode-toggle" title="Toggle Light/Dark Mode">🌓</button>
+      </div>
+      <ul class="nav-tree">
+        
+        <li class="nav-language">
+          <span class="group-title">clojure</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">edge-cases</span>
+            <ul class="nav-modules">
+              
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;clojure/edge-cases/edge-cases.html">edge-cases</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-clj</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">tests</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;clojure/lena-adapter-clj/tests.fixtures.clj.edge_cases.clj.html">fixtures.clj.edge_cases.clj</a></li>
+                
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">go</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-go</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;go/lena-adapter-go/src.main.go.html">main.go</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;go/lena-adapter-go/src.main_test.go.html">main_test.go</a></li>
+                
+              
+                
+                  <li class="mod-group-title">tests</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;go/lena-adapter-go/tests.fixtures.go.edge_cases.go.html">fixtures.go.edge_cases.go</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;go/lena-adapter-go/tests.fixtures.go.gin.gin.1.9.1.gin.go.html">fixtures.go.gin.gin.1.9.1.gin.go</a></li>
+                
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+        <li class="nav-language">
+          <span class="group-title">rust</span>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-clj</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-adapter-clj/src.main.rs.html">main.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-rust</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-adapter-rust/src.main.rs.html">main.rs</a></li>
+                
+              
+                
+                  <li class="mod-group-title">tests</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-adapter-rust/tests.fixtures.rust.axum.axum.0.7.4.axum.src.routing.mod.rs.html">fixtures.rust.axum.axum.0.7.4.axum.src.routing.mod.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-adapter-rust/tests.fixtures.rust.edge_cases.rs.html">fixtures.rust.edge_cases.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-adapter-treesitter</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-adapter-treesitter/src.main.rs.html">main.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-bench</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">benches</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-bench/benches.ingest_bench.rs.html">ingest_bench.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-cli</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.adapter.rs.html">adapter.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.callees.rs.html">callees.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.callers.rs.html">callers.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.doc.rs.html">doc.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.index.rs.html">index.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.list.rs.html">list.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.main.rs.html">main.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.prompt.rs.html">prompt.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.query.rs.html">query.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-cli/src.skeleton.rs.html">skeleton.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-core</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.config.rs.html">config.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.db.rs.html">db.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.docgen.html.rs.html">docgen.html.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.docgen.ir.rs.html">docgen.ir.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.docgen.mdbook.rs.html">docgen.mdbook.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.docgen.mod.rs.html">docgen.mod.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.exporter.rs.html">exporter.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.ingest.rs.html">ingest.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.schema.rs.html">schema.rs</a></li>
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-core/src.skeleton.rs.html">skeleton.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+          <div class="nav-package">
+            <span class="pkg-title">lena-protocol</span>
+            <ul class="nav-modules">
+              
+                
+                  <li class="mod-group-title">src</li>
+                
+                
+                  <li><a href="..&#x2f;..&#x2f;rust/lena-protocol/src.emitter.rs.html">emitter.rs</a></li>
+                
+              
+            </ul>
+          </div>
+          
+        </li>
+        
+      </ul>
+    </nav>
+    <main class="content">
+      
+  <h1>src.schema.rs</h1>
+  <p class="file-path">Source: <code>lena-core&#x2f;src&#x2f;schema.rs</code></p>
+  
+  <hr />
+  <section class="symbols">
+    
+      <div class="symbol-card" id="bootstrap">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">bootstrap</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn bootstrap() -&gt; SchemaMap</code></pre>
+        
+        
+          <div class="symbol-desc">Bootstraps the complete Universal Intermediate Representation (UIR) schema.</div>
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_bootstrap_code_payload_attributes">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_bootstrap_code_payload_attributes</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_bootstrap_code_payload_attributes()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_bootstrap_graph_edge_attributes">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_bootstrap_graph_edge_attributes</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_bootstrap_graph_edge_attributes()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_bootstrap_identity_attributes">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_bootstrap_identity_attributes</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_bootstrap_identity_attributes()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_bootstrap_location_attributes">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_bootstrap_location_attributes</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_bootstrap_location_attributes()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_bootstrap_unknown_attribute">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_bootstrap_unknown_attribute</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_bootstrap_unknown_attribute()</code></pre>
+        
+        
+        
+      </div>
+    
+      <div class="symbol-card" id="test_schema_bootstrap_contains_all_attributes">
+        <div class="symbol-header">
+          <span class="badge badge-fn">Function</span>
+          <h3 class="symbol-name">test_schema_bootstrap_contains_all_attributes</h3>
+          <span class="symbol-line">Line 1</span>
+        </div>
+        
+          <pre class="symbol-sig"><code>fn test_schema_bootstrap_contains_all_attributes()</code></pre>
+        
+        
+        
+      </div>
+    
+  </section>
+
+    </main>
+  </div>
+  <script>window.ROOT_REL = "../../";</script>
+  <script src="..&#x2f;..&#x2f;assets/search.js"></script>
+</body>
+</html>

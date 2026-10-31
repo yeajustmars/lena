@@ -36,10 +36,10 @@ impl<'a> HtmlRenderer<'a> {
                             let module = modules_val
                                 .get_item(&key)
                                 .unwrap_or(MiniJinjaValue::UNDEFINED);
-                            let parts: Vec<&str> = mod_name.splitn(2, '/').collect();
 
-                            // If there's a slash, group by the first directory,
-                            // otherwise, group under "/"
+                            // Split on dot-notation rather than slashes
+                            let parts: Vec<&str> = mod_name.splitn(2, '.').collect();
+
                             let (group, display) = if parts.len() == 2 {
                                 (parts[0].to_string(), parts[1].to_string())
                             } else {

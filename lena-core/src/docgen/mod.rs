@@ -97,10 +97,7 @@ impl<'a> DocGraphBuilder<'a> {
 
             let href = format!(
                 "{}/{}/{}.html#{}",
-                raw.language,
-                raw.package,
-                raw.module.replace("::", "/"),
-                raw.name
+                raw.language, raw.package, raw.module, raw.name
             );
 
             search_index.push(SearchEntry {
@@ -194,25 +191,39 @@ impl<'a> DocGraphBuilder<'a> {
                 None
             };
 
-            let mut package = extract_string(data, "symbol/namespace");
+            let raw_ns = extract_string(data, "symbol/namespace");
+
+            let mut package = raw_ns.clone();
             if package.is_empty() {
                 // Fallback: Use the top-level directory from the normalized file path
                 package = file_path.split('/').next().unwrap_or("root").to_string();
                 if package.is_empty() || package == "." {
                     package = "root".to_string();
                 }
+            } else {
+                // For Rust crates (e.g., "lena-core::db"), the package is the first segment
+                package = package.split("::").next().unwrap_or(&package).to_string();
+                // For Go/Clojure (e.g., "my-ns/core" or "my-ns.core"), take the first segment
+                package = package
+                    .split('/')
+                    .next()
+                    .unwrap_or(&package)
+                    .split('.')
+                    .next()
+                    .unwrap_or(&package)
+                    .to_string();
             }
 
-            // Fallback: Use the file path as the module name to preserve the tree structure
-            let mut module = if file_path.is_empty() {
-                "main".to_string()
-            } else {
-                file_path.clone()
-            };
+            // Derive the module name from the namespace, normalizing to dot-notation (a.b.c)
+            let mut module = raw_ns.replace("::", ".").replace('/', ".");
+            if module.is_empty() {
+                // Fallback to dot-notation file path if no namespace exists (e.g., shell scripts)
+                module = file_path.replace('/', ".");
+            }
 
-            // Strip the redundant package prefix from the module name for a cleaner UI
+            // Strip the redundant package prefix from the module name for a cleaner UI tree
             if module.starts_with(&package) && module.len() > package.len() {
-                let stripped = module[package.len()..].trim_start_matches(['/', '\\']);
+                let stripped = module[package.len()..].trim_start_matches('.');
                 module = stripped.to_string();
             }
 
