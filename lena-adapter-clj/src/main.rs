@@ -64,6 +64,9 @@ struct VarDef {
     #[serde(rename = "end-col")]
     end_col: Option<i64>,
     doc: Option<String>,
+    // clj-kondo surfaces :macro in the var-definition payload
+    #[serde(rename = "macro")]
+    is_macro: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -98,7 +101,9 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
             tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&ns.name))?;
+            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(":kind/module"))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
+
             tx.add(
                 e_id,
                 ATTR_LOC_START_LINE,
@@ -122,7 +127,12 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
             tx.add(e_id, ATTR_SYMBOL_NAMESPACE, EdnValue::String(&v.ns))?;
             tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&v.name))?;
-            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
+            let kind = if v.is_macro.unwrap_or(false) {
+                ":kind/macro"
+            } else {
+                KIND_FN
+            };
+            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(kind))?;
             tx.add(e_id, ATTR_PARENT_ENTITY, EdnValue::Ref(parent_id))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&v.filename))?;
             tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(v.row.unwrap_or(1)))?;

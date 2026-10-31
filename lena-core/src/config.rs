@@ -115,21 +115,74 @@ impl Default for DocConfig {
     }
 }
 
+// lena-core/src/config.rs (Replace AdaptersConfig and its Default implementation)
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AdapterDefinition {
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
 /// Management configurations for native and foreign adapters.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct AdaptersConfig {
-    /// Key-value pair of installed adapters to their target path or "native"
-    pub installed: HashMap<String, String>,
+    /// Key-value pair of supported languages to their adapter definitions
+    pub registered: HashMap<String, AdapterDefinition>,
 }
 
 impl Default for AdaptersConfig {
     fn default() -> Self {
-        let mut installed = HashMap::new();
-        installed.insert("rust".to_string(), "native".to_string());
-        installed.insert("treesitter".to_string(), "native".to_string());
-        installed.insert("clj".to_string(), "native".to_string());
-        Self { installed }
+        let mut registered = HashMap::new();
+
+        registered.insert(
+            "rust".to_string(),
+            AdapterDefinition {
+                command: "lena-adapter-rust".to_string(),
+                args: vec![],
+            },
+        );
+        registered.insert(
+            "go".to_string(),
+            AdapterDefinition {
+                command: "lena-adapter-go".to_string(),
+                args: vec![],
+            },
+        );
+        registered.insert(
+            "clojure".to_string(),
+            AdapterDefinition {
+                command: "lena-adapter-clj".to_string(),
+                args: vec![],
+            },
+        );
+        registered.insert(
+            "python".to_string(),
+            AdapterDefinition {
+                command: "lena-adapter-treesitter".to_string(),
+                args: vec![
+                    "--lang".to_string(),
+                    "python".to_string(),
+                    "--grammar".to_string(),
+                    "~/.lena/grammars/tree-sitter-python.so".to_string(),
+                ],
+            },
+        );
+        registered.insert(
+            "javascript".to_string(),
+            AdapterDefinition {
+                command: "lena-adapter-treesitter".to_string(),
+                args: vec![
+                    "--lang".to_string(),
+                    "javascript".to_string(),
+                    "--grammar".to_string(),
+                    "~/.lena/grammars/tree-sitter-javascript.so".to_string(),
+                ],
+            },
+        );
+
+        Self { registered }
     }
 }
 
@@ -199,7 +252,7 @@ mod tests {
         assert_eq!(config.prompt.depth, 1);
         assert_eq!(config.prompt.include_source, "root");
         assert_eq!(config.doc.format, "book");
-        assert!(config.adapters.installed.contains_key("rust"));
+        assert!(config.adapters.registered.contains_key("rust"));
     }
 
     #[test]
@@ -257,7 +310,7 @@ mod tests {
 
         // Assert defaults remained for omitted categories
         assert_eq!(config.prompt.depth, 1);
-        assert!(config.adapters.installed.contains_key("rust"));
+        assert!(config.adapters.registered.contains_key("rust"));
     }
 
     #[test]
@@ -288,17 +341,32 @@ mod tests {
 
         // Maps must be deeply merged (python added, rust overwritten, clj retained)
         assert_eq!(
-            merged.adapters.installed.get("python").unwrap(),
-            "/usr/bin/python-adapter"
+            merged.adapters.registered.get("python").unwrap(),
+            &AdapterDefinition {
+                command: "lena-adapter-treesitter".to_string(),
+                args: vec![
+                    "--lang".to_string(),
+                    "python".to_string(),
+                    "--grammar".to_string(),
+                    "~/.lena/grammars/tree-sitter-python.so".to_string(),
+                ],
+            },
         );
+
         assert_eq!(
-            merged.adapters.installed.get("rust").unwrap(),
-            "custom-path"
+            merged.adapters.registered.get("rust").unwrap(),
+            &AdapterDefinition {
+                command: "lena-adapter-rust".to_string(),
+                args: vec![],
+            },
         );
-        assert_eq!(merged.adapters.installed.get("clj").unwrap(), "native");
+
         assert_eq!(
-            merged.adapters.installed.get("treesitter").unwrap(),
-            "native"
+            merged.adapters.registered.get("clojure").unwrap(),
+            &AdapterDefinition {
+                command: "lena-adapter-clj".to_string(),
+                args: vec![],
+            },
         );
     }
 }

@@ -48,6 +48,16 @@ enum Commands {
         /// Adapter name to install (e.g., 'rust', 'go')
         name: Option<String>,
     },
+    /// Show all functions called by the given symbol (transitively)
+    Callees {
+        /// The Fully Qualified Symbol Name
+        fqsn: String,
+    },
+    /// Show all functions that call the given symbol (transitively)
+    Callers {
+        /// The Fully Qualified Symbol Name
+        fqsn: String,
+    },
     /// Generate static HTML documentation from the indexed codebase
     Doc {
         /// Output directory for the static site
@@ -63,15 +73,6 @@ enum Commands {
         #[arg(long)]
         github_actions: bool,
     },
-    /// List available Fully Qualified Symbol Names (FQSNs) in the database
-    List {
-        /// Optional regex pattern to filter the symbol list
-        #[arg(short, long)]
-        filter: Option<String>,
-        /// List all symbols in the database (warning: output can be very large)
-        #[arg(short, long)]
-        all: bool,
-    },
     /// Index a codebase by running available adapters
     Index {
         /// Target directory to index
@@ -81,6 +82,23 @@ enum Commands {
         /// Maximum number of concurrent subprocesses (default: 16)
         #[arg(long, default_value = "16")]
         concurrency: usize,
+
+        /// Specific adapter(s) to run (e.g., -a rust -a python)
+        #[arg(short = 'a', long = "adapter", required_unless_present = "all")]
+        adapters: Option<Vec<String>>,
+
+        /// Run all installed adapters registered in lena.toml
+        #[arg(short = 'A', long, conflicts_with = "adapters")]
+        all: bool,
+    },
+    /// List available Fully Qualified Symbol Names (FQSNs) in the database
+    List {
+        /// Optional regex pattern to filter the symbol list
+        #[arg(short, long)]
+        filter: Option<String>,
+        /// List all symbols in the database (warning: output can be very large)
+        #[arg(short, long)]
+        all: bool,
     },
     /// Export an entity as LLM Context
     Prompt {
@@ -114,16 +132,10 @@ enum Commands {
         #[arg(long)]
         max_tokens: Option<usize>,
     },
-    /// Export an entire directory of source code into a single context file
-    Snapshot {
-        /// The path to the directory (or file) to export
-        path: PathBuf,
-        /// The output format: markdown or xml
-        #[arg(short, long, default_value = "markdown")]
-        format: String,
-        /// Optional path to save the output file directly
-        #[arg(short, long)]
-        out: Option<PathBuf>,
+    /// Query the graph using Datalog
+    Query {
+        /// Datalog query string
+        query: String,
     },
     /// Generate a hierarchical call-graph skeleton for a symbol
     Skeleton {
@@ -139,20 +151,16 @@ enum Commands {
         #[arg(long)]
         by_callee: bool,
     },
-    /// Query the graph using Datalog
-    Query {
-        /// Datalog query string
-        query: String,
-    },
-    /// Show all functions that call the given symbol (transitively)
-    Callers {
-        /// The Fully Qualified Symbol Name
-        fqsn: String,
-    },
-    /// Show all functions called by the given symbol (transitively)
-    Callees {
-        /// The Fully Qualified Symbol Name
-        fqsn: String,
+    /// Export an entire directory of source code into a single context file
+    Snapshot {
+        /// The path to the directory (or file) to export
+        path: PathBuf,
+        /// The output format: markdown or xml
+        #[arg(short, long, default_value = "markdown")]
+        format: String,
+        /// Optional path to save the output file directly
+        #[arg(short, long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -187,7 +195,13 @@ async fn main() -> Result<()> {
         Commands::Index {
             target,
             concurrency,
-        } => index::run(target, concurrency, &db).await?,
+            adapters,
+            all,
+        } => {
+            let config =
+                lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?;
+            index::run(target, concurrency, &db, adapters, all, config.adapters).await?
+        }
         Commands::Prompt {
             fqsn,
             format,

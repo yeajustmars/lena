@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+cargo install --path lena-adapter-rust --root ~/.lena

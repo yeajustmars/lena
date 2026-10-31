@@ -5,6 +5,7 @@
 // TODO: turn on pedantic and fix all warnings and issues
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
     ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
@@ -12,7 +13,6 @@ use lena_protocol::schema::{
     ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME, KIND_FN, LANG_RUST, TYPE_CALL_SITE,
     TYPE_FUNCTION, TYPE_MODULE,
 };
-use clap::Parser;
 use ra_ap_syntax::{AstNode, Edition, SourceFile, ast, ast::HasAttrs, ast::HasName};
 use std::{
     collections::HashMap,
@@ -245,22 +245,67 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+fn find_package_name(file_path: &Path, cache: &mut HashMap<PathBuf, String>) -> String {
+    let mut current_dir = file_path.parent();
+    while let Some(dir) = current_dir {
+        if let Some(cached) = cache.get(dir) {
+            return cached.clone();
+        }
+
+        let cargo_toml = dir.join("Cargo.toml");
+        if cargo_toml.exists()
+            && let Ok(content) = fs::read_to_string(&cargo_toml)
+        {
+            let mut in_package = false;
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed == "[package]" {
+                    in_package = true;
+                } else if trimmed.starts_with('[') {
+                    in_package = false;
+                }
+                if in_package
+                    && trimmed.starts_with("name")
+                    && let Some(val) = trimmed.split('=').nth(1)
+                {
+                    // Strip inline comments before trimming quotes
+                    let pkg_name = val
+                        .split('#')
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .trim_matches('"')
+                        .to_string();
+
+                    cache.insert(dir.to_path_buf(), pkg_name.clone());
+                    return pkg_name;
+                }
+            }
+        }
+        current_dir = dir.parent();
+    }
+    "crate".to_string()
+}
+
 fn visit_dirs(dir: &Path) -> Result<()> {
     let mut files_to_process = Vec::new();
     collect_files(dir, &mut files_to_process)?;
 
     let mut symbol_table = SymbolTable::new();
     let mut parsed_files = Vec::new();
+    let mut pkg_cache = HashMap::new(); // Cache Cargo.toml results
 
     for path in &files_to_process {
         let content = fs::read_to_string(path)
             .with_context(|| format!("Failed to read {}", path.display()))?;
-        // .with_context(|| format!("Failed to read {path:?}"))?;
         let parse = SourceFile::parse(&content, Edition::Edition2024);
 
         let path_str = path.to_string_lossy().to_string();
         let file_stem = path.file_stem().unwrap_or_default().to_string_lossy();
-        let module_fqsn = format!("rust:crate::{file_stem}");
+
+        // Resolve the exact package name for this specific file
+        let package_name = find_package_name(path, &mut pkg_cache);
+        let module_fqsn = format!("rust:{package_name}::{file_stem}");
 
         symbol_table
             .file_to_module
