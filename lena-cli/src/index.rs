@@ -1,8 +1,7 @@
 // lena-cli/src/index.rs
 
-//#![deny(warnings)]
-//#![warn(clippy::all, clippy::pedantic)]
-//TODO: turn on clippy::pedantic
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::{Context, Result, bail};
 use lena_core::{
@@ -10,7 +9,11 @@ use lena_core::{
     db::LenaDb,
     ingest::ingest_stream,
 };
-use std::{path::PathBuf, process::Stdio, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+    sync::Arc,
+};
 use tokio::{process::Command, sync::Semaphore, task::JoinSet};
 use tracing::{debug, error, info, warn};
 
@@ -61,9 +64,13 @@ async fn run_adapter(
     let mut expanded_args = Vec::new();
     for arg in def.args {
         let expanded = expand_tilde(&arg);
-        if expanded.ends_with(".so") && !PathBuf::from(&expanded).exists() {
+        if Path::new(&expanded)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
+        {
             bail!("Required grammar file not found: {expanded}");
         }
+
         expanded_args.push(expanded);
     }
 
@@ -108,7 +115,9 @@ pub async fn run(
                 // If it requires a grammar, only auto-run if the grammar exists
                 let has_missing_grammar = def.args.iter().any(|a| {
                     let exp = expand_tilde(a);
-                    exp.ends_with(".so") && !PathBuf::from(exp).exists()
+                    Path::new(&exp)
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
                 });
 
                 if has_missing_grammar {
@@ -128,10 +137,7 @@ pub async fn run(
             if let Some(def) = config.registered.get(&lang) {
                 targets_to_run.push((lang, def.clone()));
             } else {
-                bail!(
-                    "Unknown adapter '{}'. Check your lena.toml configuration.",
-                    lang
-                );
+                bail!("Unknown adapter '{lang}'. Check your lena.toml configuration.");
             }
         }
     }
