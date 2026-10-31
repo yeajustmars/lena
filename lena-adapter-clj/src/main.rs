@@ -3,13 +3,14 @@
 #![deny(warnings)]
 #![warn(clippy::all)]
 //#![warn(clippy::all, clippy::pedantic)]
+//TODO: put back pendantic
 
 use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
-    ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE, ATTR_ENTITY_TYPE,
-    ATTR_LOC_END_COL, ATTR_LOC_END_LINE, ATTR_LOC_FILE, ATTR_LOC_START_COL, ATTR_LOC_START_LINE,
-    ATTR_PARENT_ENTITY, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME,
+    ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
+    ATTR_ENTITY_TYPE, ATTR_LOC_END_COL, ATTR_LOC_END_LINE, ATTR_LOC_FILE, ATTR_LOC_START_COL,
+    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME,
     ATTR_SYMBOL_NAMESPACE, KIND_FN, LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
 };
 use serde::Deserialize;
@@ -64,9 +65,11 @@ struct VarDef {
     #[serde(rename = "end-col")]
     end_col: Option<i64>,
     doc: Option<String>,
-    // clj-kondo surfaces :macro in the var-definition payload
     #[serde(rename = "macro")]
     is_macro: Option<bool>,
+    // ADD THIS:
+    #[serde(rename = "arglist-strs")]
+    arglist_strs: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -147,6 +150,10 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             if let Some(doc) = v.doc {
                 tx.add(e_id, ATTR_DOC_TEXT, EdnValue::String(&doc))?;
             }
+            if let Some(ref args) = v.arglist_strs {
+                let sig = args.join("\n");
+                tx.add(e_id, ATTR_CODE_SIGNATURE, EdnValue::String(&sig))?;
+            }
 
             facts.push(tx.finish());
         }
@@ -201,7 +208,7 @@ fn execute_kondo(target: &Path) -> anyhow::Result<Vec<String>> {
         .arg("--lint")
         .arg(target)
         .arg("--config")
-        .arg("{:output {:format :json, :analysis true}}")
+        .arg("{:output {:format :json, :analysis {:arglists true}}}")
         .output()?;
 
     if !output.status.success() {

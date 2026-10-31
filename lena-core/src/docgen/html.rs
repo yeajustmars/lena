@@ -38,7 +38,8 @@ impl<'a> HtmlRenderer<'a> {
                                 .unwrap_or(MiniJinjaValue::UNDEFINED);
                             let parts: Vec<&str> = mod_name.splitn(2, '/').collect();
 
-                            // If there's a slash, group by the first directory. Otherwise, group under "/"
+                            // If there's a slash, group by the first directory,
+                            // otherwise, group under "/"
                             let (group, display) = if parts.len() == 2 {
                                 (parts[0].to_string(), parts[1].to_string())
                             } else {
@@ -96,9 +97,10 @@ impl<'a> HtmlRenderer<'a> {
     pub fn render_lena_book(&self, out_dir: &Path) -> Result<()> {
         fs::create_dir_all(out_dir.join("assets"))?;
 
-        // 1. Write search index bundle
+        // 1. Write search index bundle as a JS file to bypass file:// CORS
         let search_json = serde_json::to_string(&self.graph.search_index)?;
-        fs::write(out_dir.join("assets/search_index.json"), search_json)?;
+        let search_js_payload = format!("window.SEARCH_INDEX = {};", search_json);
+        fs::write(out_dir.join("assets/search_index.js"), search_js_payload)?;
 
         // 2. Write embedded static CSS and JS
         fs::write(
@@ -241,7 +243,7 @@ mod tests {
         assert!(dir.path().join("index.html").exists());
         assert!(dir.path().join("assets/layout.css").exists());
         assert!(dir.path().join("assets/themes.css").exists());
-        assert!(dir.path().join("assets/search_index.json").exists());
+        assert!(dir.path().join("assets/search_index.js").exists());
         assert!(dir.path().join("Rust/crate/main.html").exists());
 
         // Verify custom CSS injection in multi-page

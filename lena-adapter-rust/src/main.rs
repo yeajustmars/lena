@@ -155,9 +155,18 @@ fn emit_function_facts(
 
     let docs = fn_def
         .doc_comments()
-        .map(|doc| doc.syntax().text().to_string())
+        .map(|doc| {
+            doc.syntax()
+                .text()
+                .to_string()
+                .trim_start_matches("///")
+                .trim_start_matches("//!")
+                .trim_start_matches(' ')
+                .to_string()
+        })
         .collect::<Vec<_>>()
         .join("\n");
+
     if !docs.is_empty() {
         tx.add(fn_id, ATTR_DOC_TEXT, EdnValue::String(&docs))?;
     }

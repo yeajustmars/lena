@@ -37,4 +37,10 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem('lena-mode', newMode);
     });
   }
+
+  if (typeof marked !== 'undefined') {
+    document.querySelectorAll('.symbol-desc').forEach(el => {
+      el.innerHTML = marked.parse(el.textContent);
+    });
+  }
 });

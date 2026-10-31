@@ -25,17 +25,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (type === 'INIT') {
         try {
-          if (indexData) {
-            index = indexData;
-          } else {
-            const res = await fetch(rootRel + "assets/search_index.json");
-            if (res.ok || res.status === 0) index = await res.json();
-          }
+          index = indexData || [];
 
-          // Build Prefix Trie
+          // Build Prefix Trie with tokenization
           index.forEach((item, id) => {
+            const tokens = (item.name + " " + item.fqsn).split(/[^a-zA-Z0-9_]/);
+            tokens.forEach(t => insertTrie(t, id));
             insertTrie(item.name, id);
-            insertTrie(item.fqsn, id);
           });
           self.postMessage({ type: 'READY' });
         } catch (err) {

@@ -3,9 +3,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"hash/fnv"
 	"os"
@@ -127,8 +129,12 @@ func emitFacts(file *ParsedFile, table *SymbolTable) []string {
 			fnId := hashId(fnFqsn)
 			pos := file.Fset.Position(decl.Pos())
 
-			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
-				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(fnName), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
+			var sigBuf bytes.Buffer
+			printer.Fprint(&sigBuf, file.Fset, decl.Type)
+			sigStr := "func " + fnName + sigBuf.String()
+
+			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :symbol/kind :kind/fn] [:db/add %d :code/signature \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
+				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(fnName), fnId, fnId, escapeString(sigStr), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
 
 			if decl.Doc != nil {
 				docText := decl.Doc.Text()

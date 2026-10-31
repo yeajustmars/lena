@@ -6,6 +6,7 @@
   <style>{{ builtin_css | safe }}</style>
   {% if custom_css %}<style>{{ custom_css | safe }}</style>{% endif %}
   <script>{{ theme_js | safe }}</script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </head>
