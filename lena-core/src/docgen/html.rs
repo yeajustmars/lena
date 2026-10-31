@@ -87,6 +87,7 @@ impl<'a> HtmlRenderer<'a> {
             builtin_css => builtin_css,
             custom_css => self.custom_css.clone(),
             theme_js => include_str!("assets/theme.js"),
+            search_js => include_str!("assets/search.js"),
             search_index_json => search_index_json,
         })?;
 
