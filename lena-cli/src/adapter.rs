@@ -25,38 +25,70 @@ pub async fn run(action: &str, name: Option<&str>) -> Result<()> {
 
 async fn list_adapters() -> Result<()> {
     let bin_dir = get_bin_dir()?;
-    println!(
-        "Checking for installed adapters in {}...\n",
-        bin_dir.display()
-    );
+    println!("Checking for installed adapters...\n");
 
-    if !bin_dir.exists() {
-        println!("No adapters installed in ~/.lena/bin/ yet.");
-        return Ok(());
-    }
+    let known_adapters = [
+        "lena-adapter-rust",
+        "lena-adapter-go",
+        "lena-adapter-clojure",
+        "lena-adapter-treesitter",
+    ];
 
-    let mut entries = fs::read_dir(&bin_dir)?
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.is_file())
-        .collect::<Vec<_>>();
+    let mut found_any = false;
 
-    entries.sort();
+    for adapter in known_adapters {
+        let mut lena_bin_path = None;
+        let mut path_bin_path = None;
 
-    for path in entries {
-        let filename = path.file_name().unwrap_or_default().to_string_lossy();
-        if filename.starts_with("lena-adapter-") {
-            // Attempt a version handshake
-            let version = match Command::new(&path).arg("--version").output().await {
-                Ok(out) if out.status.success() => {
-                    String::from_utf8_lossy(&out.stdout).trim().to_string()
-                }
-                _ => "unknown version".to_string(),
-            };
-            println!("- {filename} ({version})");
+        // Check ~/.lena/bin/
+        let managed_path = bin_dir.join(format!("{}{}", adapter, std::env::consts::EXE_SUFFIX));
+        if managed_path.exists() {
+            lena_bin_path = Some(managed_path);
+        }
+
+        // Check $PATH
+        if let Ok(p) = which::which(adapter) {
+            // Ensure we aren't just resolving the exact same file we found in ~/.lena/bin
+            if lena_bin_path.as_ref().map_or(true, |lb| lb != &p) {
+                path_bin_path = Some(p);
+            }
+        }
+
+        if lena_bin_path.is_none() && path_bin_path.is_none() {
+            continue;
+        }
+
+        found_any = true;
+
+        if let Some(p) = &lena_bin_path {
+            let version = get_adapter_version(p).await;
+            println!("- {adapter} ({version}) [Managed: {}]", p.display());
+        }
+
+        if let Some(p) = &path_bin_path {
+            let version = get_adapter_version(p).await;
+            println!("- {adapter} ({version}) [System: {}]", p.display());
+
+            if lena_bin_path.is_some() {
+                tracing::warn!(
+                    "  ⚠️  The system installation of {adapter} is being shadowed by the managed ~/.lena/bin/ installation."
+                );
+            }
         }
     }
+
+    if !found_any {
+        println!("No Leña adapters found in ~/.lena/bin/ or $PATH.");
+    }
+
     Ok(())
+}
+
+async fn get_adapter_version(path: &PathBuf) -> String {
+    match Command::new(path).arg("--version").output().await {
+        Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).trim().to_string(),
+        _ => "unknown version".to_string(),
+    }
 }
 
 async fn install_adapter(name: &str) -> Result<()> {

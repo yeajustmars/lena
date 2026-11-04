@@ -21,13 +21,7 @@ fn resolve_binary(command_name: &str) -> Option<PathBuf> {
     let exe_suffix = std::env::consts::EXE_SUFFIX;
     let adapter_filename = format!("{command_name}{exe_suffix}");
 
-    if let Some(home) = dirs::home_dir() {
-        let lena_bin = home.join(".lena").join("bin").join(&adapter_filename);
-        if lena_bin.exists() {
-            return Some(lena_bin);
-        }
-    }
-
+    // 1. Sibling directory (e.g., ./target/debug/ during development)
     let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("lena"));
     current_exe.pop();
     let local_adapter_path = current_exe.join(&adapter_filename);
@@ -35,6 +29,15 @@ fn resolve_binary(command_name: &str) -> Option<PathBuf> {
         return Some(local_adapter_path);
     }
 
+    // 2. Managed Leña directory (~/.lena/bin/)
+    if let Some(home) = dirs::home_dir() {
+        let lena_bin = home.join(".lena").join("bin").join(&adapter_filename);
+        if lena_bin.exists() {
+            return Some(lena_bin);
+        }
+    }
+
+    // 3. System PATH
     which::which(&adapter_filename).ok()
 }
 

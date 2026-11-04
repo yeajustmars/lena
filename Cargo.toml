@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "lena-adapter-clj",
+    "lena-adapter-clojure",
     "lena-adapter-rust",
     "lena-adapter-treesitter",
     "lena-bench",

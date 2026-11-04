@@ -2297,7 +2297,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lena-adapter-clj"
+name = "lena-adapter-clojure"
 version = "0.1.6"
 dependencies = [
  "anyhow",

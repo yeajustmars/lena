@@ -11,7 +11,7 @@ CRATES_TO_PUBLISH=(
     "lena-protocol"
     "lena-core"
     "lena"
-    "lena-adapter-clj"
+    "lena-adapter-clojure"
     "lena-adapter-rust"
     "lena-adapter-treesitter"
 )

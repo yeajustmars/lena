@@ -1,5 +1,5 @@
 [package]
-name = "lena-adapter-clj"
+name = "lena-adapter-clojure"
 description.workspace = true
 version.workspace = true
 edition.workspace = true
