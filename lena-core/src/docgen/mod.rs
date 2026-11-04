@@ -47,12 +47,30 @@ impl<'a> DocGraphBuilder<'a> {
             let callers = callers_map.get(&fqsn).cloned().unwrap_or_default();
             let callees = callees_map.get(&fqsn).cloned().unwrap_or_default();
 
+            // Calculate context-aware display name (e.g. `Server.Close` or `Router::nest`)
+            let display_name = if let Some(c) = &raw.container {
+                match raw.language.to_lowercase().as_str() {
+                    "go" | "java" | "javascript" | "python" | "c#" | "typescript" => {
+                        format!("{}.{}", c, raw.name)
+                    }
+                    _ => format!("{}::{}", c, raw.name), // Rust, C++, PHP, etc.
+                }
+            } else {
+                raw.name.clone()
+            };
+
             let mut neighborhood = DocNeighborhood {
                 callers,
                 callees,
                 mermaid_chart: None,
             };
-            neighborhood.generate_mermaid(&raw.name);
+            neighborhood.generate_mermaid(&display_name);
+
+            // Skip external stubs from getting dedicated doc pages and search entries.
+            // They are preserved in symbols_map so they appear in caller/callee graphs.
+            if raw.is_external {
+                continue;
+            }
 
             let summary = raw
                 .docstring
@@ -62,12 +80,14 @@ impl<'a> DocGraphBuilder<'a> {
 
             let doc_symbol = DocSymbol {
                 fqsn: raw.fqsn.clone(),
-                name: raw.name.clone(),
+                name: display_name.clone(),
                 kind: raw.kind,
                 signature: raw.signature,
                 docstring: raw.docstring,
                 file_path: raw.file_path.clone(),
                 line: raw.line,
+                container: raw.container.clone(),
+                submodule: raw.submodule.clone(),
                 neighborhood,
             };
 
@@ -92,7 +112,7 @@ impl<'a> DocGraphBuilder<'a> {
                 .entry(raw.module.clone())
                 .or_insert_with(|| DocModule {
                     name: raw.module.clone(),
-                    namespace: raw.namespace.clone(),
+                    namespace: raw.module.clone(),
                     path: raw.file_path.clone(),
                     docstring: None,
                     symbols: Vec::new(),
@@ -105,7 +125,7 @@ impl<'a> DocGraphBuilder<'a> {
 
             search_index.push(SearchEntry {
                 fqsn: raw.fqsn,
-                name: raw.name,
+                name: display_name,
                 kind: format!("{:?}", raw.kind),
                 module: raw.module,
                 summary,
@@ -115,6 +135,7 @@ impl<'a> DocGraphBuilder<'a> {
             mod_entry.symbols.push(doc_symbol);
         }
 
+        // Sort symbols for deterministic layout
         for lang in languages.values_mut() {
             for pkg in lang.packages.values_mut() {
                 for module in pkg.modules.values_mut() {
@@ -152,7 +173,6 @@ impl<'a> DocGraphBuilder<'a> {
             }
 
             let name = extract_string(data, "symbol/name");
-            // Skip partial graph entities (like external library calls) that lack a parsed name
             if name.is_empty() {
                 continue;
             }
@@ -161,7 +181,10 @@ impl<'a> DocGraphBuilder<'a> {
                 .replace(":type/", "")
                 .replace(":kind/", "")
                 .replace(':', "");
+
             let language = extract_string(data, "entity/language").replace(":lang/", "");
+
+            let is_external = extract_string(data, "symbol/external") == "true";
 
             let sig_raw = extract_string(data, "code/signature");
             let sig_str = if sig_raw.is_empty() {
@@ -177,16 +200,7 @@ impl<'a> DocGraphBuilder<'a> {
                 Some(doc_raw.replace("\\n", "\n"))
             };
 
-            // Normalize file path by stripping leading "./" or "/"
-            let mut file_path = extract_string(data, "location/file");
-            while file_path.starts_with("./") || file_path.starts_with('/') {
-                if file_path.starts_with("./") {
-                    file_path = file_path[2..].to_string();
-                } else if file_path.starts_with('/') {
-                    file_path = file_path[1..].to_string();
-                }
-            }
-
+            let file_path = extract_string(data, "location/file");
             let line_val = extract_i64(data, "location/start-line");
             let line = if line_val > 0 {
                 Some(line_val as usize)
@@ -194,58 +208,37 @@ impl<'a> DocGraphBuilder<'a> {
                 None
             };
 
-            let raw_ns = extract_string(data, "symbol/namespace");
+            let module = extract_string(data, "symbol/module");
 
-            let clean_namespace = if !raw_ns.is_empty() {
-                // Strip language prefixes like "rust:" or "clj:" if present
-                raw_ns.splitn(2, ':').last().unwrap_or(&raw_ns).to_string()
+            let submod_raw = extract_string(data, "symbol/submodule");
+            let submodule = if submod_raw.is_empty() {
+                None
             } else {
-                // Fallback: use file path without extension
-                let path_obj = std::path::Path::new(&file_path);
-                path_obj.with_extension("").to_string_lossy().to_string()
+                Some(submod_raw)
             };
 
-            let mut package = raw_ns.clone();
-            if package.is_empty() {
-                // Fallback: Use the top-level directory from the normalized file path
-                package = file_path.split('/').next().unwrap_or("root").to_string();
-                if package.is_empty() || package == "." {
-                    package = "root".to_string();
-                }
+            let cont_raw = extract_string(data, "symbol/container");
+            let container = if cont_raw.is_empty() {
+                None
             } else {
-                // For Rust crates (e.g., "lena-core::db"), the package is the first segment
-                package = package.split("::").next().unwrap_or(&package).to_string();
-                // For Go/Clojure (e.g., "my-ns/core" or "my-ns.core"), take the first segment
-                package = package
-                    .split('/')
-                    .next()
-                    .unwrap_or(&package)
-                    .split('.')
-                    .next()
-                    .unwrap_or(&package)
-                    .to_string();
-            }
+                Some(cont_raw)
+            };
 
-            // Derive the module name from the namespace, normalizing to dot-notation (a.b.c)
-            let mut module = raw_ns.replace("::", ".").replace('/', ".");
-            if module.is_empty() {
-                // Fallback to dot-notation file path if no namespace exists (e.g., shell scripts)
-                module = file_path.replace('/', ".");
+            // Determine the top-level package boundary for UI grouping
+            let mut package = module.split("::").next().unwrap_or(&module).to_string();
+            if package == module {
+                package = module.split('/').next().unwrap_or(&module).to_string();
             }
-
-            // Strip the redundant package prefix from the module name for a cleaner UI tree
-            if module.starts_with(&package) && module.len() > package.len() {
-                let stripped = module[package.len()..].trim_start_matches('.');
-                module = stripped.to_string();
+            if package == module {
+                package = module.split('.').next().unwrap_or(&module).to_string();
+            }
+            if package.is_empty() {
+                package = "root".to_string();
             }
 
             symbols.push(RawSymbol {
                 fqsn,
-                name: if name.is_empty() {
-                    "Unnamed".to_string()
-                } else {
-                    name
-                },
+                name,
                 kind: SymbolKind::from_str(&kind_str),
                 signature: sig_str,
                 docstring: doc_str,
@@ -257,8 +250,14 @@ impl<'a> DocGraphBuilder<'a> {
                     language
                 },
                 package,
-                module,
-                namespace: clean_namespace,
+                module: if module.is_empty() {
+                    "root".to_string()
+                } else {
+                    module
+                },
+                submodule,
+                container,
+                is_external,
             });
         }
         Ok(symbols)
@@ -287,8 +286,41 @@ impl<'a> DocGraphBuilder<'a> {
         let mut callees_map: HashMap<String, Vec<NeighborRef>> = HashMap::new();
 
         for row in rows {
-            let caller_fqsn = extract_string(&row, "?caller_fqsn");
-            let callee_fqsn = extract_string(&row, "?callee_fqsn");
+            let (caller_fqsn, callee_fqsn) = match &row {
+                Value::Array(arr) => {
+                    let caller = arr
+                        .first()
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .to_string();
+                    let callee = arr
+                        .get(1)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .to_string();
+                    (caller, callee)
+                }
+                Value::Object(_) => {
+                    let caller = {
+                        let s = extract_string(&row, "?caller_fqsn");
+                        if s.is_empty() {
+                            extract_string(&row, "caller_fqsn")
+                        } else {
+                            s
+                        }
+                    };
+                    let callee = {
+                        let s = extract_string(&row, "?callee_fqsn");
+                        if s.is_empty() {
+                            extract_string(&row, "callee_fqsn")
+                        } else {
+                            s
+                        }
+                    };
+                    (caller, callee)
+                }
+                _ => continue,
+            };
 
             if caller_fqsn.is_empty() || callee_fqsn.is_empty() {
                 continue;
@@ -297,13 +329,26 @@ impl<'a> DocGraphBuilder<'a> {
             let caller_sym = symbols_map.get(&caller_fqsn);
             let callee_sym = symbols_map.get(&callee_fqsn);
 
+            // Fetch display names to show containers in Mermaid graphs
             let caller_name = caller_sym
-                .map(|s| s.name.clone())
+                .map(|s| {
+                    if let Some(c) = &s.container {
+                        format!("{}::{}", c, s.name)
+                    } else {
+                        s.name.clone()
+                    }
+                })
                 .unwrap_or_else(|| caller_fqsn.clone());
             let caller_file = caller_sym.map(|s| s.file_path.clone()).unwrap_or_default();
 
             let callee_name = callee_sym
-                .map(|s| s.name.clone())
+                .map(|s| {
+                    if let Some(c) = &s.container {
+                        format!("{}::{}", c, s.name)
+                    } else {
+                        s.name.clone()
+                    }
+                })
                 .unwrap_or_else(|| callee_fqsn.clone());
             let callee_file = callee_sym.map(|s| s.file_path.clone()).unwrap_or_default();
 
@@ -342,7 +387,9 @@ struct RawSymbol {
     language: String,
     package: String,
     module: String,
-    namespace: String,
+    submodule: Option<String>,
+    container: Option<String>,
+    is_external: bool,
 }
 
 fn extract_string(val: &Value, key: &str) -> String {
@@ -382,7 +429,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let db = LenaDb::open(dir.path().join("docgen.db")).unwrap();
 
-        // Seed mock symbol
+        // Seed mock symbol with explicitly defined modularity attributes
         db.inner()
             .transact(vec![
                 Fact {
@@ -411,8 +458,16 @@ mod tests {
                 },
                 Fact {
                     e: 1,
-                    ident: ":symbol/namespace".into(),
+                    ident: ":symbol/module".into(),
                     v: MesoValue::String("core".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/container".into(),
+                    v: MesoValue::String("MyStruct".into()),
                     op: true,
                     cas_old_v: None,
                     valid_time: None,
@@ -435,5 +490,269 @@ mod tests {
 
         let rust_lang = graph.languages.get("Rust").unwrap();
         assert!(rust_lang.packages.contains_key("core"));
+
+        let core_pkg = rust_lang.packages.get("core").unwrap();
+        let module = core_pkg.modules.get("core").unwrap();
+        let symbol = &module.symbols[0];
+
+        // Assert container display name logic triggered
+        assert_eq!(symbol.name, "MyStruct::func");
+        assert_eq!(symbol.container, Some("MyStruct".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_docgraph_skips_external_symbols() {
+        let dir = tempdir().unwrap();
+        let db = LenaDb::open(dir.path().join("docgen_ext.db")).unwrap();
+
+        db.inner()
+            .transact(vec![
+                Fact {
+                    e: 1,
+                    ident: ":symbol/fqsn".into(),
+                    v: MesoValue::String("go:fmt/Println".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/name".into(),
+                    v: MesoValue::String("Println".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/external".into(),
+                    v: MesoValue::String("true".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+            ])
+            .await
+            .unwrap();
+
+        let options = DocGenOptions {
+            project_name: "Test".into(),
+            version: "1.0.0".into(),
+            custom_css: None,
+        };
+
+        let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
+
+        assert!(
+            graph.languages.is_empty(),
+            "External symbols should not pollute the main documentation tree"
+        );
+        assert!(
+            graph.search_index.is_empty(),
+            "External symbols should not appear in search results"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_docgraph_language_specific_display_name_formatting() {
+        let dir = tempdir().unwrap();
+        let db = LenaDb::open(dir.path().join("docgen_lang.db")).unwrap();
+
+        // Seed a Go method (should format as Server.Close)
+        db.inner()
+            .transact(vec![
+                Fact {
+                    e: 10,
+                    ident: ":symbol/fqsn".into(),
+                    v: MesoValue::String("go:net/http.Server.Close".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 10,
+                    ident: ":symbol/name".into(),
+                    v: MesoValue::String("Close".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 10,
+                    ident: ":entity/language".into(),
+                    v: MesoValue::String("go".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 10,
+                    ident: ":symbol/module".into(),
+                    v: MesoValue::String("net/http".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 10,
+                    ident: ":symbol/container".into(),
+                    v: MesoValue::String("Server".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 10,
+                    ident: ":location/file".into(),
+                    v: MesoValue::String("server.go".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+            ])
+            .await
+            .unwrap();
+
+        let options = DocGenOptions {
+            project_name: "GoTest".into(),
+            version: "1.0.0".into(),
+            custom_css: None,
+        };
+
+        let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
+        let go_lang = graph.languages.get("go").unwrap();
+        let pkg = go_lang.packages.get("net").unwrap();
+        let module = pkg.modules.get("net/http").unwrap();
+
+        assert_eq!(module.symbols[0].name, "Server.Close");
+    }
+
+    #[tokio::test]
+    async fn test_docgraph_call_edges_include_external_stubs() {
+        let dir = tempdir().unwrap();
+        let db = LenaDb::open(dir.path().join("docgen_edges.db")).unwrap();
+
+        // Internal caller referencing external callee
+        db.inner()
+            .transact(vec![
+                Fact {
+                    e: 1,
+                    ident: ":symbol/fqsn".into(),
+                    v: MesoValue::String("rust:app::main".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/name".into(),
+                    v: MesoValue::String("main".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":symbol/module".into(),
+                    v: MesoValue::String("app".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":entity/language".into(),
+                    v: MesoValue::String("rust".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 1,
+                    ident: ":location/file".into(),
+                    v: MesoValue::String("src/main.rs".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                // External stub
+                Fact {
+                    e: 2,
+                    ident: ":symbol/fqsn".into(),
+                    v: MesoValue::String("rust:std::process::exit".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 2,
+                    ident: ":symbol/name".into(),
+                    v: MesoValue::String("exit".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 2,
+                    ident: ":symbol/external".into(),
+                    v: MesoValue::String("true".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                // Call edge
+                Fact {
+                    e: 3,
+                    ident: ":entity/type".into(),
+                    v: MesoValue::String(":type/call-site".into()),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 3,
+                    ident: ":call/caller".into(),
+                    v: MesoValue::Ref(1),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+                Fact {
+                    e: 3,
+                    ident: ":call/callee".into(),
+                    v: MesoValue::Ref(2),
+                    op: true,
+                    cas_old_v: None,
+                    valid_time: None,
+                },
+            ])
+            .await
+            .unwrap();
+
+        let options = DocGenOptions {
+            project_name: "EdgeTest".into(),
+            version: "1.0.0".into(),
+            custom_css: None,
+        };
+
+        let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
+        let app_module = graph
+            .languages
+            .get("rust")
+            .unwrap()
+            .packages
+            .get("app")
+            .unwrap()
+            .modules
+            .get("app")
+            .unwrap();
+        let main_sym = &app_module.symbols[0];
+
+        assert_eq!(main_sym.neighborhood.callees.len(), 1);
+        assert_eq!(
+            main_sym.neighborhood.callees[0].fqsn,
+            "rust:std::process::exit"
+        );
+        assert_eq!(main_sym.neighborhood.callees[0].name, "exit");
     }
 }

@@ -277,7 +277,9 @@ mod tests {
             [[:db/add 21 :entity/type :type/call-site] [:db/add 21 :call/caller 11] [:db/add 21 :call/callee 12]]\n\
         ";
 
-        crate::ingest::ingest_stream(&db, &edn[..]).await.unwrap();
+        crate::ingest::ingest_stream(&db, &edn[..], true)
+            .await
+            .unwrap();
 
         // Depth 1: Root is bold; child1 is normal text
         let skel_d1 = generate_skeleton(&db, "root", 1, SkeletonFormat::Indented, false)

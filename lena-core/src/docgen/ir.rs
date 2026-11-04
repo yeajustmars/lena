@@ -1,3 +1,5 @@
+// lena-core/src/docgen/ir.rs
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -112,6 +114,8 @@ pub struct DocSymbol {
     pub docstring: Option<String>,
     pub file_path: String,
     pub line: Option<usize>,
+    pub container: Option<String>,
+    pub submodule: Option<String>,
     pub neighborhood: DocNeighborhood,
 }
 

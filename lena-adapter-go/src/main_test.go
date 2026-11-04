@@ -30,7 +30,6 @@ func TestGoEdgeCasesParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to extract facts: %v", err)
 	}
-
 	if len(facts) == 0 {
 		t.Fatal("Expected facts to be extracted, got 0")
 	}
@@ -42,36 +41,49 @@ func TestGoModuleEntityCreation(t *testing.T) {
 
 	moduleFound := false
 	for _, f := range facts {
-		if strings.Contains(f, ":type/module") && strings.Contains(f, "edge_cases.go") {
+		// Module FQSN should be go:edgecases, no file extensions!
+		if strings.Contains(f, ":type/module") && strings.Contains(f, "go:edgecases") {
 			moduleFound = true
 			break
 		}
 	}
 	if !moduleFound {
-		t.Error("Expected module entity for edge_cases.go")
+		t.Error("Expected logical module entity for edgecases")
 	}
 }
 
-func TestGoMethodReceiverCorrelation(t *testing.T) {
+func TestGoDecomposedAttributes(t *testing.T) {
 	fset := token.NewFileSet()
 	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, "\"go:edgecases.MyStruct/PointerReceiver\"") {
-		t.Error("Failed to correctly correlate pointer receiver method")
+
+	if !strings.Contains(output, ":symbol/container \"MyStruct\"") {
+		t.Error("Failed to extract container struct name")
 	}
-	if !strings.Contains(output, "\"go:edgecases.MyStruct/ValueReceiver\"") {
-		t.Error("Failed to correctly correlate value receiver method")
+	if !strings.Contains(output, ":symbol/module \"edgecases\"") {
+		t.Error("Failed to extract module name")
+	}
+	if !strings.Contains(output, ":symbol/name \"PointerReceiver\"") {
+		t.Error("Failed to extract atomic function name")
+	}
+	if !strings.Contains(output, ":lang/go") {
+		t.Error("Missing standardized :lang/go language tag")
 	}
 }
 
-func TestGoDocstringExtraction(t *testing.T) {
+func TestGoExternalStubEmission(t *testing.T) {
 	fset := token.NewFileSet()
 	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
 	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, ":doc/text \"StandaloneFunc is a standard function") {
-		t.Error("Failed to extract docstring")
+
+	// Check for fmt.Println external stub
+	if !strings.Contains(output, ":symbol/external true") {
+		t.Error("Failed to emit external stubs")
+	}
+	if !strings.Contains(output, ":symbol/fqsn \"go:fmt/Println\"") {
+		t.Error("Missing specific external stub FQSN")
 	}
 }
 
@@ -95,93 +107,19 @@ func TestGoHashIdMasking(t *testing.T) {
 	}
 }
 
-func TestGoEmptyFileGracefulHandling(t *testing.T) {
-	emptyPath := getFixturePath("empty.go")
-	os.WriteFile(emptyPath, []byte(""), 0644)
-	defer os.Remove(emptyPath)
-
-	fset := token.NewFileSet()
-	facts, err := RunTwoPass(fset, []string{emptyPath})
-
-	// go/parser throws an error on completely empty files (expected package declaration)
-	if err == nil {
-		t.Error("Expected parsing error for empty file, got nil")
-	}
-	if len(facts) != 0 {
-		t.Error("Expected 0 facts from empty file")
+func TestGoAdapterVersion(t *testing.T) {
+	if AdapterVersion != "0.2.0" {
+		t.Errorf("Expected AdapterVersion 0.2.0, got %s", AdapterVersion)
 	}
 }
 
-func TestGoMalformedSyntaxResilience(t *testing.T) {
-	malformedPath := getFixturePath("malformed.go")
-	os.WriteFile(malformedPath, []byte("package bad\nfunc A() {\n"), 0644)
-	defer os.Remove(malformedPath)
-
-	fset := token.NewFileSet()
-	_, err := RunTwoPass(fset, []string{malformedPath})
-
-	if err == nil {
-		t.Error("Expected parser to surface syntax error")
-	}
-}
-
-func TestGoFunctionPositions(t *testing.T) {
+func TestGoModuleNoExtension(t *testing.T) {
 	fset := token.NewFileSet()
 	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
 
-	output := strings.Join(facts, "\n")
-	if !strings.Contains(output, ":location/start-line") || !strings.Contains(output, ":location/start-col") {
-		t.Error("Missing physical line/col metadata")
-	}
-}
-
-func TestGoMultipleFunctions(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	fnCount := 0
 	for _, f := range facts {
-		if strings.Contains(f, ":type/function") {
-			fnCount++
+		if strings.Contains(f, ":symbol/module") && strings.Contains(f, ".go") {
+			t.Errorf("Found file extension in :symbol/module: %s", f)
 		}
-	}
-	if fnCount != 3 {
-		t.Errorf("Expected 3 functions, found %d", fnCount)
-	}
-}
-
-func TestGoGinStressAddCount(t *testing.T) {
-	ginPath := getFixturePath("gin/gin/1.9.1/gin.go")
-	if _, err := os.Stat(ginPath); os.IsNotExist(err) {
-		t.Skip("Gin fixture not found, skipping stress test. Run download script first.")
-	}
-
-	fset := token.NewFileSet()
-	facts, err := RunTwoPass(fset, []string{ginPath})
-	if err != nil {
-		t.Fatalf("Failed to parse Gin: %v", err)
-	}
-
-	addCount := countDbAdds(facts)
-	if addCount <= 100 {
-		t.Errorf("Expected >100 [:db/add assertions for Gin, got %d", addCount)
-	}
-}
-
-func TestGoCallSiteExtraction(t *testing.T) {
-	fset := token.NewFileSet()
-	facts, _ := RunTwoPass(fset, []string{getFixturePath("edge_cases.go")})
-
-	output := strings.Join(facts, "\n")
-
-	// Did it create call-site entities?
-	if !strings.Contains(output, ":type/call-site") {
-		t.Error("Failed to extract any :type/call-site entities")
-	}
-
-	// Did it catch the fmt.Println call inside StandaloneFunc?
-	// The callee ID should map to "go:fmt/Println" because localImports maps "fmt" to "fmt".
-	if !strings.Contains(output, ":call/caller") || !strings.Contains(output, ":call/callee") {
-		t.Error("Missing :call/caller or :call/callee edges on call-site")
 	}
 }

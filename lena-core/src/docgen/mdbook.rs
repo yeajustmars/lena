@@ -105,6 +105,8 @@ mod tests {
             docstring: Some("Runs the thing".into()),
             file_path: "src/lib.rs".into(),
             line: Some(10),
+            container: None,
+            submodule: None,
             neighborhood: DocNeighborhood::default(),
         }];
 

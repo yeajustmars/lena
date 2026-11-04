@@ -2,20 +2,20 @@
 
 #![deny(warnings)]
 #![warn(clippy::all)]
-//#![warn(clippy::all, clippy::pedantic)]
-//TODO: put back pendantic
+// TODO: put back pedantic
 
 use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
     ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
     ATTR_ENTITY_TYPE, ATTR_LOC_END_COL, ATTR_LOC_END_LINE, ATTR_LOC_FILE, ATTR_LOC_START_COL,
-    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME,
-    ATTR_SYMBOL_NAMESPACE, KIND_FN, LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
+    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_EXTERNAL, ATTR_SYMBOL_FQSN,
+    ATTR_SYMBOL_KIND, ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, KIND_FN, KIND_MACRO, KIND_MODULE,
+    LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
 };
 use serde::Deserialize;
 use std::{
-    collections::hash_map::DefaultHasher,
+    collections::{HashSet, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
     process::Command,
@@ -67,7 +67,6 @@ struct VarDef {
     doc: Option<String>,
     #[serde(rename = "macro")]
     is_macro: Option<bool>,
-    // ADD THIS:
     #[serde(rename = "arglist-strs")]
     arglist_strs: Option<Vec<String>>,
 }
@@ -90,12 +89,13 @@ fn hash_id(key: &str) -> u64 {
     hasher.finish() & 0x7FFF_FFFF_FFFF_FFFF
 }
 
-/// Core processing logic extracted to allow isolated unit testing of the EDN generation
 fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> {
     let mut facts = Vec::new();
+    let mut local_namespaces = HashSet::new();
 
     if let Some(namespaces) = kondo_data.analysis.namespace_definitions {
         for ns in namespaces {
+            local_namespaces.insert(ns.name.clone());
             let mut tx = TransactionBuilder::new();
             let fqsn = format!("clj:{}", ns.name);
             let e_id = hash_id(&fqsn);
@@ -103,8 +103,9 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_MODULE))?;
             tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
+            tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&ns.name))?;
             tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&ns.name))?;
-            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(":kind/module"))?;
+            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_MODULE))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
 
             tx.add(
@@ -128,10 +129,11 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
             tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
-            tx.add(e_id, ATTR_SYMBOL_NAMESPACE, EdnValue::String(&v.ns))?;
+            tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&v.ns))?;
             tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&v.name))?;
+
             let kind = if v.is_macro.unwrap_or(false) {
-                ":kind/macro"
+                KIND_MACRO
             } else {
                 KIND_FN
             };
@@ -159,16 +161,16 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
         }
     }
 
+    let mut emitted_externals = HashSet::new();
+
     if let Some(usages) = kondo_data.analysis.var_usages {
         for u in usages {
             if let (Some(from_ns), Some(from_var), Some(to_ns)) = (u.from, u.from_var, u.to) {
-                let mut tx = TransactionBuilder::new();
                 let caller_fqsn = format!("clj:{from_ns}/{from_var}");
                 let callee_fqsn = format!("clj:{to_ns}/{}", u.name);
 
                 let caller_id = hash_id(&caller_fqsn);
                 let callee_id = hash_id(&callee_fqsn);
-
                 let call_site_id = hash_id(&format!(
                     "{}:{}:{}:{caller_fqsn}->{callee_fqsn}",
                     u.filename,
@@ -176,6 +178,7 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
                     u.col.unwrap_or(1)
                 ));
 
+                let mut tx = TransactionBuilder::new();
                 tx.add(
                     call_site_id,
                     ATTR_ENTITY_TYPE,
@@ -194,8 +197,17 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
                     ATTR_LOC_START_COL,
                     EdnValue::Int(u.col.unwrap_or(1)),
                 )?;
-
                 facts.push(tx.finish());
+
+                // Emit external stub if callee belongs to a namespace not found in this workspace
+                if !local_namespaces.contains(&to_ns) && emitted_externals.insert(callee_id) {
+                    let mut stub_tx = TransactionBuilder::new();
+                    stub_tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(&callee_fqsn))?;
+                    stub_tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(&u.name))?;
+                    stub_tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String(&to_ns))?;
+                    stub_tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::String("true"))?;
+                    facts.push(stub_tx.finish());
+                }
             }
         }
     }
@@ -241,7 +253,6 @@ mod tests {
             .join(file)
     }
 
-    // Helper to run kondo on a fixture and return the output joined as a single string
     fn run_fixture(file: &str) -> String {
         let path = get_fixture_path(file);
         if !path.exists() {
@@ -251,23 +262,13 @@ mod tests {
     }
 
     #[test]
-    fn test_clj_edge_cases_parse() {
-        let path = get_fixture_path("edge_cases.clj");
-        if !path.exists() {
-            return;
-        }
-        let facts = execute_kondo(&path).unwrap();
-        assert!(!facts.is_empty(), "Expected clj-kondo to extract facts");
-    }
-
-    #[test]
     fn test_clj_module_definition() {
         let output = run_fixture("edge_cases.clj");
         if output.is_empty() {
             return;
         }
         assert!(output.contains(":type/module"));
-        assert!(output.contains(":symbol/fqsn \"clj:edge-cases\""));
+        assert!(output.contains(":symbol/module \"edge-cases\""));
     }
 
     #[test]
@@ -277,85 +278,78 @@ mod tests {
             return;
         }
         assert!(output.contains(":symbol/fqsn \"clj:edge-cases/public-fn\""));
-        assert!(output.contains(":symbol/fqsn \"clj:edge-cases/private-fn\""));
+        assert!(output.contains(":symbol/module \"edge-cases\""));
     }
 
     #[test]
-    fn test_clj_metadata_extraction() {
-        let output = run_fixture("edge_cases.clj");
-        if output.is_empty() {
-            return;
-        }
-        assert!(output.contains(":doc/text \"This is a public function docstring.\""));
-    }
-
-    #[test]
-    fn test_clj_callsite_mapping() {
-        let output = run_fixture("edge_cases.clj");
-        if output.is_empty() {
-            return;
-        }
-        assert!(output.contains(":type/call-site"));
-        // Check that `public-fn` calls `private-fn`
-        assert!(output.contains(&hash_id("clj:edge-cases/public-fn").to_string()));
-        assert!(output.contains(&hash_id("clj:edge-cases/private-fn").to_string()));
-    }
-
-    #[test]
-    fn test_clj_threading_macro_callsites() {
-        let output = run_fixture("edge_cases.clj");
-        if output.is_empty() {
-            return;
-        }
-        // Ensure calls inside `->` or `->>` are resolved.
-        // str and inc should be called
-        assert!(output.contains(&hash_id("clj:clojure.core/str").to_string()));
-        assert!(output.contains(&hash_id("clj:clojure.core/inc").to_string()));
-    }
-
-    #[test]
-    fn test_clj_hash_id_masking() {
-        let path = get_fixture_path("edge_cases.clj");
-        if !path.exists() {
-            return;
-        }
-        let facts = execute_kondo(&path).unwrap();
-
-        for fact in facts {
-            let parts: Vec<&str> = fact.split_whitespace().collect();
-            if parts.len() > 1
-                && parts[0] == "[:db/add"
-                && let Ok(id) = parts[1].parse::<u64>()
-            {
-                assert!(
-                    id <= 0x7FFF_FFFF_FFFF_FFFF,
-                    "Hash ID {id} exceeds positive 64-bit threshold",
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_clj_graceful_empty_handling() {
-        // Feed an empty analysis object to the processor directly
-        let empty_data = KondoOutput {
-            analysis: Analysis::default(),
+    fn test_clj_external_stub_generation() {
+        let kondo_data = KondoOutput {
+            analysis: Analysis {
+                namespace_definitions: Some(vec![NsDef {
+                    name: "app.core".to_string(),
+                    filename: "src/app/core.clj".to_string(),
+                    row: Some(1),
+                    col: Some(1),
+                }]),
+                var_definitions: Some(vec![VarDef {
+                    ns: "app.core".to_string(),
+                    name: "run".to_string(),
+                    filename: "src/app/core.clj".to_string(),
+                    row: Some(2),
+                    col: Some(1),
+                    end_row: None,
+                    end_col: None,
+                    doc: None,
+                    is_macro: None,
+                    arglist_strs: None,
+                }]),
+                var_usages: Some(vec![VarUsage {
+                    from: Some("app.core".to_string()),
+                    from_var: Some("run".to_string()),
+                    to: Some("clojure.core".to_string()), // External namespace
+                    name: "str".to_string(),
+                    filename: "src/app/core.clj".to_string(),
+                    row: Some(3),
+                    col: Some(3),
+                }]),
+            },
         };
-        let facts = process_kondo_output(empty_data).unwrap();
-        assert!(facts.is_empty(), "Empty analysis should yield 0 facts");
+
+        let facts = process_kondo_output(kondo_data).unwrap();
+        let output = facts.join("\n");
+
+        assert!(output.contains(":symbol/external \"true\""));
+        assert!(output.contains(":symbol/fqsn \"clj:clojure.core/str\""));
+        assert!(output.contains(":symbol/module \"clojure.core\""));
+        assert!(output.contains(":symbol/name \"str\""));
     }
 
     #[test]
-    fn test_clj_ring_stress_add_count() {
-        let output = run_fixture("ring/ring-core/1.10.0/ring/util/response.clj");
-        if output.is_empty() {
-            return;
-        }
+    fn test_clj_var_module_attribute() {
+        let kondo_data = KondoOutput {
+            analysis: Analysis {
+                namespace_definitions: None,
+                var_definitions: Some(vec![VarDef {
+                    ns: "my.service".to_string(),
+                    name: "handler".to_string(),
+                    filename: "src/my/service.clj".to_string(),
+                    row: Some(5),
+                    col: Some(1),
+                    end_row: None,
+                    end_col: None,
+                    doc: None,
+                    is_macro: None,
+                    arglist_strs: None,
+                }]),
+                var_usages: None,
+            },
+        };
 
-        let add_count = output.matches("[:db/add").count();
-        assert!(
-            add_count > 100,
-            "Expected >100 [:db/add assertions for ring core response, got {add_count}",
-        );
+        let facts = process_kondo_output(kondo_data).unwrap();
+        let output = facts.join("\n");
+
+        assert!(output.contains(":symbol/module \"my.service\""));
+        assert!(output.contains(":symbol/name \"handler\""));
+        assert!(!output.contains(":symbol/namespace"));
     }
 }

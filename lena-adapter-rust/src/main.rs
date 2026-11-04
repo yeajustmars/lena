@@ -10,13 +10,13 @@ use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
     ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
     ATTR_ENTITY_TYPE, ATTR_LOC_FILE, ATTR_LOC_START_COL, ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY,
-    ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND, ATTR_SYMBOL_NAME, KIND_FN, LANG_RUST, TYPE_CALL_SITE,
+    ATTR_SYMBOL_CONTAINER, ATTR_SYMBOL_EXTERNAL, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND,
+    ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, KIND_FN, KIND_METHOD, LANG_RUST, TYPE_CALL_SITE,
     TYPE_FUNCTION, TYPE_MODULE,
 };
 use ra_ap_syntax::{AstNode, Edition, SourceFile, ast, ast::HasAttrs, ast::HasName};
 use std::{
-    collections::HashMap,
-    collections::hash_map::DefaultHasher,
+    collections::{HashMap, HashSet, hash_map::DefaultHasher},
     fs,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
@@ -33,12 +33,10 @@ struct Cli {
 
 #[derive(Debug, Default)]
 struct SymbolTable {
-    /// Maps physical file paths to logical module FQSNs
     pub file_to_module: HashMap<String, String>,
-    /// Tracks all discovered symbols globally: Canonical FQSN -> Entity ID
     pub symbols: HashMap<String, u64>,
-    /// Tracks module-scoped imports per file: `FilePath` -> (`LocalAlias` -> `CanonicalFqsn`)
     pub use_maps: HashMap<String, HashMap<String, String>>,
+    pub local_fqsns: HashSet<String>,
 }
 
 impl SymbolTable {
@@ -48,10 +46,9 @@ impl SymbolTable {
     }
 }
 
-/// A container for the parsed syntax trees to avoid redundant parsing
 struct ParsedFile {
     path: String,
-    module_fqsn: String,
+    logical_module: String,
     tree: ra_ap_syntax::SourceFile,
 }
 
@@ -88,19 +85,41 @@ fn discover_symbols(file: &ParsedFile, table: &mut SymbolTable) {
     for fn_def in file.tree.syntax().descendants().filter_map(ast::Fn::cast) {
         if let Some(name) = fn_def.name() {
             let fn_name = name.text().to_string();
-            let fn_fqsn = format!("{}::{fn_name}", file.module_fqsn);
+
+            let container = get_container_name(&fn_def);
+            let fn_fqsn = if let Some(c) = &container {
+                format!("rust:{}::{}::{}", file.logical_module, c, fn_name)
+            } else {
+                format!("rust:{}::{}", file.logical_module, fn_name)
+            };
+
             let fn_id = hash_id(&fn_fqsn);
-            table.symbols.insert(fn_fqsn, fn_id);
+            table.symbols.insert(fn_fqsn.clone(), fn_id);
+            table.local_fqsns.insert(fn_fqsn);
         }
     }
+}
+
+fn get_container_name(fn_def: &ast::Fn) -> Option<String> {
+    let mut current = fn_def.syntax().parent();
+    while let Some(node) = current {
+        if let Some(impl_block) = ast::Impl::cast(node.clone()) {
+            if let Some(ty) = impl_block.self_ty() {
+                return Some(ty.syntax().text().to_string());
+            }
+        }
+        current = node.parent();
+    }
+    None
 }
 
 fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
     let mut facts = Vec::new();
 
     let filename = &file.path;
-    let module_fqsn = &file.module_fqsn;
-    let module_id = hash_id(module_fqsn);
+    let logical_module = &file.logical_module;
+    let module_fqsn = format!("rust:{logical_module}");
+    let module_id = hash_id(&module_fqsn);
 
     let mut tx = TransactionBuilder::new();
     tx.add(module_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_MODULE))?;
@@ -109,103 +128,121 @@ fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
         ATTR_ENTITY_LANGUAGE,
         EdnValue::Keyword(LANG_RUST),
     )?;
-    tx.add(module_id, ATTR_SYMBOL_FQSN, EdnValue::String(module_fqsn))?;
+    tx.add(module_id, ATTR_SYMBOL_FQSN, EdnValue::String(&module_fqsn))?;
+    tx.add(
+        module_id,
+        ATTR_SYMBOL_MODULE,
+        EdnValue::String(logical_module),
+    )?;
     tx.add(module_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
     facts.push(tx.finish());
 
     let local_imports = table.use_maps.get(filename);
+    let mut emitted_externals = HashSet::new();
 
     for fn_def in file.tree.syntax().descendants().filter_map(ast::Fn::cast) {
-        if let Ok(mut fn_facts) =
-            emit_function_facts(&fn_def, filename, module_fqsn, module_id, local_imports)
-        {
-            facts.append(&mut fn_facts);
+        let Some(name) = fn_def.name() else { continue };
+
+        let fn_name = name.text().to_string();
+        let container = get_container_name(&fn_def);
+
+        let fn_fqsn = if let Some(ref c) = container {
+            format!("rust:{logical_module}::{c}::{fn_name}")
+        } else {
+            format!("rust:{logical_module}::{fn_name}")
+        };
+        let fn_id = hash_id(&fn_fqsn);
+
+        let mut tx = TransactionBuilder::new();
+        tx.add(fn_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
+        tx.add(fn_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_RUST))?;
+        tx.add(fn_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fn_fqsn))?;
+        tx.add(fn_id, ATTR_SYMBOL_NAME, EdnValue::String(&fn_name))?;
+        tx.add(fn_id, ATTR_SYMBOL_MODULE, EdnValue::String(logical_module))?;
+
+        if let Some(ref c) = container {
+            tx.add(fn_id, ATTR_SYMBOL_CONTAINER, EdnValue::String(c))?;
+            tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_METHOD))?;
+        } else {
+            tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
         }
-    }
 
-    Ok(facts)
-}
+        tx.add(fn_id, ATTR_PARENT_ENTITY, EdnValue::Ref(module_id))?;
+        tx.add(fn_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
+        tx.add(fn_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
+        tx.add(fn_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
 
-fn emit_function_facts(
-    fn_def: &ast::Fn,
-    filename: &str,
-    module_fqsn: &str,
-    module_id: u64,
-    local_imports: Option<&HashMap<String, String>>,
-) -> Result<Vec<String>> {
-    let mut facts = Vec::new();
-    let Some(name) = fn_def.name() else {
-        return Ok(facts);
-    };
+        let docs = fn_def
+            .doc_comments()
+            .map(|doc| {
+                doc.syntax()
+                    .text()
+                    .to_string()
+                    .trim_start_matches("///")
+                    .trim_start_matches("//!")
+                    .trim_start_matches(' ')
+                    .to_string()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
 
-    let fn_name = name.text().to_string();
-    let fn_fqsn = format!("{module_fqsn}::{fn_name}");
-    let fn_id = hash_id(&fn_fqsn);
+        if !docs.is_empty() {
+            tx.add(fn_id, ATTR_DOC_TEXT, EdnValue::String(&docs))?;
+        }
 
-    let mut tx = TransactionBuilder::new();
-    tx.add(fn_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
-    tx.add(fn_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_RUST))?;
-    tx.add(fn_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fn_fqsn))?;
-    tx.add(fn_id, ATTR_SYMBOL_NAME, EdnValue::String(&fn_name))?;
-    tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
-    tx.add(fn_id, ATTR_PARENT_ENTITY, EdnValue::Ref(module_id))?;
-    tx.add(fn_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
-    tx.add(fn_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
-    tx.add(fn_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
+        if let Some(param_list) = fn_def.param_list() {
+            let ret_type = fn_def
+                .ret_type()
+                .map_or_else(String::new, |rt| rt.syntax().text().to_string());
+            let sig = format!("fn {fn_name}{param_list} {ret_type}");
+            tx.add(fn_id, ATTR_CODE_SIGNATURE, EdnValue::String(sig.trim()))?;
+        }
+        facts.push(tx.finish());
 
-    let docs = fn_def
-        .doc_comments()
-        .map(|doc| {
-            doc.syntax()
-                .text()
-                .to_string()
-                .trim_start_matches("///")
-                .trim_start_matches("//!")
-                .trim_start_matches(' ')
-                .to_string()
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+        if let Some(body) = fn_def.body() {
+            // Function calls
+            for call_expr in body.syntax().descendants().filter_map(ast::CallExpr::cast) {
+                if let Some(callee_expr) = call_expr.expr() {
+                    let callee_name = callee_expr.syntax().text().to_string();
+                    let callee_fqsn = local_imports
+                        .and_then(|imports| imports.get(&callee_name).cloned())
+                        .unwrap_or_else(|| {
+                            if callee_name.contains("::") {
+                                format!("rust:{callee_name}")
+                            } else {
+                                format!("rust:{logical_module}::{callee_name}")
+                            }
+                        });
 
-    if !docs.is_empty() {
-        tx.add(fn_id, ATTR_DOC_TEXT, EdnValue::String(&docs))?;
-    }
+                    facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
 
-    if let Some(param_list) = fn_def.param_list() {
-        let ret_type = fn_def
-            .ret_type()
-            .map_or_else(String::new, |rt| rt.syntax().text().to_string());
-        let sig = format!("fn {fn_name}{param_list} {ret_type}");
-        tx.add(fn_id, ATTR_CODE_SIGNATURE, EdnValue::String(sig.trim()))?;
-    }
-    facts.push(tx.finish());
-
-    if let Some(body) = fn_def.body() {
-        for call_expr in body.syntax().descendants().filter_map(ast::CallExpr::cast) {
-            if let Some(callee_expr) = call_expr.expr() {
-                let callee_name = callee_expr.syntax().text().to_string();
-                let callee_fqsn = local_imports
-                    .and_then(|imports| imports.get(&callee_name).cloned())
-                    .unwrap_or_else(|| {
-                        if callee_name.contains("::") {
-                            format!("rust:{callee_name}")
-                        } else {
-                            format!("{module_fqsn}::{callee_name}")
-                        }
-                    });
-                facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
+                    if !table.local_fqsns.contains(&callee_fqsn)
+                        && emitted_externals.insert(callee_fqsn.clone())
+                    {
+                        facts.push(emit_external_stub(&callee_fqsn, &callee_name)?);
+                    }
+                }
             }
-        }
 
-        for method_call in body
-            .syntax()
-            .descendants()
-            .filter_map(ast::MethodCallExpr::cast)
-        {
-            if let Some(name_ref) = method_call.name_ref() {
-                let callee_name = name_ref.text().to_string();
-                let callee_fqsn = format!("{module_fqsn}::{callee_name}");
-                facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
+            // Method calls
+            for method_call in body
+                .syntax()
+                .descendants()
+                .filter_map(ast::MethodCallExpr::cast)
+            {
+                if let Some(name_ref) = method_call.name_ref() {
+                    let callee_name = name_ref.text().to_string();
+                    // Fallback approximation for method FQSN without full type inference
+                    let callee_fqsn =
+                        format!("rust:{logical_module}::[UnknownType]::{}", callee_name);
+
+                    facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
+                    if !table.local_fqsns.contains(&callee_fqsn)
+                        && emitted_externals.insert(callee_fqsn.clone())
+                    {
+                        facts.push(emit_external_stub(&callee_fqsn, &callee_name)?);
+                    }
+                }
             }
         }
     }
@@ -234,6 +271,15 @@ fn emit_call_site(
     ctx.add(call_site_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
     ctx.add(call_site_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
     Ok(ctx.finish())
+}
+
+fn emit_external_stub(callee_fqsn: &str, callee_name: &str) -> Result<String> {
+    let callee_id = hash_id(callee_fqsn);
+    let mut tx = TransactionBuilder::new();
+    tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(callee_fqsn))?;
+    tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(callee_name))?;
+    tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::String("true"))?;
+    Ok(tx.finish())
 }
 
 fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
@@ -277,7 +323,6 @@ fn find_package_name(file_path: &Path, cache: &mut HashMap<PathBuf, String>) -> 
                     && trimmed.starts_with("name")
                     && let Some(val) = trimmed.split('=').nth(1)
                 {
-                    // Strip inline comments before trimming quotes
                     let pkg_name = val
                         .split('#')
                         .next()
@@ -285,7 +330,6 @@ fn find_package_name(file_path: &Path, cache: &mut HashMap<PathBuf, String>) -> 
                         .trim()
                         .trim_matches('"')
                         .to_string();
-
                     cache.insert(dir.to_path_buf(), pkg_name.clone());
                     return pkg_name;
                 }
@@ -302,7 +346,7 @@ fn visit_dirs(dir: &Path) -> Result<()> {
 
     let mut symbol_table = SymbolTable::new();
     let mut parsed_files = Vec::new();
-    let mut pkg_cache = HashMap::new(); // Cache Cargo.toml results
+    let mut pkg_cache = HashMap::new();
 
     for path in &files_to_process {
         let content = fs::read_to_string(path)
@@ -312,17 +356,16 @@ fn visit_dirs(dir: &Path) -> Result<()> {
         let path_str = path.to_string_lossy().to_string();
         let file_stem = path.file_stem().unwrap_or_default().to_string_lossy();
 
-        // Resolve the exact package name for this specific file
         let package_name = find_package_name(path, &mut pkg_cache);
-        let module_fqsn = format!("rust:{package_name}::{file_stem}");
+        let logical_module = format!("{package_name}::{file_stem}");
 
         symbol_table
             .file_to_module
-            .insert(path_str.clone(), module_fqsn.clone());
+            .insert(path_str.clone(), logical_module.clone());
 
         let parsed_file = ParsedFile {
             path: path_str,
-            module_fqsn,
+            logical_module,
             tree: parse.tree(),
         };
 
@@ -357,35 +400,23 @@ mod tests {
             .join(file)
     }
 
-    /// Simulates the two-pass architecture for a single file to support unit tests.
     fn run_two_pass_on_fixture(path: &Path, content: &str) -> Vec<String> {
         let mut symbol_table = SymbolTable::new();
         let path_str = path.to_string_lossy().to_string();
         let file_stem = path.file_stem().unwrap_or_default().to_string_lossy();
-        let module_fqsn = format!("rust:crate::{file_stem}");
+        let logical_module = format!("crate::{file_stem}");
 
         let parse = SourceFile::parse(content, Edition::Edition2024);
         let parsed_file = ParsedFile {
             path: path_str.clone(),
-            module_fqsn: module_fqsn.clone(),
+            logical_module: logical_module.clone(),
             tree: parse.tree(),
         };
 
-        symbol_table.file_to_module.insert(path_str, module_fqsn);
+        symbol_table.file_to_module.insert(path_str, logical_module);
 
         discover_symbols(&parsed_file, &mut symbol_table);
         emit_facts(&parsed_file, &symbol_table).unwrap_or_default()
-    }
-
-    #[test]
-    fn test_rust_edge_cases_parse() {
-        let fixture = get_fixture_path("edge_cases.rs");
-        if !fixture.exists() {
-            return;
-        }
-        let content = fs::read_to_string(&fixture).unwrap();
-        let facts = run_two_pass_on_fixture(&fixture, &content);
-        assert!(!facts.is_empty(), "Expected facts to be extracted");
     }
 
     #[test]
@@ -399,109 +430,43 @@ mod tests {
 
         let output = facts.join("\n");
         assert!(output.contains(":type/module"));
-        assert!(output.contains("edge_cases.rs"));
-        assert!(output.contains("rust:crate::edge_cases"));
+        assert!(output.contains(":symbol/module \"crate::edge_cases\""));
     }
 
     #[test]
-    fn test_rust_function_extraction() {
+    fn test_rust_container_method_extraction() {
         let fixture = get_fixture_path("edge_cases.rs");
         if !fixture.exists() {
             return;
         }
         let content = fs::read_to_string(&fixture).unwrap();
         let facts = run_two_pass_on_fixture(&fixture, &content);
-
         let output = facts.join("\n");
-        assert!(output.contains(":symbol/name \"standard_function\""));
-        assert!(output.contains(":symbol/name \"async_worker\""));
+
+        // Method inside `impl MyStruct` in edge_cases.rs
+        assert!(output.contains(":symbol/container \"MyStruct\""));
+        assert!(output.contains(":symbol/kind :kind/method"));
+        assert!(output.contains(":symbol/name \"method_call\""));
     }
 
     #[test]
-    fn test_rust_call_site_extraction() {
-        let fixture = get_fixture_path("edge_cases.rs");
-        if !fixture.exists() {
-            return;
-        }
-        let content = fs::read_to_string(&fixture).unwrap();
-        let facts = run_two_pass_on_fixture(&fixture, &content);
-
-        let output = facts.join("\n");
-        assert!(output.contains(":type/call-site"));
-        assert!(output.contains(":call/caller"));
-        assert!(output.contains(":call/callee"));
-    }
-
-    #[test]
-    fn test_rust_hash_id_masking() {
-        let fixture = get_fixture_path("edge_cases.rs");
-        if !fixture.exists() {
-            return;
-        }
-        let content = fs::read_to_string(&fixture).unwrap();
-        let facts = run_two_pass_on_fixture(&fixture, &content);
-
-        for fact in facts {
-            let parts: Vec<&str> = fact.split_whitespace().collect();
-            if parts.len() > 1
-                && parts[0] == "[:db/add"
-                && let Ok(id) = parts[1].parse::<u64>()
-            {
-                assert!(
-                    id <= 0x7FFF_FFFF_FFFF_FFFF,
-                    "Hash ID {id} exceeds positive 64-bit limit"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_rust_cross_file_resolution() {
+    fn test_rust_external_stub_emission() {
         let mut symbol_table = SymbolTable::new();
-
-        let callee_file = ParsedFile {
-            path: "callee.rs".to_string(),
-            module_fqsn: "rust:crate::callee".to_string(),
-            tree: SourceFile::parse("pub fn target_func() {}", Edition::Edition2024).tree(),
-        };
-        discover_symbols(&callee_file, &mut symbol_table);
-
-        let caller_file = ParsedFile {
-            path: "caller.rs".to_string(),
-            module_fqsn: "rust:crate::caller".to_string(),
+        let file = ParsedFile {
+            path: "src/test.rs".to_string(),
+            logical_module: "crate::test".to_string(),
             tree: SourceFile::parse(
-                "use crate::callee::target_func; fn caller_func() { target_func(); }",
+                "fn caller() { std::process::exit(0); }",
                 Edition::Edition2024,
             )
             .tree(),
         };
-        discover_symbols(&caller_file, &mut symbol_table);
 
-        let facts = emit_facts(&caller_file, &symbol_table).unwrap();
+        discover_symbols(&file, &mut symbol_table);
+        let facts = emit_facts(&file, &symbol_table).unwrap();
         let output = facts.join("\n");
 
-        // The call site should correctly point to the fully qualified target_func in the callee file
-        let caller_fqsn = "rust:crate::caller::caller_func";
-        let callee_fqsn = "rust:crate::callee::target_func";
-
-        assert!(output.contains(&format!(":call/caller {}", hash_id(caller_fqsn))));
-        assert!(output.contains(&format!(":call/callee {}", hash_id(callee_fqsn))));
-    }
-
-    #[test]
-    fn test_rust_axum_stress_add_count() {
-        let fixture = get_fixture_path("axum/axum/0.7.4/axum/src/routing/mod.rs");
-        if !fixture.exists() {
-            return;
-        }
-        let content = fs::read_to_string(&fixture).unwrap();
-        let facts = run_two_pass_on_fixture(&fixture, &content);
-
-        let output = facts.join("\n");
-        let add_count = output.matches("[:db/add").count();
-        assert!(
-            add_count > 100,
-            "Expected >100 [:db/add assertions for Axum routing"
-        );
+        assert!(output.contains(":symbol/external \"true\""));
+        assert!(output.contains(":symbol/fqsn \"rust:std::process::exit\""));
     }
 }

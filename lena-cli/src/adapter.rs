@@ -85,18 +85,32 @@ async fn install_adapter(name: &str) -> Result<()> {
             }
         }
         "go" => {
-            // Force Go to compile and drop the binary directly into our managed directory
-            let status = Command::new("go")
-                .arg("install")
-                .arg("github.com/lena-project/lena-adapter-go@latest")
-                .env("GOBIN", &bin_dir)
-                .status()
-                .await?;
+            let local_main = PathBuf::from("./lena-adapter-go/src/main.go");
+
+            let status = if local_main.exists() {
+                info!("Local workspace detected. Building Go adapter from source...");
+                Command::new("go")
+                    .arg("build")
+                    .arg("-o")
+                    .arg(bin_dir.join("lena-adapter-go"))
+                    .arg("./src")
+                    .current_dir("./lena-adapter-go")
+                    .status()
+                    .await?
+            } else {
+                info!("Remote user mode. Installing Go adapter via standard toolchain...");
+                Command::new("go")
+                    .arg("install")
+                    .arg("github.com/yeajustmars/lena/lena-adapter-go/src@main")
+                    .env("GOBIN", &bin_dir)
+                    .status()
+                    .await?
+            };
 
             if status.success() {
                 info!("Successfully installed lena-adapter-go to ~/.lena/bin/");
             } else {
-                anyhow::bail!("Failed to install lena-adapter-go via standard Go toolchain.");
+                anyhow::bail!("Failed to install lena-adapter-go.");
             }
         }
         _ => {
@@ -109,4 +123,23 @@ async fn install_adapter(name: &str) -> Result<()> {
 pub fn get_bin_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().context("Could not determine home directory")?;
     Ok(home.join(".lena").join("bin"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_bin_dir() {
+        let bin_dir = get_bin_dir().expect("Failed to get bin dir");
+        assert!(bin_dir.ends_with(".lena/bin"));
+    }
+
+    #[test]
+    fn test_managed_adapter_names() {
+        let supported = ["rust", "clj", "treesitter", "go"];
+        assert_eq!(supported.len(), 4);
+        assert!(supported.contains(&"go"));
+        assert!(supported.contains(&"rust"));
+    }
 }
