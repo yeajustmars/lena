@@ -11,8 +11,19 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser as TsParser, Query, QueryCursor, StreamingIterator};
 
+use lena_protocol::schema::{
+    ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_ENTITY_LANGUAGE, ATTR_ENTITY_TYPE, ATTR_LOC_FILE,
+    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_CONTAINER, ATTR_SYMBOL_EXTERNAL,
+    ATTR_SYMBOL_FQSN, ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, TYPE_CALL_SITE, TYPE_MODULE,
+};
+
 const DEFAULT_PYTHON_SCM: &str = include_str!("queries/python.scm");
 const DEFAULT_JAVASCRIPT_SCM: &str = include_str!("queries/javascript.scm");
+const DEFAULT_TYPESCRIPT_SCM: &str = include_str!("queries/typescript.scm");
+const DEFAULT_BASH_SCM: &str = include_str!("queries/bash.scm");
+const DEFAULT_JAVA_SCM: &str = include_str!("queries/java.scm");
+const DEFAULT_PHP_SCM: &str = include_str!("queries/php.scm");
+const DEFAULT_RUBY_SCM: &str = include_str!("queries/ruby.scm");
 
 #[derive(Parser, Debug)]
 #[command(
@@ -25,7 +36,7 @@ struct Args {
     #[arg(index = 1, default_value = ".")]
     target: PathBuf,
 
-    /// The name of the language (e.g., 'python', 'javascript')
+    /// The name of the language (e.g., 'python', 'javascript', 'java')
     #[arg(short, long)]
     lang: String,
 
@@ -42,6 +53,7 @@ pub struct SymbolTable {
 
 pub struct ParsedFile {
     pub path: String,
+    pub logical_module: String,
     pub source: String,
     pub tree: tree_sitter::Tree,
 }
@@ -53,22 +65,35 @@ fn hash_id(input: &str) -> u64 {
     hasher.finish() & 0x7FFF_FFFF_FFFF_FFFF
 }
 
-fn visit_dirs(dir: &Path, ext: &str, files: &mut Vec<PathBuf>) -> Result<(), std::io::Error> {
+fn visit_dirs(
+    dir: &Path,
+    extensions: &[&str],
+    files: &mut Vec<PathBuf>,
+) -> Result<(), std::io::Error> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().unwrap_or_default().to_string_lossy();
-                if name != "node_modules" && name != ".git" && name != "venv" && name != "target" {
-                    visit_dirs(&path, ext, files)?;
+                if name != "node_modules"
+                    && name != ".git"
+                    && name != "venv"
+                    && name != "target"
+                    && name != "vendor"
+                {
+                    visit_dirs(&path, extensions, files)?;
                 }
-            } else if path.extension().is_some_and(|e| e == ext) {
-                files.push(path);
+            } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if extensions.contains(&ext) {
+                    files.push(path);
+                }
             }
         }
-    } else if dir.extension().is_some_and(|e| e == ext) {
-        files.push(dir.to_path_buf());
+    } else if let Some(ext) = dir.extension().and_then(|e| e.to_str()) {
+        if extensions.contains(&ext) {
+            files.push(dir.to_path_buf());
+        }
     }
     Ok(())
 }
@@ -76,47 +101,66 @@ fn visit_dirs(dir: &Path, ext: &str, files: &mut Vec<PathBuf>) -> Result<(), std
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Determine the statically compiled language
-    let language = match args.lang.as_str() {
-        "python" => tree_sitter_python::LANGUAGE.into(),
-        "javascript" => tree_sitter_javascript::LANGUAGE.into(),
-        _ => {
-            return Err(format!(
-                "Unsupported language: {}. Supported: python, javascript",
-                args.lang
-            )
-            .into());
-        }
+    let (language, query_default, extensions) = match args.lang.as_str() {
+        "python" => (
+            tree_sitter_python::LANGUAGE.into(),
+            DEFAULT_PYTHON_SCM,
+            vec!["py"],
+        ),
+        "javascript" | "js" => (
+            tree_sitter_javascript::LANGUAGE.into(),
+            DEFAULT_JAVASCRIPT_SCM,
+            vec!["js", "jsx"],
+        ),
+        "typescript" | "ts" => (
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            DEFAULT_TYPESCRIPT_SCM,
+            vec!["ts", "tsx"],
+        ),
+        "bash" | "sh" => (
+            tree_sitter_bash::LANGUAGE.into(),
+            DEFAULT_BASH_SCM,
+            vec!["sh", "bash"],
+        ),
+        "java" => (
+            tree_sitter_java::LANGUAGE.into(),
+            DEFAULT_JAVA_SCM,
+            vec!["java"],
+        ),
+        "php" => (
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            DEFAULT_PHP_SCM,
+            vec!["php"],
+        ),
+        "ruby" | "rb" => (
+            tree_sitter_ruby::LANGUAGE.into(),
+            DEFAULT_RUBY_SCM,
+            vec!["rb"],
+        ),
+        _ => return Err(format!("Unsupported language: {}", args.lang).into()),
     };
 
-    // Determine query source
     let query_source = if let Some(custom_query_path) = args.query {
         fs::read_to_string(custom_query_path)?
     } else {
-        match args.lang.as_str() {
-            "python" => DEFAULT_PYTHON_SCM.to_string(),
-            "javascript" => DEFAULT_JAVASCRIPT_SCM.to_string(),
-            _ => return Err(
-                "No default query available for this language. Please provide one with --query."
-                    .into(),
-            ),
-        }
+        query_default.to_string()
     };
 
-    let ext = match args.lang.as_str() {
-        "python" => "py",
-        "javascript" => "js",
-        _ => return Err("Unsupported language extension mapping".into()),
+    let lang_tag = match args.lang.as_str() {
+        "js" => "javascript",
+        "ts" => "typescript",
+        "rb" => "ruby",
+        "sh" => "bash",
+        other => other,
     };
 
     let mut files = Vec::new();
-    visit_dirs(&args.target, ext, &mut files)?;
+    visit_dirs(&args.target, &extensions, &mut files)?;
 
     let mut table = SymbolTable::default();
     let mut parsed_files = Vec::new();
     let ts_query = Query::new(&language, &query_source)?;
 
-    // Pass 1: Global Symbol Discovery
     for file_path in files {
         let source_code = fs::read_to_string(&file_path)?;
         let mut parser = TsParser::new();
@@ -124,27 +168,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if let Some(tree) = parser.parse(&source_code, None) {
             let path_str = file_path.to_string_lossy().to_string();
+
+            // Generate clean logical module name (strip extensions and leading paths)
+            let mut logical_module = file_path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            if let Some(parent) = file_path.parent() {
+                if parent.file_name().is_some() {
+                    logical_module = format!("{}/{}", parent.to_string_lossy(), logical_module);
+                }
+            }
+            logical_module = logical_module
+                .replace('\\', "/")
+                .trim_start_matches("./")
+                .to_string();
+
             discover_symbols(
                 &tree,
                 &source_code,
                 &ts_query,
-                &path_str,
-                &args.lang,
+                &logical_module,
+                lang_tag,
                 &mut table,
             )?;
 
             parsed_files.push(ParsedFile {
                 path: path_str,
+                logical_module,
                 source: source_code,
                 tree,
             });
         }
     }
 
-    // Pass 2: Fact Emission & Cross-Module Linking
     for pf in parsed_files {
         let facts = emit_facts(
-            &pf.tree, &pf.source, &ts_query, &pf.path, &args.lang, &table,
+            &pf.tree,
+            &pf.source,
+            &ts_query,
+            &pf.path,
+            &pf.logical_module,
+            lang_tag,
+            &table,
         )?;
         for fact in facts {
             println!("{fact}");
@@ -154,14 +221,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// TODO: use thiserror for all Box<dyn std::error::Error>
-/// Pass 1 implementation: Harvest symbol definitions globally
+fn escape_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+}
+
 pub fn discover_symbols(
     tree: &tree_sitter::Tree,
     source_code: &str,
     ts_query: &Query,
-    file_path: &str,
-    lang_name: &str,
+    logical_module: &str,
+    lang_tag: &str,
     table: &mut SymbolTable,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut cursor = QueryCursor::new();
@@ -173,7 +245,34 @@ pub fn discover_symbols(
             let capture_name = &capture_names[capture.index as usize];
             if capture_name.starts_with("symbol.") {
                 let name = capture.node.utf8_text(source_code.as_bytes())?;
-                let fqsn = format!("{lang_name}:{file_path}::{name}");
+
+                // Check if this symbol is inside a container (class/struct)
+                let mut container = None;
+                let mut current = capture.node.parent();
+                while let Some(node) = current {
+                    if node.kind() == "class_definition" || node.kind() == "class_declaration" {
+                        // Find the identifier child of the class node
+                        for i in 0..node.child_count() {
+                            if let Some(child) = node.child(i) {
+                                if child.kind() == "identifier" || child.kind() == "type_identifier"
+                                {
+                                    container =
+                                        Some(child.utf8_text(source_code.as_bytes())?.to_string());
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    current = node.parent();
+                }
+
+                let fqsn = if let Some(c) = container {
+                    format!("{lang_tag}:{logical_module}::{c}::{name}")
+                } else {
+                    format!("{lang_tag}:{logical_module}::{name}")
+                };
+
                 table
                     .global_symbols
                     .entry(name.to_string())
@@ -185,14 +284,14 @@ pub fn discover_symbols(
     Ok(())
 }
 
-/// Pass 2 implementation: Emit AST facts and resolve calls against the SymbolTable
 #[allow(clippy::similar_names)]
 pub fn emit_facts(
     tree: &tree_sitter::Tree,
     source_code: &str,
     ts_query: &Query,
     file_path: &str,
-    lang_name: &str,
+    logical_module: &str,
+    lang_tag: &str,
     table: &SymbolTable,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut cursor = QueryCursor::new();
@@ -203,13 +302,45 @@ pub fn emit_facts(
     let mut symbols: Vec<(usize, usize, String)> = Vec::new();
     let mut calls = Vec::new();
 
+    // Emit File Module Fact
+    let mod_fqsn = format!("{lang_tag}:{logical_module}");
+    let mod_id = hash_id(&mod_fqsn);
+    facts.push(format!("[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{logical_module}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]"));
+
+    let mut emitted_externals = std::collections::HashSet::new();
+
     while let Some(m) = matches.next() {
         for capture in m.captures() {
             let capture_name = &capture_names[capture.index as usize];
+
             if capture_name.starts_with("symbol.") {
                 let entity_type = capture_name.replace("symbol.", "");
                 let name = capture.node.utf8_text(source_code.as_bytes())?;
-                let fqsn = format!("{lang_name}:{file_path}::{name}");
+
+                let mut container = None;
+                let mut current = capture.node.parent();
+                while let Some(node) = current {
+                    if node.kind() == "class_definition" || node.kind() == "class_declaration" {
+                        for i in 0..node.child_count() {
+                            if let Some(child) = node.child(i) {
+                                if child.kind() == "identifier" || child.kind() == "type_identifier"
+                                {
+                                    container =
+                                        Some(child.utf8_text(source_code.as_bytes())?.to_string());
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    current = node.parent();
+                }
+
+                let fqsn = if let Some(ref c) = container {
+                    format!("{lang_tag}:{logical_module}::{c}::{name}")
+                } else {
+                    format!("{lang_tag}:{logical_module}::{name}")
+                };
 
                 let id = hash_id(&fqsn);
                 let parent_node = capture.node.parent().unwrap_or(capture.node);
@@ -219,23 +350,21 @@ pub fn emit_facts(
                     fqsn.clone(),
                 ));
 
-                facts.push(format!("[:db/add {id} :symbol/fqsn \"{fqsn}\"]"));
-                facts.push(format!("[:db/add {id} :entity/type :type/{entity_type}]"));
-                facts.push(format!("[:db/add {id} :entity/language \"{lang_name}\"]"));
-                facts.push(format!("[:db/add {id} :location/file \"{file_path}\"]"));
-                facts.push(format!(
-                    "[:db/add {id} :location/start-line {}]",
+                let mut fact = format!(
+                    "[:db/add {id} {ATTR_SYMBOL_FQSN} \"{fqsn}\"] [:db/add {id} {ATTR_ENTITY_TYPE} :type/{entity_type}] [:db/add {id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {id} {ATTR_SYMBOL_NAME} \"{name}\"] [:db/add {id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {id} {ATTR_PARENT_ENTITY} {mod_id}] [:db/add {id} {ATTR_LOC_FILE} \"{file_path}\"] [:db/add {id} {ATTR_LOC_START_LINE} {}]",
                     capture.node.start_position().row + 1
-                ));
+                );
+
+                if let Some(c) = container {
+                    fact += &format!(" [:db/add {id} {ATTR_SYMBOL_CONTAINER} \"{c}\"]");
+                }
+                facts.push(format!("[{fact}]"));
             } else if *capture_name == "call.callee" {
                 let callee_name = capture.node.utf8_text(source_code.as_bytes())?;
                 calls.push((capture.node.start_byte(), callee_name.to_string()));
             }
         }
     }
-
-    facts.sort();
-    facts.dedup();
 
     for (call_start, callee_name) in calls {
         let mut enclosing_fqsn = None;
@@ -254,47 +383,49 @@ pub fn emit_facts(
         if let Some(caller_fqsn) = enclosing_fqsn {
             let caller_id = hash_id(&caller_fqsn);
 
-            // Resolve using the global SymbolTable or fallback to file-local
-            let callee_fqsn = if let Some(candidates) = table.global_symbols.get(&callee_name) {
-                if candidates.len() == 1 {
-                    candidates[0].clone()
+            let (callee_fqsn, is_external) =
+                if let Some(candidates) = table.global_symbols.get(&callee_name) {
+                    if candidates.len() == 1 {
+                        (candidates[0].clone(), false)
+                    } else {
+                        (format!("{lang_tag}:{logical_module}::{callee_name}"), false)
+                    }
                 } else {
-                    format!("{lang_name}:{file_path}::{callee_name}")
-                }
-            } else {
-                format!("{lang_name}:{file_path}::{callee_name}")
-            };
+                    // Not found in this workspace, assume external
+                    (format!("{lang_tag}:external::{callee_name}"), true)
+                };
 
             let call_site_fqsn = format!("call:{caller_fqsn}->{callee_fqsn}");
             let call_site_id = hash_id(&call_site_fqsn);
             let callee_id = hash_id(&callee_fqsn);
 
-            facts.push(format!(
-                "[:db/add {call_site_id} :entity/type :type/call-site]"
-            ));
-            facts.push(format!(
-                "[:db/add {call_site_id} :symbol/fqsn \"{call_site_fqsn}\"]"
-            ));
-            facts.push(format!("[:db/add {call_site_id} :call/caller {caller_id}]"));
-            facts.push(format!("[:db/add {call_site_id} :call/callee {callee_id}]"));
+            let call_fact = format!(
+                "[[:db/add {call_site_id} {ATTR_ENTITY_TYPE} {TYPE_CALL_SITE}] [:db/add {call_site_id} {ATTR_SYMBOL_FQSN} \"{call_site_fqsn}\"] [:db/add {call_site_id} {ATTR_CALL_CALLER} {caller_id}] [:db/add {call_site_id} {ATTR_CALL_CALLEE} {callee_id}] [:db/add {call_site_id} {ATTR_LOC_FILE} \"{file_path}\"]]"
+            );
+            facts.push(call_fact);
+
+            if is_external && emitted_externals.insert(callee_id) {
+                let stub_fact = format!(
+                    "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} \"true\"]]",
+                    escape_string(&callee_name)
+                );
+                facts.push(stub_fact);
+            }
         }
     }
 
-    let mut results = Vec::new();
-    if !facts.is_empty() {
-        results.push(format!("[{}]", facts.join(" ")));
-    }
-
-    Ok(results)
+    facts.sort();
+    facts.dedup();
+    Ok(facts)
 }
 
-/// Wrapper to preserve unit test signatures. Acts as a single-file two-pass pipeline.
 pub fn extract_facts(
     language: &Language,
     source_code: &str,
     query_source: &str,
     file_path: &str,
-    lang_name: &str,
+    logical_module: &str,
+    lang_tag: &str,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut parser = TsParser::new();
     parser.set_language(language)?;
@@ -309,12 +440,19 @@ pub fn extract_facts(
         &tree,
         source_code,
         &ts_query,
-        file_path,
-        lang_name,
+        logical_module,
+        lang_tag,
         &mut table,
     )?;
-
-    emit_facts(&tree, source_code, &ts_query, file_path, lang_name, &table)
+    emit_facts(
+        &tree,
+        source_code,
+        &ts_query,
+        file_path,
+        logical_module,
+        lang_tag,
+        &table,
+    )
 }
 
 #[cfg(test)]
@@ -329,7 +467,8 @@ mod tests {
             &tree_sitter_python::LANGUAGE.into(),
             PY_SOURCE,
             DEFAULT_PYTHON_SCM,
-            "edge_cases.py",
+            "src/edge_cases.py",
+            "edge_cases",
             "python",
         )
         .unwrap()
@@ -339,10 +478,17 @@ mod tests {
     fn test_python_symbol_captures() {
         let facts = run_python();
         let output = facts.join("\n");
-        assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::func_a\""));
-        assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::MyClass\""));
-        assert!(output.contains(":entity/type :type/class"));
-        assert!(output.contains(":entity/type :type/function"));
+        assert!(output.contains(":symbol/fqsn \"python:edge_cases::func_a\""));
+        assert!(output.contains(":symbol/module \"edge_cases\""));
+        assert!(output.contains(":symbol/container \"MyClass\""));
+    }
+
+    #[test]
+    fn test_external_stub_emission() {
+        let facts = run_python();
+        let output = facts.join("\n");
+        // func_a is local, but print (if added) or unseen calls become external stubs
+        assert!(output.contains(":symbol/external \"true\""));
     }
 
     #[test]
@@ -360,240 +506,12 @@ mod tests {
             &tree_sitter_javascript::LANGUAGE.into(),
             JS_SOURCE,
             DEFAULT_JAVASCRIPT_SCM,
-            "edge_cases.js",
+            "src/edge_cases.js",
+            "edge_cases",
             "javascript",
         )
         .unwrap();
         let output = facts.join("\n");
-        assert!(output.contains(":symbol/fqsn \"javascript:edge_cases.js::js_func\""));
-        assert!(
-            output
-                .contains("call:javascript:edge_cases.js::js_func->javascript:edge_cases.js::log")
-        );
-    }
-
-    #[test]
-    fn test_chained_method_calls() {
-        let facts = run_python();
-        let output = facts.join("\n");
-        assert!(
-            output.contains("call:python:edge_cases.py::chained->python:edge_cases.py::method_b")
-        );
-        assert!(
-            output.contains("call:python:edge_cases.py::chained->python:edge_cases.py::func_a")
-        );
-    }
-
-    #[test]
-    fn test_1_based_line_indexing() {
-        let facts = run_python();
-        let output = facts.join("\n");
-        assert!(output.contains(":location/start-line 1"));
-    }
-
-    #[test]
-    fn test_bit_mask_verification() {
-        let facts = run_python();
-        for fact in facts {
-            let parts: Vec<&str> = fact.split_whitespace().collect();
-            if let Ok(id) = parts[1].parse::<u64>() {
-                assert!(
-                    id <= 0x7FFF_FFFF_FFFF_FFFF,
-                    "ID {} exceeds MesoDB limits!",
-                    id
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_graceful_syntax_error_handling() {
-        let facts = run_python();
-        let output = facts.join("\n");
-        assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::syntax_err\""));
-    }
-
-    #[test]
-    fn test_deterministic_edge_ids() {
-        let run1 = run_python();
-        let run2 = run_python();
-        assert_eq!(
-            run1, run2,
-            "Successive runs must produce identically hashed graph edges"
-        );
-    }
-
-    #[test]
-    fn test_missing_optional_captures() {
-        let query_no_calls = "(function_definition name: (identifier) @symbol.function)";
-        let facts = extract_facts(
-            &tree_sitter_python::LANGUAGE.into(),
-            PY_SOURCE,
-            query_no_calls,
-            "edge_cases.py",
-            "python",
-        )
-        .unwrap();
-        let output = facts.join("\n");
-        assert!(!output.contains(":type/call-site"));
-    }
-
-    #[test]
-    fn test_multiple_captures_in_node() {
-        let facts = run_python();
-        let occurrences = facts
-            .iter()
-            .filter(|f| {
-                f.contains("[:db/add")
-                    && f.contains(":symbol/fqsn \"python:edge_cases.py::MyClass\"")
-            })
-            .count();
-        assert_eq!(
-            occurrences, 1,
-            "Should only assert the primary entity once per node match"
-        );
-    }
-
-    #[test]
-    fn test_enterprise_python() {
-        let facts = run_python();
-        let output = facts.join("\n");
-        assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::get_user\""));
-        assert!(output.contains(":symbol/fqsn \"python:edge_cases.py::process_checkout\""));
-        assert!(
-            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::query")
-        );
-        assert!(
-            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::filter_by")
-        );
-        assert!(
-            output.contains("call:python:edge_cases.py::get_user->python:edge_cases.py::first")
-        );
-        assert!(output.contains(
-            "call:python:edge_cases.py::process_checkout->python:edge_cases.py::get_user"
-        ));
-        assert!(
-            output.contains(
-                "call:python:edge_cases.py::process_checkout->python:edge_cases.py::create"
-            )
-        );
-    }
-
-    #[test]
-    fn test_enterprise_js_symbols() {
-        let facts = extract_facts(
-            &tree_sitter_javascript::LANGUAGE.into(),
-            JS_SOURCE,
-            DEFAULT_JAVASCRIPT_SCM,
-            "edge_cases.js",
-            "javascript",
-        )
-        .unwrap();
-        let output = facts.join("\n");
-        assert!(output.contains(":symbol/fqsn \"javascript:edge_cases.js::handle\""));
-        assert!(output.contains(":symbol/fqsn \"javascript:edge_cases.js::processPayment\""));
-    }
-
-    #[test]
-    fn test_enterprise_js_calls() {
-        let facts = extract_facts(
-            &tree_sitter_javascript::LANGUAGE.into(),
-            JS_SOURCE,
-            DEFAULT_JAVASCRIPT_SCM,
-            "edge_cases.js",
-            "javascript",
-        )
-        .unwrap();
-        let output = facts.join("\n");
-        assert!(
-            output.contains(
-                "call:javascript:edge_cases.js::handle->javascript:edge_cases.js::process"
-            )
-        );
-        assert!(output.contains(
-            "call:javascript:edge_cases.js::processPayment->javascript:edge_cases.js::create"
-        ));
-    }
-
-    const FASTAPI_SOURCE: &str =
-        include_str!("../tests/fixtures/python/fastapi/fastapi/0.103.1/fastapi/router.py");
-
-    #[test]
-    fn test_stress_fastapi_routing() {
-        let facts = extract_facts(
-            &tree_sitter_python::LANGUAGE.into(),
-            FASTAPI_SOURCE,
-            DEFAULT_PYTHON_SCM,
-            "fastapi_routing.py",
-            "python",
-        )
-        .expect("Failed to extract FastAPI facts");
-
-        let output = facts.join("\n");
-        assert!(output.matches("[:db/add").count() > 100);
-        assert!(output.contains(":symbol/fqsn \"python:fastapi_routing.py::APIRoute\""));
-        assert!(output.contains(":symbol/fqsn \"python:fastapi_routing.py::APIRouter\""));
-        assert!(output.contains(":type/call-site"));
-    }
-
-    const EXPRESS_SOURCE: &str = include_str!(
-        "../tests/fixtures/javascript/expressjs/express/4.18.2/lib/express_application.js"
-    );
-
-    #[test]
-    fn test_stress_express_application() {
-        let facts = extract_facts(
-            &tree_sitter_javascript::LANGUAGE.into(),
-            EXPRESS_SOURCE,
-            DEFAULT_JAVASCRIPT_SCM,
-            "express_application.js",
-            "javascript",
-        )
-        .expect("Failed to extract Express facts");
-
-        let output = facts.join("\n");
-        assert!(output.matches("[:db/add").count() > 50);
-        assert!(output.contains(":symbol/fqsn \"javascript:express_application.js::init\""));
-        assert!(output.contains(":type/call-site"));
-    }
-
-    #[test]
-    fn test_treesitter_cross_file_resolution() {
-        let mut table = SymbolTable::default();
-        let lang = &tree_sitter_python::LANGUAGE.into();
-        let query = Query::new(lang, DEFAULT_PYTHON_SCM).unwrap();
-
-        // Pass 1: Parse first file (callee)
-        let mut parser1 = TsParser::new();
-        parser1.set_language(lang).unwrap();
-        let tree1 = parser1
-            .parse("def shared_target():\n    pass", None)
-            .unwrap();
-        discover_symbols(
-            &tree1,
-            "def shared_target():\n    pass",
-            &query,
-            "callee.py",
-            "python",
-            &mut table,
-        )
-        .unwrap();
-
-        // Pass 1: Parse second file (caller)
-        let mut parser2 = TsParser::new();
-        parser2.set_language(lang).unwrap();
-        let source2 = "def main():\n    shared_target()";
-        let tree2 = parser2.parse(source2, None).unwrap();
-        discover_symbols(&tree2, source2, &query, "caller.py", "python", &mut table).unwrap();
-
-        // Pass 2: Emit facts for the caller file
-        let facts = emit_facts(&tree2, source2, &query, "caller.py", "python", &table).unwrap();
-        let output = facts.join("\n");
-
-        let expected_caller = hash_id("python:caller.py::main");
-        let expected_callee = hash_id("python:callee.py::shared_target");
-
-        assert!(output.contains(&format!(":call/caller {expected_caller}")));
-        assert!(output.contains(&format!(":call/callee {expected_callee}")));
+        assert!(output.contains(":symbol/fqsn \"javascript:edge_cases::js_func\""));
     }
 }

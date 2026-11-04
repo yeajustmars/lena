@@ -1,0 +1,5 @@
+(function_declaration name: (identifier) @symbol.function)
+(method_definition name: (property_identifier) @symbol.function)
+(variable_declarator name: (identifier) @symbol.function value: (arrow_function))
+(call_expression function: (identifier) @call.callee)
+(call_expression function: (member_expression property: (property_identifier) @call.callee))

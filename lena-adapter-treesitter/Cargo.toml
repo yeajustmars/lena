@@ -15,5 +15,11 @@ clap.workspace = true
 libloading.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true
-tree-sitter-python = "0.23"
+
+tree-sitter-bash = "0.23"
+tree-sitter-java = "0.23"
 tree-sitter-javascript = "0.23"
+tree-sitter-php = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-typescript = "0.23"
