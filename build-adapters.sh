@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-echo "==> Building Rust workspace (lena-cli, lena-adapter-rust, lena-adapter-clj, lena-adapter-treesitter)..."
+echo "==> Building Rust workspace (lena-cli, lena-adapter-rust, lena-adapter-clojure, lena-adapter-treesitter)..."
 cargo build
 
 # Ensure the debug directory exists (cargo build should have created this)

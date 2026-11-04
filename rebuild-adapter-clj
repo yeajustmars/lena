@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 # TODO: check location for debug binaries: ~/.lena/bin vs target/debug
 
-cargo install --path lena-adapter-clj --root ~/.lena
+cargo install --path lena-adapter-clojure --root ~/.lena

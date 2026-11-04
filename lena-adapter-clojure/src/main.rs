@@ -1,4 +1,4 @@
-// lena-adapter-clj/src/main.rs
+// lena-adapter-clojure/src/main.rs
 
 #![deny(warnings)]
 #![warn(clippy::all)]
@@ -22,7 +22,7 @@ use std::{
 };
 
 #[derive(Parser)]
-#[command(name = "lena-adapter-clj")]
+#[command(name = "lena-adapter-clojure")]
 #[command(about = "Clojure adapter for Lena using clj-kondo")]
 struct Cli {
     /// Target directory to analyze

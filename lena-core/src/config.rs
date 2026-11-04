@@ -153,7 +153,7 @@ impl Default for AdaptersConfig {
         registered.insert(
             "clojure".to_string(),
             AdapterDefinition {
-                command: "lena-adapter-clj".to_string(),
+                command: "lena-adapter-clojure".to_string(),
                 args: vec![],
             },
         );
@@ -364,7 +364,7 @@ mod tests {
         assert_eq!(
             merged.adapters.registered.get("clojure").unwrap(),
             &AdapterDefinition {
-                command: "lena-adapter-clj".to_string(),
+                command: "lena-adapter-clojure".to_string(),
                 args: vec![],
             },
         );
