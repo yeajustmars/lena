@@ -1,55 +1,92 @@
 // lena-core/src/docgen/html.rs
 
+use crate::docgen::ir::DocGraph;
 use anyhow::Result;
-use minijinja::{Environment as MiniJinjaEnvironment, Value as MiniJinjaValue, context};
-use std::collections::BTreeMap;
+use minijinja::{Environment, context};
 use std::fs;
 use std::path::Path;
 
-use crate::docgen::ir::{DocGraph, DocModule, SymbolKind};
-
 pub struct HtmlRenderer<'a> {
     graph: &'a DocGraph,
-    env: MiniJinjaEnvironment<'static>,
+    env: Environment<'static>,
     custom_css: Option<String>,
 }
 
 impl<'a> HtmlRenderer<'a> {
     pub fn new(graph: &'a DocGraph, custom_css: Option<String>) -> Result<Self> {
-        let mut env = MiniJinjaEnvironment::new();
+        let mut env = Environment::new();
 
         // Register the badge mapping as a MiniJinja filter
         env.add_filter("badge_class", |kind: String| -> String {
-            SymbolKind::from_str(&kind).badge_class().to_string()
+            crate::docgen::ir::SymbolKind::from_str(&kind)
+                .badge_class()
+                .to_string()
         });
 
-        // Register the group_modules filter for the sidebar navigation
+        // Register the build_nav_tree filter for the sidebar navigation
         env.add_filter(
-            "group_modules",
-            |modules_val: MiniJinjaValue| -> MiniJinjaValue {
-                let mut grouped: BTreeMap<String, BTreeMap<String, MiniJinjaValue>> =
-                    BTreeMap::new();
+            "build_nav_tree",
+            |modules_val: minijinja::Value| -> minijinja::Value {
+                use serde_json::{Map, Value as JsonValue};
+
+                let mut root = Map::new();
 
                 if let Ok(iter) = modules_val.try_iter() {
                     for key in iter {
-                        if let Some(mod_name) = key.as_str() {
-                            let module = modules_val
-                                .get_item(&key)
-                                .unwrap_or(MiniJinjaValue::UNDEFINED);
+                        if key.as_str().is_some() {
+                            let module = modules_val.get_item(&key).unwrap();
+                            let path_str = module
+                                .get_attr("path")
+                                .unwrap()
+                                .as_str()
+                                .unwrap()
+                                .to_string();
 
-                            // Split on dot-notation rather than slashes
-                            let parts: Vec<&str> = mod_name.splitn(2, '.').collect();
+                            // Strip extension
+                            let path_no_ext = std::path::Path::new(&path_str)
+                                .with_extension("")
+                                .to_string_lossy()
+                                .to_string();
 
-                            let (group, display) = if parts.len() == 2 {
-                                (parts[0].to_string(), parts[1].to_string())
-                            } else {
-                                ("/".to_string(), mod_name.to_string())
-                            };
-                            grouped.entry(group).or_default().insert(display, module);
+                            let segments: Vec<&str> = path_no_ext.split('/').collect();
+
+                            let mut current_path = Vec::new();
+
+                            for (i, segment) in segments.iter().enumerate() {
+                                let is_file = i == segments.len() - 1;
+
+                                // Walk from root to the current directory safely
+                                let mut current = &mut root;
+                                for p in &current_path {
+                                    current = current.get_mut(*p).unwrap().as_object_mut().unwrap();
+                                }
+
+                                if is_file {
+                                    let mut file_node = Map::new();
+                                    file_node.insert(
+                                        "_module".to_string(),
+                                        serde_json::to_value(&module).unwrap(),
+                                    );
+                                    file_node.insert(
+                                        "_name".to_string(),
+                                        JsonValue::String(segment.to_string()),
+                                    );
+                                    current
+                                        .insert(segment.to_string(), JsonValue::Object(file_node));
+                                } else {
+                                    if !current.contains_key(*segment) {
+                                        current.insert(
+                                            segment.to_string(),
+                                            JsonValue::Object(Map::new()),
+                                        );
+                                    }
+                                    current_path.push(*segment);
+                                }
+                            }
                         }
                     }
                 }
-                MiniJinjaValue::from_serialize(&grouped)
+                minijinja::Value::from_serialize(&root)
             },
         );
 
@@ -146,9 +183,13 @@ impl<'a> HtmlRenderer<'a> {
         Ok(())
     }
 
-    fn render_module_page(&self, module: &DocModule, _lang: &str, _pkg: &str) -> Result<String> {
+    fn render_module_page(
+        &self,
+        module: &crate::docgen::ir::DocModule,
+        _lang: &str,
+        _pkg: &str,
+    ) -> Result<String> {
         // Dynamically calculate the relative path back to the root directory
-        // Base depth is 2 (Language/Package/), plus 1 for every slash in the module file path
         let slash_count = module
             .name
             .chars()
@@ -200,6 +241,7 @@ mod tests {
             "main".into(),
             DocModule {
                 name: "main".into(),
+                namespace: "main".into(),
                 path: "src/main.rs".into(),
                 docstring: None,
                 symbols: vec![],

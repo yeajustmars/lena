@@ -1,3 +1,5 @@
+// lena-core/src/docgen/mod.rs
+
 pub mod html;
 pub mod ir;
 pub mod mdbook;
@@ -90,6 +92,7 @@ impl<'a> DocGraphBuilder<'a> {
                 .entry(raw.module.clone())
                 .or_insert_with(|| DocModule {
                     name: raw.module.clone(),
+                    namespace: raw.namespace.clone(),
                     path: raw.file_path.clone(),
                     docstring: None,
                     symbols: Vec::new(),
@@ -193,6 +196,15 @@ impl<'a> DocGraphBuilder<'a> {
 
             let raw_ns = extract_string(data, "symbol/namespace");
 
+            let clean_namespace = if !raw_ns.is_empty() {
+                // Strip language prefixes like "rust:" or "clj:" if present
+                raw_ns.splitn(2, ':').last().unwrap_or(&raw_ns).to_string()
+            } else {
+                // Fallback: use file path without extension
+                let path_obj = std::path::Path::new(&file_path);
+                path_obj.with_extension("").to_string_lossy().to_string()
+            };
+
             let mut package = raw_ns.clone();
             if package.is_empty() {
                 // Fallback: Use the top-level directory from the normalized file path
@@ -246,6 +258,7 @@ impl<'a> DocGraphBuilder<'a> {
                 },
                 package,
                 module,
+                namespace: clean_namespace,
             });
         }
         Ok(symbols)
@@ -329,6 +342,7 @@ struct RawSymbol {
     language: String,
     package: String,
     module: String,
+    namespace: String,
 }
 
 fn extract_string(val: &Value, key: &str) -> String {
@@ -420,7 +434,6 @@ mod tests {
         assert!(graph.languages.contains_key("Rust"));
 
         let rust_lang = graph.languages.get("Rust").unwrap();
-        // Since we seeded ":symbol/namespace" as "core", we expect the package to be "core"
         assert!(rust_lang.packages.contains_key("core"));
     }
 }

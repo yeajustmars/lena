@@ -405,3 +405,8 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.nav-modules a.active-nav {
+  font-weight: 700;
+  color: var(--accent);
+}

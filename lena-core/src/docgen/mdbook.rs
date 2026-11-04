@@ -113,6 +113,7 @@ mod tests {
             "core".into(),
             DocModule {
                 name: "core".into(),
+                namespace: "core".into(),
                 path: "src/core.rs".into(),
                 docstring: None,
                 symbols,

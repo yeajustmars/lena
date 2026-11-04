@@ -11,6 +11,25 @@
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </head>
 <body>
+  {% macro render_tree(tree_node, lang_name, pkg_name, current_path) %}
+    <ul class="nav-modules">
+      {% for key, node in tree_node | items %}
+        {% if node._module %}
+          <li>
+            <a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ node._module.name }}.html">{{ node._name }}</a>
+          </li>
+        {% else %}
+          {% set next_path = current_path ~ "-" ~ key %}
+          <li>
+            <details data-nav-id="{{ lang_name }}-{{ pkg_name }}{{ next_path }}">
+              <summary class="mod-group-title">{{ key }}</summary>
+              {{ render_tree(node, lang_name, pkg_name, next_path) }}
+            </details>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  {% endmacro %}
   <div class="layout">
     <nav class="sidebar">
       <div class="sidebar-header">
@@ -28,6 +47,7 @@
           <option value="gruvbox">Gruvbox</option>
         </select>
         <button id="mode-toggle" title="Toggle Light/Dark Mode">🌓</button>
+        <button id="toggle-nav-tree" title="Expand/Collapse All Folders">↕️</button>
       </div>
       <ul class="nav-tree">
         {% for lang_name, lang in languages | items %}
@@ -36,16 +56,7 @@
           {% for pkg_name, pkg in lang.packages | items %}
           <div class="nav-package">
             <span class="pkg-title">{{ pkg_name }}</span>
-            <ul class="nav-modules">
-              {% for group_name, group_mods in pkg.modules | group_modules | items %}
-                {% if group_name != "/" %}
-                  <li class="mod-group-title">{{ group_name }}</li>
-                {% endif %}
-                {% for display_name, mod in group_mods | items %}
-                  <li><a href="#{{ lang_name }}-{{ pkg_name }}-{{ mod.name }}">{{ display_name }}</a></li>
-                {% endfor %}
-              {% endfor %}
-            </ul>
+            {{ render_tree(pkg.modules | build_nav_tree, lang_name, pkg_name, "") }}
           </div>
           {% endfor %}
         </li>

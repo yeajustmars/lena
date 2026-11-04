@@ -25,6 +25,7 @@ pub struct DocPackage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocModule {
     pub name: String,
+    pub namespace: String,
     pub path: String,
     pub docstring: Option<String>,
     pub symbols: Vec<DocSymbol>,

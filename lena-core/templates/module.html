@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>{{ module.name }}</h1>
+  <h1>{{ module.namespace }}</h1>
   <p class="file-path">Source: <code>{{ module.path }}</code></p>
   {% if module.docstring %}
     <div class="module-doc">{{ module.docstring }}</div>
