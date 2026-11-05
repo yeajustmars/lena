@@ -146,8 +146,30 @@ func emitFacts(file *ParsedFile, table *SymbolTable) []string {
 				kind = ":kind/method"
 			}
 
-			fact := fmt.Sprintf("[[:db/add %d :entity/type :type/function] [:db/add %d :entity/language :lang/go] [:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/module \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :symbol/kind %s] [:db/add %d :code/signature \"%s\"] [:db/add %d :parent/entity %d] [:db/add %d :location/file \"%s\"] [:db/add %d :location/start-line %d] [:db/add %d :location/start-col %d]",
-				fnId, fnId, fnId, escapeString(fnFqsn), fnId, escapeString(pkgName), fnId, escapeString(fnName), fnId, kind, fnId, fnId, escapeString(sigStr), fnId, modId, fnId, escapeString(filename), fnId, pos.Line, fnId, pos.Column)
+			fact := fmt.Sprintf(
+				"[[:db/add %d :entity/type :type/function] "+
+				"[:db/add %d :entity/language :lang/go] "+
+				"[:db/add %d :symbol/fqsn \"%s\"] "+
+				"[:db/add %d :symbol/module \"%s\"] "+
+				"[:db/add %d :symbol/name \"%s\"] "+
+				"[:db/add %d :symbol/kind %s] "+
+				"[:db/add %d :code/signature \"%s\"] "+
+				"[:db/add %d :parent/entity %d] "+
+				"[:db/add %d :location/file \"%s\"] "+
+				"[:db/add %d :location/start-line %d] "+
+				"[:db/add %d :location/start-col %d]",
+				fnId,
+				fnId,
+				fnId, escapeString(fnFqsn),
+				fnId, escapeString(pkgName),
+				fnId, escapeString(fnName),
+				fnId, kind,
+				fnId, escapeString(sigStr),
+				fnId, modId,
+				fnId, escapeString(filename),
+				fnId, pos.Line,
+				fnId, pos.Column,
+			)
 
 			if container != "" {
 				fact += fmt.Sprintf(" [:db/add %d :symbol/container \"%s\"]", fnId, escapeString(container))
