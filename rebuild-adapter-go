@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+go build -o target/debug/lena-adapter-go ./lena-adapter-go/src

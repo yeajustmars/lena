@@ -89,7 +89,7 @@ async fn run_adapter(
     let mut facts_ingested = 0;
     if let Some(stdout) = child.stdout.take() {
         // Pass `false` to enforce strict protocol validation
-        facts_ingested = ingest_stream(&db, stdout, false).await?;
+        facts_ingested = ingest_stream(&db, stdout, false, &lang).await?;
     }
 
     let status = child.wait().await?;

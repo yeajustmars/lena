@@ -134,7 +134,10 @@ fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
         ATTR_SYMBOL_MODULE,
         EdnValue::String(logical_module),
     )?;
+
     tx.add(module_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
+    let mod_name = logical_module.split("::").last().unwrap_or(logical_module);
+    tx.add(module_id, ATTR_SYMBOL_NAME, EdnValue::String(mod_name))?;
     facts.push(tx.finish());
 
     let local_imports = table.use_maps.get(filename);
@@ -203,16 +206,30 @@ fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
             // Function calls
             for call_expr in body.syntax().descendants().filter_map(ast::CallExpr::cast) {
                 if let Some(callee_expr) = call_expr.expr() {
-                    let callee_name = callee_expr.syntax().text().to_string();
-                    let callee_fqsn = local_imports
-                        .and_then(|imports| imports.get(&callee_name).cloned())
-                        .unwrap_or_else(|| {
-                            if callee_name.contains("::") {
-                                format!("rust:{callee_name}")
-                            } else {
-                                format!("rust:{logical_module}::{callee_name}")
-                            }
-                        });
+                    let raw_callee = callee_expr.syntax().text().to_string();
+
+                    let (callee_name, callee_fqsn) = if let Some(imported_fqsn) =
+                        local_imports.and_then(|i| i.get(&raw_callee).cloned())
+                    {
+                        let short_name = raw_callee
+                            .split("::")
+                            .last()
+                            .unwrap_or(&raw_callee)
+                            .to_string();
+                        (short_name, imported_fqsn)
+                    } else if raw_callee.contains("::") {
+                        let short_name = raw_callee
+                            .split("::")
+                            .last()
+                            .unwrap_or(&raw_callee)
+                            .to_string();
+                        (short_name, format!("rust:{raw_callee}"))
+                    } else {
+                        (
+                            raw_callee.clone(),
+                            format!("rust:{logical_module}::{raw_callee}"),
+                        )
+                    };
 
                     facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
 
@@ -232,7 +249,6 @@ fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
             {
                 if let Some(name_ref) = method_call.name_ref() {
                     let callee_name = name_ref.text().to_string();
-                    // Fallback approximation for method FQSN without full type inference
                     let callee_fqsn =
                         format!("rust:{logical_module}::[UnknownType]::{}", callee_name);
 
@@ -278,6 +294,7 @@ fn emit_external_stub(callee_fqsn: &str, callee_name: &str) -> Result<String> {
     let mut tx = TransactionBuilder::new();
     tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(callee_fqsn))?;
     tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(callee_name))?;
+    tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String("external"))?;
     tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::String("true"))?;
     Ok(tx.finish())
 }

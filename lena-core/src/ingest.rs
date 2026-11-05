@@ -29,6 +29,7 @@ pub async fn ingest_stream<R>(
     db: &Arc<LenaDb>,
     reader: R,
     allow_incomplete_facts: bool,
+    adapter_name: &str,
 ) -> Result<usize, IngestError>
 where
     R: tokio::io::AsyncRead + Unpin + Send + 'static,
@@ -78,9 +79,9 @@ where
                 // 2. Validate Batch
                 if let Err(errors) = validator.validate_batch(&val_facts) {
                     for err in errors {
-                        error!("Validation Error: {}", err);
+                        error!("[{}] Validation Error: {}", adapter_name, err);
                     }
-                    error!("Skipping malformed transaction batch.");
+                    error!("[{}] Skipping malformed transaction batch.", adapter_name);
                     continue;
                 }
 
@@ -182,7 +183,7 @@ mod tests {
         // Incomplete facts (missing mandatory module/file paths), so we test in permissive mode
         let edn_stream = b"[[:db/add 100 :entity/type :type/module] [:db/add 100 :symbol/name \"my_mod\"]]\n[[:db/add 101 :entity/type :type/function]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true)
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 3);
@@ -201,7 +202,7 @@ mod tests {
         // Incomplete fact violating strict validation (missing FQSN, LOC_FILE, etc.)
         let edn_stream = b"[[:db/add 100 :symbol/name \"my_mod\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false)
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
             .await
             .expect("Ingestion failed");
 
@@ -214,7 +215,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"\n   \n\t\n[[:db/add 100 :symbol/name \"test\"]]\n\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true)
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 1);
@@ -225,7 +226,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"[[:db/add 100 :symbol/name \"valid_1\"]]\n[MALFORMED NONSENSE\n[[:db/add 101 :symbol/name \"valid_2\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true)
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(
@@ -310,7 +311,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"[[:db/add 100 :entity/type :type/function] [:db/add 100 :symbol/fqsn \"rust:core::test\"] [:db/add 100 :symbol/name \"test\"] [:db/add 100 :symbol/module \"core\"] [:db/add 100 :location/file \"src/lib.rs\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false)
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 5);
@@ -329,7 +330,7 @@ mod tests {
         // Module contains .rs extension -> must be rejected under strict mode
         let edn_stream = b"[[:db/add 100 :entity/type :type/function] [:db/add 100 :symbol/fqsn \"rust:core::test\"] [:db/add 100 :symbol/name \"test\"] [:db/add 100 :symbol/module \"core.rs\"] [:db/add 100 :location/file \"src/lib.rs\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false)
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
             .await
             .expect("Ingestion execution errored");
         assert_eq!(
