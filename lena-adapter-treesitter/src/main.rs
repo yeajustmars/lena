@@ -84,16 +84,16 @@ fn visit_dirs(
                 {
                     visit_dirs(&path, extensions, files)?;
                 }
-            } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                if extensions.contains(&ext) {
-                    files.push(path);
-                }
+            } else if let Some(ext) = path.extension().and_then(|e| e.to_str())
+                && extensions.contains(&ext)
+            {
+                files.push(path);
             }
         }
-    } else if let Some(ext) = dir.extension().and_then(|e| e.to_str()) {
-        if extensions.contains(&ext) {
-            files.push(dir.to_path_buf());
-        }
+    } else if let Some(ext) = dir.extension().and_then(|e| e.to_str())
+        && extensions.contains(&ext)
+    {
+        files.push(dir.to_path_buf());
     }
     Ok(())
 }
