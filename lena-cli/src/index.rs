@@ -21,23 +21,22 @@ fn resolve_binary(command_name: &str) -> Option<PathBuf> {
     let exe_suffix = std::env::consts::EXE_SUFFIX;
     let adapter_filename = format!("{command_name}{exe_suffix}");
 
-    // 1. Sibling directory (e.g., ./target/debug/ during development)
+    // 1. Local workspace (if running inside the Leña repo)
+    let workspace_bin = PathBuf::from("target")
+        .join("debug")
+        .join(&adapter_filename);
+    if Path::new("Cargo.toml").exists() && workspace_bin.exists() {
+        return Some(workspace_bin);
+    }
+
+    // 2. Sibling directory (e.g., if running from a globally installed target/release folder)
     let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("lena"));
     current_exe.pop();
-    let local_adapter_path = current_exe.join(&adapter_filename);
-    if local_adapter_path.exists() {
-        return Some(local_adapter_path);
+    let sibling_path = current_exe.join(&adapter_filename);
+    if sibling_path.exists() {
+        return Some(sibling_path);
     }
 
-    // 2. Managed Leña directory (~/.lena/bin/)
-    if let Some(home) = dirs::home_dir() {
-        let lena_bin = home.join(".lena").join("bin").join(&adapter_filename);
-        if lena_bin.exists() {
-            return Some(lena_bin);
-        }
-    }
-
-    // 3. System PATH
     which::which(&adapter_filename).ok()
 }
 

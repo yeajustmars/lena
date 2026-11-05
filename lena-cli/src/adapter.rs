@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::process::Command;
 use tracing::info;
 
@@ -34,11 +34,25 @@ async fn list_adapters() -> Result<()> {
         "lena-adapter-treesitter",
     ];
 
+    let is_lena_repo = Path::new("Cargo.toml").exists();
     let mut found_any = false;
 
     for adapter in known_adapters {
+        let mut local_bin_path = None;
         let mut lena_bin_path = None;
         let mut path_bin_path = None;
+
+        // Check target/debug/ (if inside repo)
+        if is_lena_repo {
+            let p = PathBuf::from("target").join("debug").join(format!(
+                "{}{}",
+                adapter,
+                std::env::consts::EXE_SUFFIX
+            ));
+            if p.exists() {
+                local_bin_path = Some(p);
+            }
+        }
 
         // Check ~/.lena/bin/
         let managed_path = bin_dir.join(format!("{}{}", adapter, std::env::consts::EXE_SUFFIX));
@@ -49,29 +63,40 @@ async fn list_adapters() -> Result<()> {
         // Check $PATH
         if let Ok(p) = which::which(adapter) {
             // Ensure we aren't just resolving the exact same file we found in ~/.lena/bin
-            if lena_bin_path.as_ref().map_or(true, |lb| lb != &p) {
+            if lena_bin_path.as_ref() != Some(&p) {
                 path_bin_path = Some(p);
             }
         }
 
-        if lena_bin_path.is_none() && path_bin_path.is_none() {
+        if local_bin_path.is_none() && lena_bin_path.is_none() && path_bin_path.is_none() {
             continue;
         }
 
         found_any = true;
 
+        if let Some(p) = &local_bin_path {
+            let version = get_adapter_version(p).await;
+            println!("- {adapter} ({version}) [Local Dev: {}]", p.display());
+        }
+
         if let Some(p) = &lena_bin_path {
             let version = get_adapter_version(p).await;
             println!("- {adapter} ({version}) [Managed: {}]", p.display());
+
+            if local_bin_path.is_some() {
+                tracing::warn!(
+                    "  ⚠️  This managed installation is being shadowed by the local target/debug/ build."
+                );
+            }
         }
 
         if let Some(p) = &path_bin_path {
             let version = get_adapter_version(p).await;
             println!("- {adapter} ({version}) [System: {}]", p.display());
 
-            if lena_bin_path.is_some() {
+            if local_bin_path.is_some() || lena_bin_path.is_some() {
                 tracing::warn!(
-                    "  ⚠️  The system installation of {adapter} is being shadowed by the managed ~/.lena/bin/ installation."
+                    "  ⚠️  This system installation is being shadowed by a higher-priority installation."
                 );
             }
         }
