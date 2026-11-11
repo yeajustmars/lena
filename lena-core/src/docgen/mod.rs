@@ -1,5 +1,9 @@
 // lena-core/src/docgen/mod.rs
 
+use anyhow::Result;
+use serde_json::Value;
+use std::collections::{BTreeMap, HashMap};
+
 pub mod html;
 pub mod ir;
 pub mod mdbook;
@@ -9,9 +13,6 @@ use crate::docgen::ir::{
     DocGraph, DocLanguage, DocModule, DocNeighborhood, DocPackage, DocSymbol, NeighborRef,
     SearchEntry, SymbolKind,
 };
-use anyhow::Result;
-use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
 
 pub struct DocGenOptions {
     pub project_name: String,
@@ -66,8 +67,8 @@ impl<'a> DocGraphBuilder<'a> {
             };
             neighborhood.generate_mermaid(&display_name);
 
-            // Skip external stubs from getting dedicated doc pages and search entries.
-            // They are preserved in symbols_map so they appear in caller/callee graphs.
+            // Skip external stubs from getting dedicated doc pages, search entries,
+            // and being rendered in caller/callee graphs.
             if raw.is_external {
                 continue;
             }
@@ -329,6 +330,9 @@ impl<'a> DocGraphBuilder<'a> {
             let caller_sym = symbols_map.get(&caller_fqsn);
             let callee_sym = symbols_map.get(&callee_fqsn);
 
+            let caller_is_external = caller_sym.map_or(true, |s| s.is_external);
+            let callee_is_external = callee_sym.map_or(true, |s| s.is_external);
+
             // Fetch display names to show containers in Mermaid graphs
             let caller_name = caller_sym
                 .map(|s| {
@@ -364,11 +368,16 @@ impl<'a> DocGraphBuilder<'a> {
                 file_path: callee_file,
             };
 
-            callers_map
-                .entry(callee_fqsn.clone())
-                .or_default()
-                .push(caller_ref);
-            callees_map.entry(caller_fqsn).or_default().push(callee_ref);
+            if !caller_is_external {
+                callers_map
+                    .entry(callee_fqsn.clone())
+                    .or_default()
+                    .push(caller_ref);
+            }
+
+            if !callee_is_external {
+                callees_map.entry(caller_fqsn).or_default().push(callee_ref);
+            }
         }
 
         Ok((callers_map, callees_map))
@@ -639,7 +648,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_docgraph_call_edges_include_external_stubs() {
+    async fn test_docgraph_call_edges_exclude_external_stubs() {
         let dir = tempdir().unwrap();
         let db = LenaDb::open(dir.path().join("docgen_edges.db")).unwrap();
 
@@ -759,11 +768,10 @@ mod tests {
             .unwrap();
         let main_sym = &app_module.symbols[0];
 
-        assert_eq!(main_sym.neighborhood.callees.len(), 1);
         assert_eq!(
-            main_sym.neighborhood.callees[0].fqsn,
-            "rust:std::process::exit"
+            main_sym.neighborhood.callees.len(),
+            0,
+            "External stubs should be excluded from the generated documentation graph"
         );
-        assert_eq!(main_sym.neighborhood.callees[0].name, "exit");
     }
 }
