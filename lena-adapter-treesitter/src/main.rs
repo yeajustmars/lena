@@ -601,4 +601,132 @@ mod tests {
         assert!(output.contains(":symbol/fqsn \"bash:edge_cases::deploy_server\""));
         assert!(output.contains(":type/call-site"));
     }
+
+    // Helper for loading file-based fixtures
+    fn run_file_fixture(
+        lang: tree_sitter::Language,
+        rel_path: &str,
+        query: &str,
+        lang_tag: &str,
+    ) -> Vec<String> {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(rel_path);
+        if !path.exists() {
+            return Vec::new();
+        }
+        let source = std::fs::read_to_string(&path).unwrap();
+        let logical_module = path.file_stem().unwrap().to_string_lossy().to_string();
+        extract_facts(
+            &lang,
+            &source,
+            query,
+            &path.to_string_lossy(),
+            &logical_module,
+            lang_tag,
+        )
+        .expect("Failed to extract facts")
+    }
+
+    #[test]
+    fn test_typescript_nestjs_real_world() {
+        let facts = run_file_fixture(
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            "tests/fixtures/typescript/nestjs/packages/nest-router/router-explorer.ts",
+            DEFAULT_TYPESCRIPT_SCM,
+            "typescript",
+        );
+        if facts.is_empty() {
+            return;
+        }
+        let output = facts.join("\n");
+
+        assert!(
+            facts.len() > 100,
+            "Should extract many facts from NestJS router"
+        );
+        assert!(
+            output.contains(":symbol/fqsn \"typescript:router-explorer::RouterExplorer::explore\"")
+        );
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_java_spring_real_world() {
+        let facts = run_file_fixture(
+            tree_sitter_java::LANGUAGE.into(),
+            "tests/fixtures/java/spring-framework/spring-webmvc/src/main/java/org/springframework/web/servlet/DispatcherServlet.java",
+            DEFAULT_JAVA_SCM,
+            "java",
+        );
+        if facts.is_empty() {
+            return;
+        }
+        let output = facts.join("\n");
+
+        assert!(
+            facts.len() > 100,
+            "Should extract hundreds of facts from DispatcherServlet"
+        );
+        assert!(
+            output
+                .contains(":symbol/fqsn \"java:DispatcherServlet::DispatcherServlet::doDispatch\"")
+        );
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_php_laravel_real_world() {
+        let facts = run_file_fixture(
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            "tests/fixtures/php/laravel/illuminate/routing/Route.php",
+            DEFAULT_PHP_SCM,
+            "php",
+        );
+        if facts.is_empty() {
+            return;
+        }
+        let output = facts.join("\n");
+
+        assert!(facts.len() > 100, "Should extract facts from Laravel Route");
+        assert!(output.contains(":symbol/fqsn \"php:Route::Route::run\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_ruby_sinatra_real_world() {
+        let facts = run_file_fixture(
+            tree_sitter_ruby::LANGUAGE.into(),
+            "tests/fixtures/ruby/sinatra/lib/sinatra/base.rb",
+            DEFAULT_RUBY_SCM,
+            "ruby",
+        );
+        if facts.is_empty() {
+            return;
+        }
+        let output = facts.join("\n");
+
+        assert!(
+            facts.len() > 1000,
+            "Should extract massive graph from Sinatra base"
+        );
+        assert!(output.contains(":symbol/fqsn \"ruby:base::Base::call\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_bash_nvm_real_world() {
+        let facts = run_file_fixture(
+            tree_sitter_bash::LANGUAGE.into(),
+            "tests/fixtures/bash/nvm/nvm.sh",
+            DEFAULT_BASH_SCM,
+            "bash",
+        );
+        if facts.is_empty() {
+            return;
+        }
+        let output = facts.join("\n");
+
+        assert!(facts.len() > 200, "Should extract facts from NVM");
+        assert!(output.contains(":symbol/fqsn \"bash:nvm::nvm_echo\""));
+        assert!(output.contains(":type/call-site"));
+    }
 }

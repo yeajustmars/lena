@@ -352,4 +352,27 @@ mod tests {
         assert!(output.contains(":symbol/name \"handler\""));
         assert!(!output.contains(":symbol/namespace"));
     }
+
+    #[test]
+    fn test_clojure_ring_real_world_extraction() {
+        let target_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/clojure/ring-core");
+
+        if !target_dir.exists() {
+            return;
+        }
+
+        let facts = execute_kondo(&target_dir).expect("Failed to run clj-kondo on Ring");
+        let output = facts.join("\n");
+
+        // Verify we extracted a massive amount of facts from the framework
+        assert!(
+            facts.len() > 1000,
+            "Should extract thousands of facts from ring-core"
+        );
+
+        // Verify key framework symbols were captured
+        assert!(output.contains(":symbol/fqsn \"clj:ring.middleware.cookies/cookies-request\""));
+        assert!(output.contains(":type/call-site"));
+    }
 }
