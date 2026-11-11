@@ -113,7 +113,12 @@ impl<'a> HtmlRenderer<'a> {
             include_str!("assets/themes.css")
         );
 
-        let search_index_json = serde_json::to_string(&self.graph.search_index)?;
+        // Rewrite search index links to be local anchors for single-page mode
+        let mut sp_index = self.graph.search_index.clone();
+        for entry in &mut sp_index {
+            entry.href = format!("#{}", entry.name);
+        }
+        let search_index_json = serde_json::to_string(&sp_index)?;
 
         let tmpl = self.env.get_template("single_page.html")?;
         let rendered = tmpl.render(context! {

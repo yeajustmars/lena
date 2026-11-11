@@ -16,7 +16,7 @@
       {% for key, node in tree_node | items %}
         {% if node._module %}
           <li>
-            <a href="{{ root_rel }}{{ lang_name }}/{{ pkg_name }}/{{ node._module.name }}.html">{{ node._name }}</a>
+            <a href="#{{ lang_name }}-{{ pkg_name }}-{{ node._module.name }}">{{ node._name }}</a>
           </li>
         {% else %}
           {% set next_path = current_path ~ "-" ~ key %}
@@ -78,7 +78,7 @@
             <hr />
             <section class="symbols">
               {% for sym in module.symbols %}
-                <div class="symbol-card" id="{{ sym.fqsn }}">
+                <div class="symbol-card" id="{{ sym.name }}">
                   <div class="symbol-header">
                     <span class="badge {{ sym.kind | badge_class }}">{{ sym.kind }}</span>
                     <h3 class="symbol-name">{{ sym.name }}</h3>

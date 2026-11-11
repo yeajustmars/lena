@@ -224,8 +224,13 @@ func emitFacts(file *ParsedFile, table *SymbolTable) []string {
 
 						// Emit external stub if needed
 						if isExternal && !emittedExternals[calleeId] {
+							atomicName := calleeTarget
+							if lastDot := strings.LastIndex(atomicName, "."); lastDot != -1 {
+								atomicName = atomicName[lastDot+1:]
+							}
+
 							stubFact := fmt.Sprintf("[[:db/add %d :symbol/fqsn \"%s\"] [:db/add %d :symbol/name \"%s\"] [:db/add %d :symbol/module \"%s\"] [:db/add %d :symbol/external true]]",
-								calleeId, escapeString(calleeFqsn), calleeId, escapeString(calleeTarget), calleeId, escapeString(calleeMod), calleeId)
+								calleeId, escapeString(calleeFqsn), calleeId, escapeString(atomicName), calleeId, escapeString(calleeMod), calleeId)
 							facts = append(facts, stubFact)
 							emittedExternals[calleeId] = true
 						}
