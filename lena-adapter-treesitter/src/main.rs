@@ -309,11 +309,7 @@ pub fn emit_facts(
     // Emit File Module Fact (flattened to single-line ND-EDN with atomic name)
     let mod_fqsn = format!("{lang_tag}:{logical_module}");
     let mod_id = hash_id(&mod_fqsn);
-    let atomic_mod_name = logical_module
-        .rsplit('/')
-        .next()
-        .unwrap_or(logical_module)
-        .replace('.', "_");
+    let atomic_mod_name = logical_module.rsplit('/').next().unwrap_or(logical_module);
 
     facts.push(format!(
         "[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{atomic_mod_name}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]"
