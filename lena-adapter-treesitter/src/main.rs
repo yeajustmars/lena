@@ -406,7 +406,7 @@ pub fn emit_facts(
 
             if is_external && emitted_externals.insert(callee_id) {
                 let stub_fact = format!(
-                    "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} \"true\"]]",
+                    "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} true]]",
                     escape_string(&callee_name)
                 );
                 facts.push(stub_fact);
@@ -488,7 +488,7 @@ mod tests {
         let facts = run_python();
         let output = facts.join("\n");
         // func_a is local, but print (if added) or unseen calls become external stubs
-        assert!(output.contains(":symbol/external \"true\""));
+        assert!(output.contains(":symbol/external true"));
     }
 
     #[test]

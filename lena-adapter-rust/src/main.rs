@@ -295,7 +295,7 @@ fn emit_external_stub(callee_fqsn: &str, callee_name: &str) -> Result<String> {
     tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(callee_fqsn))?;
     tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(callee_name))?;
     tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String("external"))?;
-    tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::String("true"))?;
+    tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
     Ok(tx.finish())
 }
 
@@ -483,7 +483,7 @@ mod tests {
         let facts = emit_facts(&file, &symbol_table).unwrap();
         let output = facts.join("\n");
 
-        assert!(output.contains(":symbol/external \"true\""));
+        assert!(output.contains(":symbol/external true"));
         assert!(output.contains(":symbol/fqsn \"rust:std::process::exit\""));
     }
 }

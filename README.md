@@ -14,7 +14,7 @@ Whether you want to generate documentation with interactive call graphs, export 
 
 Leña runs lightweight language adapters that extract AST symbols, locations, docstrings, and call sites, streaming them into an embedded [MesoDB](https://github.com/yeajustmars/mesodb) database. Everything is modeled as an open Universal Intermediate Representation (UIR) queryable with recursive Datalog rules (like `calls_transitive` and `parent_transitive`).
 
-* **Current Adapters:** Rust (`lena-adapter-rust`), Clojure (`lena-adapter-clojure`), Go (`lena-adapter-go`), and Tree-sitter for Python and JavaScript (`lena-adapter-treesitter`).
+* **Current Adapters:** Rust (`lena-adapter-rust`), Clojure (`lena-adapter-clojure`), Go (`lena-adapter-go`), and Tree-sitter for Python, JavaScript, PHP, Ruby, Java, even BASH, etc (`lena-adapter-treesitter`).
 
 ### 2. Beautiful, Modern Static Documentation (`lena doc`)
 

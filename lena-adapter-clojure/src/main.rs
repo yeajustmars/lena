@@ -205,7 +205,7 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
                     stub_tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(&callee_fqsn))?;
                     stub_tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(&u.name))?;
                     stub_tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String(&to_ns))?;
-                    stub_tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::String("true"))?;
+                    stub_tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
                     facts.push(stub_tx.finish());
                 }
             }
@@ -318,7 +318,7 @@ mod tests {
         let facts = process_kondo_output(kondo_data).unwrap();
         let output = facts.join("\n");
 
-        assert!(output.contains(":symbol/external \"true\""));
+        assert!(output.contains(":symbol/external true"));
         assert!(output.contains(":symbol/fqsn \"clj:clojure.core/str\""));
         assert!(output.contains(":symbol/module \"clojure.core\""));
         assert!(output.contains(":symbol/name \"str\""));
