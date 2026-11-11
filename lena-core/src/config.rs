@@ -67,7 +67,7 @@ pub struct PromptConfig {
     /// Show snippets of where functions are called
     pub call_sites: bool,
     /// Determines which symbols get full implementation source (e.g., "root", "all", "none")
-    pub include_source: String,
+    pub include_source: bool,
     /// Regex patterns matching symbol names to include full source
     pub source_patterns: Vec<String>,
     /// Namespace prefixes to include full source
@@ -82,7 +82,7 @@ impl Default for PromptConfig {
             depth: 1,
             include_docs: true,
             call_sites: true,
-            include_source: "root".to_string(),
+            include_source: false,
             source_patterns: Vec::new(),
             source_namespaces: Vec::new(),
             max_tokens: None,
@@ -250,7 +250,7 @@ mod tests {
     fn test_default_config_values() {
         let config = LenaConfig::default();
         assert_eq!(config.prompt.depth, 1);
-        assert_eq!(config.prompt.include_source, "root");
+        assert!(!config.prompt.include_source);
         assert_eq!(config.doc.format, "book");
         assert!(config.adapters.registered.contains_key("rust"));
     }
@@ -262,7 +262,7 @@ mod tests {
         let override_toml = r#"
         [prompt]
         depth = 3
-        include_source = "none"
+        include_source = true
         max_tokens = 5000
 
         [doc]
@@ -276,7 +276,7 @@ mod tests {
 
         // Ensure overrides applied
         assert_eq!(merged.prompt.depth, 3);
-        assert_eq!(merged.prompt.include_source, "none");
+        assert!(merged.prompt.include_source);
         assert_eq!(merged.prompt.max_tokens, Some(5000));
         assert_eq!(merged.doc.custom_css.as_deref(), Some("overridden.css"));
 

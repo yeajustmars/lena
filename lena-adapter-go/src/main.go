@@ -139,7 +139,7 @@ func emitFacts(file *ParsedFile, table *SymbolTable) []string {
 
 			var sigBuf bytes.Buffer
 			printer.Fprint(&sigBuf, file.Fset, decl.Type)
-			sigStr := "func " + fnName + sigBuf.String()
+			sigStr := "func " + fnName + strings.TrimPrefix(sigBuf.String(), "func")
 
 			kind := ":kind/fn"
 			if container != "" {

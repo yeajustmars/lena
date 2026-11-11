@@ -115,7 +115,7 @@ enum Commands {
         depth: Option<usize>,
         /// Determines which symbols get full source (e.g., "root", "all", "none")
         #[arg(long)]
-        include_source: Option<String>,
+        include_source: Option<bool>,
         /// Regex patterns matching symbol names to include full source
         #[arg(long)]
         source_pattern: Option<Vec<String>>,
@@ -222,8 +222,9 @@ async fn main() -> Result<()> {
             if let Some(d) = depth {
                 config.depth = d;
             }
-            if let Some(i) = include_source {
-                config.include_source = i;
+
+            if include_source.unwrap_or(false) {
+                config.include_source = true;
             }
             if let Some(p) = source_pattern {
                 config.source_patterns = p;

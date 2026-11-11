@@ -67,6 +67,7 @@ pub struct LenaContext {
     pub fqsn: String,
     pub name: String,
     pub language: String,
+    pub is_external: bool,
     pub location: SourceLocation,
     pub payload: Payload,
     pub callers: Vec<String>,
@@ -93,10 +94,14 @@ impl LenaContext {
             self.name, self.language
         );
 
-        out.push_str(&format!(
-            "  <location file=\"{}\" line=\"{}\" />\n",
-            self.location.file, self.location.line
-        ));
+        if !self.is_external && self.location.file != "Unknown" && !self.location.file.is_empty() {
+            out.push_str(&format!(
+                "  <location file=\"{}\" line=\"{}\" />\n",
+                self.location.file, self.location.line
+            ));
+        } else {
+            out.push_str("  <external-stub />\n");
+        }
 
         if !self.payload.signature.is_empty() {
             out.push_str("  <signature>\n");
@@ -135,10 +140,15 @@ impl LenaContext {
         let lang_clean = self.language.replace(":lang/", "");
         let mut out = format!("### `{}`\n\n", self.name);
         out.push_str(&format!("- **Language:** `{lang_clean}`\n"));
-        out.push_str(&format!(
-            "- **Location:** `{}:{}`\n\n",
-            self.location.file, self.location.line
-        ));
+
+        if !self.is_external && self.location.file != "Unknown" && !self.location.file.is_empty() {
+            out.push_str(&format!(
+                "- **Location:** `{}:{}`\n\n",
+                self.location.file, self.location.line
+            ));
+        } else {
+            out.push_str("- **Location:** `External Stub`\n\n");
+        }
 
         if !self.payload.signature.is_empty() {
             out.push_str("**Signature:**\n");
@@ -207,6 +217,19 @@ fn extract_i64(val: &Value, key: &str) -> i64 {
                 .or_else(|| v.as_array().and_then(|arr| arr.first()?.as_i64()))
         })
         .unwrap_or(0)
+}
+
+fn extract_bool(val: &Value, key: &str) -> bool {
+    let key_with_colon = format!(":{key}");
+    let key_without_colon = key.trim_start_matches(':');
+
+    val.get(&key_with_colon)
+        .or_else(|| val.get(key_without_colon))
+        .and_then(|v| {
+            v.as_bool()
+                .or_else(|| v.as_array().and_then(|arr| arr.first()?.as_bool()))
+        })
+        .unwrap_or(false)
 }
 
 /// Retrieves a subgraph of entities starting from `root_fqsn` and formats them for LLM context,
@@ -278,12 +301,12 @@ pub async fn export_prompt(
         };
 
         let line = extract_i64(&entity_data, "location/start-line");
-        let namespace = extract_string(&entity_data, "symbol/namespace");
+
+        let namespace = extract_string(&entity_data, "symbol/module");
+        let is_external = extract_bool(&entity_data, "symbol/external");
 
         // Determine inclusion tier
-        let is_root = current_depth == 0;
-        let force_source = is_root && config.include_source == "root"
-            || config.include_source == "all"
+        let force_source = config.include_source
             || config
                 .source_namespaces
                 .iter()
@@ -373,6 +396,7 @@ pub async fn export_prompt(
             fqsn: current_fqsn.clone(),
             name,
             language,
+            is_external,
             location: SourceLocation { file, line },
             payload: Payload {
                 signature: node_signature,
@@ -532,6 +556,7 @@ mod tests {
         let ctx = LenaContext {
             fqsn: "rust:crate::add".to_string(),
             name: "add".to_string(),
+            is_external: false,
             language: "Rust".to_string(),
             location: SourceLocation {
                 file: "src/lib.rs".to_string(),
@@ -560,6 +585,7 @@ mod tests {
             fqsn: "rust:crate::add".to_string(),
             name: "add".to_string(),
             language: ":lang/Rust".to_string(),
+            is_external: false,
             location: SourceLocation {
                 file: "src/lib.rs".to_string(),
                 line: 10,
