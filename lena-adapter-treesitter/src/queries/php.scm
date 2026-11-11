@@ -1,5 +1,5 @@
 (class_declaration name: (name) @symbol.class)
 (method_declaration name: (name) @symbol.function)
-(function_declaration name: (name) @symbol.function)
-(method_call_expression name: (name) @call.callee)
+(function_definition name: (name) @symbol.function)
+(member_call_expression name: (name) @call.callee)
 (function_call_expression function: (name) @call.callee)

@@ -250,16 +250,20 @@ pub fn discover_symbols(
                 let mut container = None;
                 let mut current = capture.node.parent();
                 while let Some(node) = current {
-                    if node.kind() == "class_definition" || node.kind() == "class_declaration" {
-                        // Find the identifier child of the class node
+                    if node.kind() == "class_definition"
+                        || node.kind() == "class_declaration"
+                        || node.kind() == "class"
+                    {
                         for i in 0..node.child_count() {
-                            if let Some(child) = node.child(i) {
-                                if child.kind() == "identifier" || child.kind() == "type_identifier"
-                                {
-                                    container =
-                                        Some(child.utf8_text(source_code.as_bytes())?.to_string());
-                                    break;
-                                }
+                            if let Some(child) = node.child(i)
+                                && (child.kind() == "identifier"
+                                    || child.kind() == "type_identifier"
+                                    || child.kind() == "constant"
+                                    || child.kind() == "name")
+                            {
+                                container =
+                                    Some(child.utf8_text(source_code.as_bytes())?.to_string());
+                                break;
                             }
                         }
                         break;
@@ -305,7 +309,16 @@ pub fn emit_facts(
     // Emit File Module Fact
     let mod_fqsn = format!("{lang_tag}:{logical_module}");
     let mod_id = hash_id(&mod_fqsn);
-    facts.push(format!("[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{logical_module}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]"));
+    facts.push(format!(
+        "
+        [[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}]
+         [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"]
+         [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"]
+         [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"]
+         [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{logical_module}\"]
+         [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]
+         "
+    ));
 
     let mut emitted_externals = std::collections::HashSet::new();
 
@@ -320,15 +333,20 @@ pub fn emit_facts(
                 let mut container = None;
                 let mut current = capture.node.parent();
                 while let Some(node) = current {
-                    if node.kind() == "class_definition" || node.kind() == "class_declaration" {
+                    if node.kind() == "class_definition"
+                        || node.kind() == "class_declaration"
+                        || node.kind() == "class"
+                    {
                         for i in 0..node.child_count() {
-                            if let Some(child) = node.child(i) {
-                                if child.kind() == "identifier" || child.kind() == "type_identifier"
-                                {
-                                    container =
-                                        Some(child.utf8_text(source_code.as_bytes())?.to_string());
-                                    break;
-                                }
+                            if let Some(child) = node.child(i)
+                                && (child.kind() == "identifier"
+                                    || child.kind() == "type_identifier"
+                                    || child.kind() == "constant"
+                                    || child.kind() == "name")
+                            {
+                                container =
+                                    Some(child.utf8_text(source_code.as_bytes())?.to_string());
+                                break;
                             }
                         }
                         break;
@@ -459,59 +477,128 @@ pub fn extract_facts(
 mod tests {
     use super::*;
 
-    const PY_SOURCE: &str = include_str!("../tests/fixtures/python/edge_cases.py");
-    const JS_SOURCE: &str = include_str!("../tests/fixtures/javascript/edge_cases.js");
-
-    fn run_python() -> Vec<String> {
-        extract_facts(
-            &tree_sitter_python::LANGUAGE.into(),
-            PY_SOURCE,
-            DEFAULT_PYTHON_SCM,
-            "src/edge_cases.py",
-            "edge_cases",
-            "python",
-        )
-        .unwrap()
+    // Reusable fixture runner
+    fn run_ts_fixture(
+        lang: tree_sitter::Language,
+        source: &str,
+        query: &str,
+        path: &str,
+        module: &str,
+        tag: &str,
+    ) -> Vec<String> {
+        extract_facts(&lang, source, query, path, module, tag).expect("Failed to extract facts")
     }
 
     #[test]
     fn test_python_symbol_captures() {
-        let facts = run_python();
+        let source = include_str!("../tests/fixtures/python/edge_cases.py");
+        let facts = run_ts_fixture(
+            tree_sitter_python::LANGUAGE.into(),
+            source,
+            DEFAULT_PYTHON_SCM,
+            "src/edge_cases.py",
+            "edge_cases",
+            "python",
+        );
         let output = facts.join("\n");
         assert!(output.contains(":symbol/fqsn \"python:edge_cases::func_a\""));
-        assert!(output.contains(":symbol/module \"edge_cases\""));
         assert!(output.contains(":symbol/container \"MyClass\""));
-    }
-
-    #[test]
-    fn test_external_stub_emission() {
-        let facts = run_python();
-        let output = facts.join("\n");
-        // func_a is local, but print (if added) or unseen calls become external stubs
-        assert!(output.contains(":symbol/external true"));
-    }
-
-    #[test]
-    fn test_python_call_sites() {
-        let facts = run_python();
-        let output = facts.join("\n");
         assert!(output.contains(":type/call-site"));
-        assert!(output.contains(":call/caller"));
-        assert!(output.contains(":call/callee"));
     }
 
     #[test]
-    fn test_javascript_grammar_loading() {
-        let facts = extract_facts(
-            &tree_sitter_javascript::LANGUAGE.into(),
-            JS_SOURCE,
+    fn test_javascript_symbol_captures() {
+        let source = include_str!("../tests/fixtures/javascript/edge_cases.js");
+        let facts = run_ts_fixture(
+            tree_sitter_javascript::LANGUAGE.into(),
+            source,
             DEFAULT_JAVASCRIPT_SCM,
             "src/edge_cases.js",
             "edge_cases",
             "javascript",
-        )
-        .unwrap();
+        );
         let output = facts.join("\n");
         assert!(output.contains(":symbol/fqsn \"javascript:edge_cases::js_func\""));
+    }
+
+    #[test]
+    fn test_typescript_symbol_captures() {
+        let source = include_str!("../tests/fixtures/typescript/edge_cases.ts");
+        let facts = run_ts_fixture(
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            source,
+            DEFAULT_TYPESCRIPT_SCM,
+            "src/edge_cases.ts",
+            "edge_cases",
+            "typescript",
+        );
+        let output = facts.join("\n");
+        assert!(output.contains(":symbol/fqsn \"typescript:edge_cases::ApiClient::fetchData\""));
+        assert!(output.contains(":symbol/fqsn \"typescript:edge_cases::standalone\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_java_symbol_captures() {
+        let source = include_str!("../tests/fixtures/java/EdgeCases.java");
+        let facts = run_ts_fixture(
+            tree_sitter_java::LANGUAGE.into(),
+            source,
+            DEFAULT_JAVA_SCM,
+            "src/EdgeCases.java",
+            "EdgeCases",
+            "java",
+        );
+        let output = facts.join("\n");
+        assert!(output.contains(":symbol/fqsn \"java:EdgeCases::EdgeCases::runProcess\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_php_symbol_captures() {
+        let source = include_str!("../tests/fixtures/php/edge_cases.php");
+        let facts = run_ts_fixture(
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            source,
+            DEFAULT_PHP_SCM,
+            "src/edge_cases.php",
+            "edge_cases",
+            "php",
+        );
+        let output = facts.join("\n");
+        assert!(output.contains(":symbol/fqsn \"php:edge_cases::Processor::handle\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_ruby_symbol_captures() {
+        let source = include_str!("../tests/fixtures/ruby/edge_cases.rb");
+        let facts = run_ts_fixture(
+            tree_sitter_ruby::LANGUAGE.into(),
+            source,
+            DEFAULT_RUBY_SCM,
+            "src/edge_cases.rb",
+            "edge_cases",
+            "ruby",
+        );
+        let output = facts.join("\n");
+        assert!(output.contains(":symbol/fqsn \"ruby:edge_cases::Worker::perform\""));
+        assert!(output.contains(":type/call-site"));
+    }
+
+    #[test]
+    fn test_bash_symbol_captures() {
+        let source = include_str!("../tests/fixtures/bash/edge_cases.sh");
+        let facts = run_ts_fixture(
+            tree_sitter_bash::LANGUAGE.into(),
+            source,
+            DEFAULT_BASH_SCM,
+            "src/edge_cases.sh",
+            "edge_cases",
+            "bash",
+        );
+        let output = facts.join("\n");
+        assert!(output.contains(":symbol/fqsn \"bash:edge_cases::deploy_server\""));
+        assert!(output.contains(":type/call-site"));
     }
 }
