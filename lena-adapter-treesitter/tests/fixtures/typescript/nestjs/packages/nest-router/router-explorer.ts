@@ -1,0 +1,540 @@
+import type { HttpServer } from '@nestjs/common';
+import { pathToRegexp } from 'path-to-regexp';
+import { ApplicationConfig } from '../application-config.js';
+import { UnknownRequestMappingException } from '../errors/exceptions/unknown-request-mapping.exception.js';
+import { ExceptionsHandler } from '../exceptions/exceptions-handler.js';
+import { GuardsConsumer, GuardsContextCreator } from '../guards/index.js';
+import { ContextIdFactory } from '../helpers/context-id-factory.js';
+import { ExecutionContextHost } from '../helpers/execution-context-host.js';
+import {
+  ROUTE_MAPPED_MESSAGE,
+  VERSIONED_ROUTE_MAPPED_MESSAGE,
+} from '../helpers/messages.js';
+import { RouterMethodFactory } from '../helpers/router-method-factory.js';
+import { STATIC_CONTEXT } from '../injector/constants.js';
+import { NestContainer } from '../injector/container.js';
+import { Injector } from '../injector/injector.js';
+import { ContextId, InstanceWrapper } from '../injector/instance-wrapper.js';
+import { Module } from '../injector/module.js';
+import { GraphInspector } from '../inspector/graph-inspector.js';
+import {
+  Entrypoint,
+  HttpEntrypointMetadata,
+} from '../inspector/interfaces/entrypoint.interface.js';
+import {
+  InterceptorsConsumer,
+  InterceptorsContextCreator,
+} from '../interceptors/index.js';
+import { MetadataScanner } from '../metadata-scanner.js';
+import { PipesConsumer, PipesContextCreator } from '../pipes/index.js';
+import { ExceptionsFilter } from './interfaces/exceptions-filter.interface.js';
+import { ResolvedRoute } from './interfaces/resolved-route.interface.js';
+import { RoutePathMetadata } from './interfaces/route-path-metadata.interface.js';
+import { RouteResolutionOptions } from './interfaces/route-resolution-options.interface.js';
+import { PathsExplorer } from './paths-explorer.js';
+import { REQUEST_CONTEXT_ID } from './request/request-constants.js';
+import { RouteParamsFactory } from './route-params-factory.js';
+import { RoutePathFactory } from './route-path-factory.js';
+import { RouterExecutionContext } from './router-execution-context.js';
+import { RouterProxy, RouterProxyCallback } from './router-proxy.js';
+import {
+  PATH_METADATA,
+  type Controller,
+  type VersionValue,
+  addLeadingSlash,
+  isUndefined,
+} from '@nestjs/common/internal';
+import {
+  RequestMethod,
+  VersioningType,
+  NotFoundException,
+  type Type,
+  Logger,
+} from '@nestjs/common';
+
+export interface RouteDefinition {
+  path: string[];
+  requestMethod: RequestMethod;
+  targetCallback: RouterProxyCallback;
+  methodName: string;
+  version?: VersionValue;
+}
+
+export class RouterExplorer {
+  private readonly executionContextCreator: RouterExecutionContext;
+  private readonly pathsExplorer: PathsExplorer;
+  private readonly routerMethodFactory = new RouterMethodFactory();
+  private readonly logger = new Logger(RouterExplorer.name, {
+    timestamp: true,
+  });
+
+  constructor(
+    metadataScanner: MetadataScanner,
+    private readonly container: NestContainer,
+    private readonly injector: Injector,
+    private readonly routerProxy: RouterProxy,
+    private readonly exceptionsFilter: ExceptionsFilter,
+    config: ApplicationConfig,
+    private readonly routePathFactory: RoutePathFactory,
+    private readonly graphInspector: GraphInspector,
+  ) {
+    this.pathsExplorer = new PathsExplorer(metadataScanner);
+
+    const routeParamsFactory = new RouteParamsFactory(config);
+    const pipesContextCreator = new PipesContextCreator(container, config);
+    const pipesConsumer = new PipesConsumer();
+    const guardsContextCreator = new GuardsContextCreator(container, config);
+    const guardsConsumer = new GuardsConsumer();
+    const interceptorsContextCreator = new InterceptorsContextCreator(
+      container,
+      config,
+    );
+    const interceptorsConsumer = new InterceptorsConsumer();
+
+    this.executionContextCreator = new RouterExecutionContext(
+      routeParamsFactory,
+      pipesContextCreator,
+      pipesConsumer,
+      guardsContextCreator,
+      guardsConsumer,
+      interceptorsContextCreator,
+      interceptorsConsumer,
+      container.getHttpAdapterRef(),
+    );
+  }
+
+  public explore<T extends HttpServer = any>(
+    instanceWrapper: InstanceWrapper,
+    moduleKey: string,
+    httpAdapterRef: T,
+    host: string | RegExp | Array<string | RegExp>,
+    routePathMetadata: RoutePathMetadata,
+    options: RouteResolutionOptions = {},
+  ) {
+    const { instance } = instanceWrapper;
+    const routerPaths = this.pathsExplorer.scanForPaths(instance);
+    this.applyPathsToRouterProxy(
+      httpAdapterRef,
+      routerPaths,
+      instanceWrapper,
+      moduleKey,
+      routePathMetadata,
+      host,
+      options,
+    );
+  }
+
+  public extractRouterPath(metatype: Type<Controller>): string[] {
+    const path = Reflect.getMetadata(PATH_METADATA, metatype);
+
+    if (isUndefined(path)) {
+      throw new UnknownRequestMappingException(metatype);
+    }
+    if (Array.isArray(path)) {
+      return path.map(p => addLeadingSlash(p));
+    }
+    return [addLeadingSlash(path)];
+  }
+
+  public applyPathsToRouterProxy<T extends HttpServer>(
+    router: T,
+    routeDefinitions: RouteDefinition[],
+    instanceWrapper: InstanceWrapper,
+    moduleKey: string,
+    routePathMetadata: RoutePathMetadata,
+    host: string | RegExp | Array<string | RegExp>,
+    options: RouteResolutionOptions = {},
+  ) {
+    (routeDefinitions || []).forEach(routeDefinition => {
+      const { version: methodVersion } = routeDefinition;
+      routePathMetadata.methodVersion = methodVersion;
+
+      this.applyCallbackToRouter(
+        router,
+        routeDefinition,
+        instanceWrapper,
+        moduleKey,
+        routePathMetadata,
+        host,
+        options,
+      );
+    });
+  }
+
+  private applyCallbackToRouter<T extends HttpServer>(
+    router: T,
+    routeDefinition: RouteDefinition,
+    instanceWrapper: InstanceWrapper,
+    moduleKey: string,
+    routePathMetadata: RoutePathMetadata,
+    host: string | RegExp | Array<string | RegExp>,
+    options: RouteResolutionOptions = {},
+  ) {
+    const { onRouteResolved, deferRegistration = false } = options;
+    const {
+      path: paths,
+      requestMethod,
+      targetCallback,
+      methodName,
+    } = routeDefinition;
+
+    const { instance } = instanceWrapper;
+    const routerMethodRef = this.routerMethodFactory
+      .get(router, requestMethod)
+      .bind(router);
+
+    const isRequestScoped = !instanceWrapper.isDependencyTreeStatic();
+    const proxy = isRequestScoped
+      ? this.createRequestScopedHandler(
+          instanceWrapper,
+          requestMethod,
+          this.container.getModuleByKey(moduleKey)!,
+          moduleKey,
+          methodName,
+        )
+      : this.createCallbackProxy(
+          instance,
+          targetCallback,
+          methodName,
+          moduleKey,
+          requestMethod,
+          STATIC_CONTEXT,
+          instanceWrapper.id,
+        );
+
+    const isVersioned =
+      (routePathMetadata.methodVersion ||
+        routePathMetadata.controllerVersion) &&
+      routePathMetadata.versioningOptions;
+    let routeHandler = this.applyHostFilter(host, proxy);
+
+    paths.forEach(path => {
+      if (
+        isVersioned &&
+        routePathMetadata.versioningOptions!.type !== VersioningType.URI
+      ) {
+        // All versioning (except for URI Versioning) is done via the "Version Filter"
+        routeHandler = this.applyVersionFilter(
+          router,
+          routePathMetadata,
+          routeHandler,
+        );
+      }
+
+      routePathMetadata.methodPath = path;
+      const pathsToRegister = this.routePathFactory.create(
+        routePathMetadata,
+        requestMethod,
+      );
+      pathsToRegister.forEach(path => {
+        const normalizedPath = router.normalizePath
+          ? router.normalizePath(path)
+          : path;
+        const entrypointDefinition: Entrypoint<HttpEntrypointMetadata> = {
+          type: 'http-endpoint',
+          methodName,
+          className: instanceWrapper.name,
+          classNodeId: instanceWrapper.id,
+          metadata: {
+            key: path,
+            path,
+            requestMethod: RequestMethod[
+              requestMethod
+            ] as keyof typeof RequestMethod,
+            methodVersion: routePathMetadata.methodVersion,
+            controllerVersion: routePathMetadata.controllerVersion,
+          },
+        };
+
+        if (!deferRegistration) {
+          this.copyMetadataToCallback(targetCallback, routeHandler);
+
+          const httpAdapter = this.container.getHttpAdapterRef();
+          const onRouteTriggered = httpAdapter.getOnRouteTriggered?.();
+          let handler = routeHandler;
+          if (onRouteTriggered) {
+            // Adapters read route options (e.g. the version) from the handler
+            handler = Object.assign((...args: unknown[]) => {
+              onRouteTriggered(requestMethod, path);
+              return routeHandler(...args);
+            }, routeHandler);
+            this.copyMetadataToCallback(targetCallback, handler);
+          }
+          Object.defineProperty(handler, 'name', {
+            configurable: true,
+            value: `${instanceWrapper.name}.${methodName}`,
+          });
+          routerMethodRef(normalizedPath, handler);
+        }
+
+        onRouteResolved?.({
+          method: requestMethod,
+          path: normalizedPath,
+          rawPath: path,
+          host,
+          version:
+            routePathMetadata.methodVersion ??
+            routePathMetadata.controllerVersion,
+          methodVersion: routePathMetadata.methodVersion,
+          controllerVersion: routePathMetadata.controllerVersion,
+          handler: routeHandler as unknown as (...args: unknown[]) => unknown,
+          targetCallback,
+          methodName,
+          instanceWrapper,
+        });
+
+        this.graphInspector.insertEntrypointDefinition<HttpEntrypointMetadata>(
+          entrypointDefinition,
+          instanceWrapper.id,
+        );
+      });
+
+      const pathsToLog = this.routePathFactory.create(
+        {
+          ...routePathMetadata,
+          versioningOptions: undefined,
+        },
+        requestMethod,
+      );
+      pathsToLog.forEach(path => {
+        if (isVersioned) {
+          const version = this.routePathFactory.getVersion(routePathMetadata);
+          this.logger.log(
+            VERSIONED_ROUTE_MAPPED_MESSAGE(path, requestMethod, version!),
+          );
+        } else {
+          this.logger.log(ROUTE_MAPPED_MESSAGE(path, requestMethod));
+        }
+      });
+    });
+  }
+
+  /**
+   * Registers a previously resolved route on the underlying HTTP adapter.
+   * Used when route registration has been deferred (e.g. when sorting
+   * routes by specificity) so the caller can choose the order in which
+   * routes are installed on the adapter.
+   */
+  public registerResolvedRoute<T extends HttpServer>(
+    router: T,
+    route: ResolvedRoute,
+  ): void {
+    const routerMethodRef = this.routerMethodFactory
+      .get(router, route.method)
+      .bind(router);
+
+    this.copyMetadataToCallback(route.targetCallback, route.handler);
+    const normalizedPath = route.path;
+    const rawPath = route.rawPath ?? route.path;
+
+    const httpAdapter = this.container.getHttpAdapterRef();
+    const onRouteTriggered = httpAdapter.getOnRouteTriggered?.();
+    if (onRouteTriggered) {
+      // Adapters read route options (e.g. the version) from the handler
+      const handler = Object.assign((...args: unknown[]) => {
+        onRouteTriggered(route.method, rawPath);
+        return route.handler(...args);
+      }, route.handler);
+      this.copyMetadataToCallback(route.targetCallback, handler);
+      routerMethodRef(normalizedPath, handler);
+    } else {
+      routerMethodRef(normalizedPath, route.handler);
+    }
+  }
+
+  private applyHostFilter(
+    host: string | RegExp | Array<string | RegExp>,
+    handler: Function,
+  ) {
+    if (!host) {
+      return handler;
+    }
+
+    const httpAdapterRef = this.container.getHttpAdapterRef();
+    const hosts = Array.isArray(host) ? host : [host];
+    const hostRegExps = hosts.map((host: string | RegExp) => {
+      if (typeof host === 'string') {
+        try {
+          return pathToRegexp(host);
+        } catch (e) {
+          if (e instanceof TypeError) {
+            this.logger.error(
+              `Unsupported host "${host}" syntax. In past releases, ?, *, and + were used to denote optional or repeating path parameters. The latest version of "path-to-regexp" now requires the use of named parameters. For example, instead of using a route like /users/* to capture all routes starting with "/users", you should use /users/*path. Please see the migration guide for more information.`,
+            );
+          }
+          throw e;
+        }
+      }
+      return { regexp: host, keys: [] };
+    });
+
+    const unsupportedFilteringMessage = Array.isArray(host)
+      ? `HTTP adapter does not support filtering on hosts: ["${host.join(
+          '", "',
+        )}"]`
+      : `HTTP adapter does not support filtering on host: "${host}"`;
+    let hasWarnedOfUnsupportedFiltering = false;
+
+    return <TRequest extends Record<string, any> = any, TResponse = any>(
+      req: TRequest,
+      res: TResponse,
+      next: () => void,
+    ) => {
+      (req as Record<string, any>).hosts = {};
+      const hostname = httpAdapterRef.getRequestHostname(req) || '';
+
+      for (const exp of hostRegExps) {
+        const match = hostname.match(exp.regexp);
+        if (match) {
+          if (exp.keys.length > 0) {
+            exp.keys.forEach((key, i) => (req.hosts[key.name] = match[i + 1]));
+          } else if (exp.regexp && match.groups) {
+            for (const groupName in match.groups) {
+              req.hosts[groupName] = match.groups[groupName];
+            }
+          }
+          return handler(req, res, next);
+        }
+      }
+      if (!next) {
+        // The adapter cannot pass the request on to another route. Tell the
+        // developer once, and answer as if no route matched, without the
+        // hosts this route is bound to.
+        if (!hasWarnedOfUnsupportedFiltering) {
+          hasWarnedOfUnsupportedFiltering = true;
+          this.logger.warn(
+            `${unsupportedFilteringMessage}. Requests for other hosts are answered with 404 instead of being passed on to other routes.`,
+          );
+        }
+        const method = httpAdapterRef.getRequestMethod(req);
+        const url = httpAdapterRef.getRequestUrl(req);
+        throw new NotFoundException(`Cannot ${method} ${url}`);
+      }
+      return next();
+    };
+  }
+
+  private applyVersionFilter<T extends HttpServer>(
+    router: T,
+    routePathMetadata: RoutePathMetadata,
+    handler: Function,
+  ) {
+    const version = this.routePathFactory.getVersion(routePathMetadata)!;
+    return router.applyVersionFilter(
+      handler,
+      version,
+      routePathMetadata.versioningOptions!,
+    );
+  }
+
+  private createCallbackProxy(
+    instance: Controller,
+    callback: RouterProxyCallback,
+    methodName: string,
+    moduleRef: string,
+    requestMethod: RequestMethod,
+    contextId = STATIC_CONTEXT,
+    inquirerId?: string,
+  ) {
+    const executionContext = this.executionContextCreator.create(
+      instance,
+      callback,
+      methodName,
+      moduleRef,
+      requestMethod,
+      contextId,
+      inquirerId,
+    );
+    const exceptionFilter = this.exceptionsFilter.create(
+      instance,
+      callback,
+      moduleRef,
+      contextId,
+      inquirerId,
+    );
+    return this.routerProxy.createProxy(executionContext, exceptionFilter);
+  }
+
+  public createRequestScopedHandler(
+    instanceWrapper: InstanceWrapper,
+    requestMethod: RequestMethod,
+    moduleRef: Module,
+    moduleKey: string,
+    methodName: string,
+  ) {
+    const { instance } = instanceWrapper;
+    const collection = moduleRef.controllers;
+
+    const isTreeDurable = instanceWrapper.isDependencyTreeDurable();
+    // Kept per route, not per handler function: controllers that inherit
+    // the handler from a base class can declare different filters
+    let exceptionFilter: ExceptionsHandler | undefined;
+
+    return async <TRequest extends Record<any, any>, TResponse>(
+      req: TRequest,
+      res: TResponse,
+      next: () => void,
+    ) => {
+      try {
+        const contextId = this.getContextId(req, isTreeDurable);
+        const contextInstance = await this.injector.loadPerContext(
+          instance,
+          moduleRef,
+          collection,
+          contextId,
+        );
+        await this.createCallbackProxy(
+          contextInstance,
+          contextInstance[methodName],
+          methodName,
+          moduleKey,
+          requestMethod,
+          contextId,
+          instanceWrapper.id,
+        )(req, res, next);
+      } catch (err) {
+        exceptionFilter ??= this.exceptionsFilter.create(
+          instance,
+          instance[methodName],
+          moduleKey,
+        );
+        const host = new ExecutionContextHost([req, res, next]);
+        exceptionFilter.next(err, host);
+      }
+    };
+  }
+
+  private getContextId<T extends Record<any, unknown> = any>(
+    request: T,
+    isTreeDurable: boolean,
+  ): ContextId {
+    const contextId = ContextIdFactory.getByRequest(request);
+    if (!request[REQUEST_CONTEXT_ID as any]) {
+      Object.defineProperty(request, REQUEST_CONTEXT_ID, {
+        value: contextId,
+        enumerable: false,
+        writable: false,
+        configurable: false,
+      });
+
+      const requestProviderValue = isTreeDurable
+        ? contextId.payload
+        : Object.assign(request, contextId.payload);
+      this.container.registerRequestProvider(requestProviderValue, contextId);
+    }
+    return contextId;
+  }
+
+  private copyMetadataToCallback(
+    originalCallback: RouterProxyCallback,
+    targetCallback: Function,
+  ) {
+    for (const key of Reflect.getMetadataKeys(originalCallback)) {
+      Reflect.defineMetadata(
+        key,
+        Reflect.getMetadata(key, originalCallback),
+        targetCallback,
+      );
+    }
+  }
+}
