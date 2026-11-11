@@ -99,12 +99,13 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             let mut tx = TransactionBuilder::new();
             let fqsn = format!("clj:{}", ns.name);
             let e_id = hash_id(&fqsn);
+            let atomic_name = ns.name.rsplit('.').next().unwrap_or(&ns.name);
 
             tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_MODULE))?;
             tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
             tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
             tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&ns.name))?;
-            tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&ns.name))?;
+            tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(atomic_name))?;
             tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_MODULE))?;
             tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
 
@@ -165,9 +166,18 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
 
     if let Some(usages) = kondo_data.analysis.var_usages {
         for u in usages {
+            let clean_name = u.name.trim_matches('.');
+            if clean_name.is_empty() {
+                continue;
+            }
+            let atomic_callee_name = clean_name.rsplit('.').next().unwrap_or(clean_name);
+            if atomic_callee_name.is_empty() {
+                continue;
+            }
+
             if let (Some(from_ns), Some(from_var), Some(to_ns)) = (u.from, u.from_var, u.to) {
                 let caller_fqsn = format!("clj:{from_ns}/{from_var}");
-                let callee_fqsn = format!("clj:{to_ns}/{}", u.name);
+                let callee_fqsn = format!("clj:{to_ns}/{clean_name}");
 
                 let caller_id = hash_id(&caller_fqsn);
                 let callee_id = hash_id(&callee_fqsn);
@@ -203,7 +213,11 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
                 if !local_namespaces.contains(&to_ns) && emitted_externals.insert(callee_id) {
                     let mut stub_tx = TransactionBuilder::new();
                     stub_tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(&callee_fqsn))?;
-                    stub_tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(&u.name))?;
+                    stub_tx.add(
+                        callee_id,
+                        ATTR_SYMBOL_NAME,
+                        EdnValue::String(atomic_callee_name),
+                    )?;
                     stub_tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String(&to_ns))?;
                     stub_tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
                     facts.push(stub_tx.finish());
