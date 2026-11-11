@@ -29,7 +29,15 @@ fn resolve_binary(command_name: &str) -> Option<PathBuf> {
         return Some(workspace_bin);
     }
 
-    // 2. Sibling directory (e.g., if running from a globally installed target/release folder)
+    // 2. ~/.lena/bin/ (Managed installs)
+    if let Some(home) = dirs::home_dir() {
+        let managed_bin = home.join(".lena").join("bin").join(&adapter_filename);
+        if managed_bin.exists() {
+            return Some(managed_bin);
+        }
+    }
+
+    // 3. Sibling directory (e.g., if running from a globally installed target/release folder)
     let mut current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("lena"));
     current_exe.pop();
     let sibling_path = current_exe.join(&adapter_filename);
@@ -65,15 +73,7 @@ async fn run_adapter(
 
     let mut expanded_args = Vec::new();
     for arg in def.args {
-        let expanded = expand_tilde(&arg);
-        if Path::new(&expanded)
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
-        {
-            bail!("Required grammar file not found: {expanded}");
-        }
-
-        expanded_args.push(expanded);
+        expanded_args.push(expand_tilde(&arg));
     }
 
     info!("Starting adapter [{lang}] via {}", def.command);
@@ -119,19 +119,7 @@ pub async fn run(
     if run_all {
         for (lang, def) in config.registered {
             if resolve_binary(&def.command).is_some() {
-                // If it requires a grammar, only auto-run if the grammar exists
-                let has_missing_grammar = def.args.iter().any(|a| {
-                    let exp = expand_tilde(a);
-                    Path::new(&exp)
-                        .extension()
-                        .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
-                });
-
-                if has_missing_grammar {
-                    debug!("Skipping [{lang}] due to missing .so grammar file.");
-                } else {
-                    targets_to_run.push((lang, def));
-                }
+                targets_to_run.push((lang, def));
             } else {
                 debug!(
                     "Skipping [{lang}] because executable '{}' is not installed.",

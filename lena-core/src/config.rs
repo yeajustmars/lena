@@ -157,30 +157,24 @@ impl Default for AdaptersConfig {
                 args: vec![],
             },
         );
-        registered.insert(
-            "python".to_string(),
-            AdapterDefinition {
-                command: "lena-adapter-treesitter".to_string(),
-                args: vec![
-                    "--lang".to_string(),
-                    "python".to_string(),
-                    "--grammar".to_string(),
-                    "~/.lena/grammars/tree-sitter-python.so".to_string(),
-                ],
-            },
-        );
-        registered.insert(
-            "javascript".to_string(),
-            AdapterDefinition {
-                command: "lena-adapter-treesitter".to_string(),
-                args: vec![
-                    "--lang".to_string(),
-                    "javascript".to_string(),
-                    "--grammar".to_string(),
-                    "~/.lena/grammars/tree-sitter-javascript.so".to_string(),
-                ],
-            },
-        );
+
+        for lang in [
+            "bash",
+            "java",
+            "javascript",
+            "php",
+            "python",
+            "ruby",
+            "typescript",
+        ] {
+            registered.insert(
+                lang.to_string(),
+                AdapterDefinition {
+                    command: "lena-adapter-treesitter".to_string(),
+                    args: vec!["--lang".to_string(), lang.to_string()],
+                },
+            );
+        }
 
         Self { registered }
     }
@@ -344,12 +338,7 @@ mod tests {
             merged.adapters.registered.get("python").unwrap(),
             &AdapterDefinition {
                 command: "lena-adapter-treesitter".to_string(),
-                args: vec![
-                    "--lang".to_string(),
-                    "python".to_string(),
-                    "--grammar".to_string(),
-                    "~/.lena/grammars/tree-sitter-python.so".to_string(),
-                ],
+                args: vec!["--lang".to_string(), "python".to_string()],
             },
         );
 
