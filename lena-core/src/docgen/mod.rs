@@ -184,7 +184,7 @@ impl<'a> DocGraphBuilder<'a> {
 
             let language = extract_string(data, "entity/language").replace(":lang/", "");
 
-            let is_external = extract_string(data, "symbol/external") == "true";
+            let is_external = extract_bool(data, "symbol/external");
 
             let sig_raw = extract_string(data, "code/signature");
             let sig_str = if sig_raw.is_empty() {
@@ -416,6 +416,17 @@ fn extract_i64(val: &Value, key: &str) -> i64 {
         .unwrap_or(0)
 }
 
+fn extract_bool(val: &Value, key: &str) -> bool {
+    let key_with_colon = format!(":{key}");
+    val.get(&key_with_colon)
+        .or_else(|| val.get(key))
+        .and_then(|v| {
+            v.as_bool()
+                .or_else(|| v.as_array().and_then(|arr| arr.first()?.as_bool()))
+        })
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,7 +537,7 @@ mod tests {
                 Fact {
                     e: 1,
                     ident: ":symbol/external".into(),
-                    v: MesoValue::String("true".into()),
+                    v: MesoValue::Boolean(true),
                     op: true,
                     cas_old_v: None,
                     valid_time: None,
@@ -695,7 +706,7 @@ mod tests {
                 Fact {
                     e: 2,
                     ident: ":symbol/external".into(),
-                    v: MesoValue::String("true".into()),
+                    v: MesoValue::Boolean(true),
                     op: true,
                     cas_old_v: None,
                     valid_time: None,

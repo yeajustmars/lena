@@ -27,7 +27,7 @@ pub fn bootstrap() -> SchemaMap {
     schema.add_attribute(ATTR_SYMBOL_NAME, ValueType::String, false);
     schema.add_attribute(ATTR_SYMBOL_KIND, ValueType::String, false);
     schema.add_attribute(ATTR_SYMBOL_VISIBILITY, ValueType::String, false);
-    schema.add_attribute(ATTR_SYMBOL_EXTERNAL, ValueType::String, false);
+    schema.add_attribute(ATTR_SYMBOL_EXTERNAL, ValueType::Boolean, false);
 
     // Code Payloads & Docs
     schema.add_attribute(ATTR_CODE_RAW, ValueType::String, false);
@@ -83,7 +83,7 @@ mod tests {
         let external = schema
             .get_by_ident(ATTR_SYMBOL_EXTERNAL)
             .expect("Missing External flag");
-        assert_eq!(external.value_type, ValueType::String);
+        assert_eq!(external.value_type, ValueType::Boolean);
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod tests {
         let external = schema
             .get_by_ident(ATTR_SYMBOL_EXTERNAL)
             .expect("Missing External attribute");
-        assert_eq!(external.value_type, ValueType::String);
+        assert_eq!(external.value_type, ValueType::Boolean);
         assert!(!external.is_unique);
     }
 }
