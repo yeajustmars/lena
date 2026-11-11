@@ -306,18 +306,17 @@ pub fn emit_facts(
     let mut symbols: Vec<(usize, usize, String)> = Vec::new();
     let mut calls = Vec::new();
 
-    // Emit File Module Fact
+    // Emit File Module Fact (flattened to single-line ND-EDN with atomic name)
     let mod_fqsn = format!("{lang_tag}:{logical_module}");
     let mod_id = hash_id(&mod_fqsn);
+    let atomic_mod_name = logical_module
+        .rsplit('/')
+        .next()
+        .unwrap_or(logical_module)
+        .replace('.', "_");
+
     facts.push(format!(
-        "
-        [[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}]
-         [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"]
-         [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"]
-         [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"]
-         [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{logical_module}\"]
-         [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]
-         "
+        "[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{atomic_mod_name}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]"
     ));
 
     let mut emitted_externals = std::collections::HashSet::new();
@@ -423,11 +422,25 @@ pub fn emit_facts(
             facts.push(call_fact);
 
             if is_external && emitted_externals.insert(callee_id) {
-                let stub_fact = format!(
-                    "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} true]]",
-                    escape_string(&callee_name)
-                );
-                facts.push(stub_fact);
+                let mut atomic_callee = callee_name.as_str();
+                if let Some(idx) = atomic_callee.rfind('/') {
+                    atomic_callee = &atomic_callee[idx + 1..];
+                }
+                if let Some(idx) = atomic_callee.rfind("::") {
+                    atomic_callee = &atomic_callee[idx + 2..];
+                }
+                if let Some(idx) = atomic_callee.rfind('.') {
+                    atomic_callee = &atomic_callee[idx + 1..];
+                }
+                let atomic_callee =
+                    atomic_callee.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
+                if !atomic_callee.is_empty() {
+                    let stub_fact = format!(
+                        "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} true]]",
+                        escape_string(atomic_callee)
+                    );
+                    facts.push(stub_fact);
+                }
             }
         }
     }

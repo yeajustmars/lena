@@ -239,7 +239,9 @@ fn execute_kondo(target: &Path) -> anyhow::Result<Vec<String>> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("clj-kondo warnings/errors: {stderr}");
+        if !stderr.trim().is_empty() {
+            eprintln!("clj-kondo stderr: {stderr}");
+        }
     }
 
     let kondo_data: KondoOutput = serde_json::from_slice(&output.stdout)?;
