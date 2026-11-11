@@ -81,8 +81,13 @@ impl FactValidator {
                     attr: ATTR_SYMBOL_FQSN,
                 });
             }
+
             if let Some(name) = attrs.get(ATTR_SYMBOL_NAME) {
-                if name.contains('.') || name.contains("::") {
+                // Modules derived from filenames (e.g. `exceptions-filter.interface`) are allowed to contain dots.
+                // All other symbols (functions, classes, etc.) must be strictly atomic.
+                if name.contains("::")
+                    || (ent_type != crate::schema::TYPE_MODULE && name.contains('.'))
+                {
                     errors.push(ValidationError::InvalidSymbolName {
                         entity: *e,
                         name: (*name).to_string(),
@@ -359,5 +364,39 @@ mod tests {
                 attr: ATTR_LOC_FILE,
             }
         );
+    }
+
+    #[test]
+    fn test_valid_module_name_with_dot() {
+        let validator = FactValidator::new(false);
+        let facts = vec![
+            ValidationFact {
+                e: 1,
+                ident: ATTR_ENTITY_TYPE,
+                value_str: crate::schema::TYPE_MODULE,
+            },
+            ValidationFact {
+                e: 1,
+                ident: ATTR_SYMBOL_FQSN,
+                value_str: "typescript:exceptions-filter.interface",
+            },
+            ValidationFact {
+                e: 1,
+                ident: ATTR_SYMBOL_NAME,
+                value_str: "exceptions-filter.interface", // Valid: module names can have dots
+            },
+            ValidationFact {
+                e: 1,
+                ident: ATTR_SYMBOL_MODULE,
+                value_str: "exceptions-filter.interface",
+            },
+            ValidationFact {
+                e: 1,
+                ident: ATTR_LOC_FILE,
+                value_str: "exceptions-filter.interface.ts",
+            },
+        ];
+
+        assert!(validator.validate_batch(&facts).is_ok());
     }
 }
