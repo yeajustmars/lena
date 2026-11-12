@@ -498,10 +498,10 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
             // Ignore build/cache directories, hidden folders, and lockfiles
             if name == "target"
                 || name == ".git"
-                || name == "dist"
                 || name == ".lena"
-                || name == "node_modules"
+                || name == "docs"
                 || name == "Cargo.lock"
+                || name == "node_modules"
             {
                 continue;
             }

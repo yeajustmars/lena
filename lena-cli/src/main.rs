@@ -67,7 +67,7 @@ enum Commands {
     /// Generate static HTML documentation from the indexed codebase
     Doc {
         /// Output directory for the static site
-        #[arg(short, long, default_value = "dist")]
+        #[arg(short, long, default_value = "docs")]
         out: PathBuf,
         /// Documentation format: book, single-page, or mdbook
         #[arg(short, long, default_value = "book")]
