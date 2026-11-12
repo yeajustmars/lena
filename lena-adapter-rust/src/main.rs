@@ -70,6 +70,15 @@ fn emit_diag(
     );
 }
 
+fn emit_prog_init(total: usize) {
+    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+}
+
+fn emit_prog_parsing(file: &str) {
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+}
+
 #[must_use]
 fn hash_id(key: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -383,8 +392,11 @@ fn visit_dirs(dir: &Path) -> Result<()> {
     let mut parsed_files = Vec::new();
     let mut pkg_cache = HashMap::new();
 
+    emit_prog_init(files_to_process.len());
+
     for path in &files_to_process {
         let path_str = path.to_string_lossy().to_string();
+        emit_prog_parsing(&path_str);
         let content = match fs::read_to_string(path) {
             Ok(c) => c,
             Err(e) => {

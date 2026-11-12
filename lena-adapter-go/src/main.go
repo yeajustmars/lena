@@ -27,6 +27,15 @@ func emitDiag(level, file string, line, col int, symbol, category, message strin
 		level, fileBytes, line, col, symBytes, category, msgBytes)
 }
 
+func emitProgInit(total int) {
+	fmt.Fprintf(os.Stderr, "@PROG:{\"status\":\"init\",\"total\":%d}\n", total)
+}
+
+func emitProgParsing(file string) {
+	fileBytes, _ := json.Marshal(file)
+	fmt.Fprintf(os.Stderr, "@PROG:{\"status\":\"parsing\",\"file\":%s}\n", fileBytes)
+}
+
 const AdapterVersion = "0.2.0"
 
 func hashId(s string) uint64 {
@@ -260,7 +269,10 @@ func RunTwoPass(fset *token.FileSet, paths []string) ([]string, error) {
 	table := NewSymbolTable()
 	var parsedFiles []*ParsedFile
 
+	emitProgInit(len(paths)) // Tell Leña how many files we found
+
 	for _, path := range paths {
+		emitProgParsing(path) // Update the progress bar
 		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments | parser.AllErrors)
 		if err != nil {
 			emitDiag("error", path, 1, 1, "", "ParseError", err.Error())

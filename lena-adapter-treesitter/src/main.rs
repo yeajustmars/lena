@@ -76,6 +76,15 @@ fn emit_diag(
     );
 }
 
+fn emit_prog_init(total: usize) {
+    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+}
+
+fn emit_prog_parsing(file: &str) {
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+}
+
 #[must_use]
 fn hash_id(input: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -179,8 +188,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parsed_files = Vec::new();
     let ts_query = Query::new(&language, &query_source)?;
 
+    emit_prog_init(files.len());
+
     for file_path in files {
         let path_str = file_path.to_string_lossy().to_string();
+        emit_prog_parsing(&path_str);
+
         let source_code = match fs::read_to_string(&file_path) {
             Ok(s) => s,
             Err(e) => {

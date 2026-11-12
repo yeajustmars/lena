@@ -89,6 +89,15 @@ fn emit_diag(
     );
 }
 
+fn emit_prog_init(total: usize) {
+    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+}
+
+fn emit_prog_parsing(file: &str) {
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+}
+
 #[derive(Deserialize, Debug)]
 struct VarUsage {
     from: Option<String>,
@@ -111,8 +120,21 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
     let mut facts = Vec::new();
     let mut local_namespaces = HashSet::new();
 
+    let ns_count = kondo_data
+        .analysis
+        .namespace_definitions
+        .as_ref()
+        .map_or(0, |v| v.len());
+    let var_count = kondo_data
+        .analysis
+        .var_definitions
+        .as_ref()
+        .map_or(0, |v| v.len());
+    emit_prog_init(ns_count + var_count);
+
     if let Some(namespaces) = kondo_data.analysis.namespace_definitions {
         for ns in namespaces {
+            emit_prog_parsing(&ns.filename);
             local_namespaces.insert(ns.name.clone());
             let mut tx = TransactionBuilder::new();
             let fqsn = format!("clj:{}", ns.name);
@@ -140,6 +162,8 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
 
     if let Some(vars) = kondo_data.analysis.var_definitions {
         for v in vars {
+            emit_prog_parsing(&v.filename);
+
             let mut tx = TransactionBuilder::new();
             let fqsn = format!("clj:{}/{}", v.ns, v.name);
             let e_id = hash_id(&fqsn);
@@ -280,6 +304,8 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
 }
 
 fn execute_kondo(target: &Path) -> anyhow::Result<Vec<String>> {
+    emit_prog_parsing("Running clj-kondo static analysis (this may take a while)...");
+
     let output = Command::new("clj-kondo")
         .arg("--lint")
         .arg(target)
