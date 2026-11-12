@@ -1,8 +1,7 @@
 // lena-adapter-clojure/src/main.rs
 
 #![deny(warnings)]
-#![warn(clippy::all)]
-// TODO: put back pedantic
+#![warn(clippy::all, clippy::pedantic)]
 
 use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
@@ -19,6 +18,7 @@ use std::{
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
     process::Command,
+    vec::Vec,
 };
 
 #[derive(Parser)]
@@ -84,18 +84,17 @@ fn emit_diag(
     let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
     eprintln!(
-        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
-        level, f, line, col, sym, category, msg
+        r#"@DIAG:{{"level":"{level}","file":{f},"line":{line},"col":{col},"symbol":{sym},"category":"{category}","message":{msg}}}"#,
     );
 }
 
 fn emit_prog_init(total: usize) {
-    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+    eprintln!(r#"@PROG:{{"status":"init","total":{total}}}"#);
 }
 
 fn emit_prog_parsing(file: &str) {
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
-    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{f}}}"#);
 }
 
 #[derive(Deserialize, Debug)]
@@ -116,188 +115,235 @@ fn hash_id(key: &str) -> u64 {
     hasher.finish() & 0x7FFF_FFFF_FFFF_FFFF
 }
 
-fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> {
-    let mut facts = Vec::new();
-    let mut local_namespaces = HashSet::new();
-
+fn get_counts(kondo_data: &KondoOutput) -> (usize, usize) {
     let ns_count = kondo_data
         .analysis
         .namespace_definitions
         .as_ref()
-        .map_or(0, |v| v.len());
+        .map_or(0, Vec::len);
+
     let var_count = kondo_data
         .analysis
         .var_definitions
         .as_ref()
-        .map_or(0, |v| v.len());
-    emit_prog_init(ns_count + var_count);
+        .map_or(0, Vec::len);
 
-    if let Some(namespaces) = kondo_data.analysis.namespace_definitions {
-        for ns in namespaces {
-            emit_prog_parsing(&ns.filename);
-            local_namespaces.insert(ns.name.clone());
-            let mut tx = TransactionBuilder::new();
-            let fqsn = format!("clj:{}", ns.name);
-            let e_id = hash_id(&fqsn);
-            let atomic_name = ns.name.rsplit('.').next().unwrap_or(&ns.name);
+    (ns_count, var_count)
+}
 
-            tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_MODULE))?;
-            tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
-            tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
-            tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&ns.name))?;
-            tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(atomic_name))?;
-            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_MODULE))?;
-            tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
+fn process_kondo_namespaces(
+    namespaces: &[NsDef],
+    facts: &mut Vec<String>,
+    local_namespaces: &mut HashSet<String>,
+) -> anyhow::Result<()> {
+    for ns in namespaces {
+        emit_prog_parsing(&ns.filename);
+        local_namespaces.insert(ns.name.clone());
 
-            tx.add(
-                e_id,
-                ATTR_LOC_START_LINE,
-                EdnValue::Int(ns.row.unwrap_or(1)),
-            )?;
-            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(ns.col.unwrap_or(1)))?;
+        let mut tx = TransactionBuilder::new();
+        let fqsn = format!("clj:{}", ns.name);
+        let e_id = hash_id(&fqsn);
+        let atomic_name = ns.name.rsplit('.').next().unwrap_or(&ns.name);
 
-            facts.push(tx.finish());
-        }
+        tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_MODULE))?;
+        tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
+        tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
+        tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&ns.name))?;
+        tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(atomic_name))?;
+        tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_MODULE))?;
+        tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&ns.filename))?;
+
+        tx.add(
+            e_id,
+            ATTR_LOC_START_LINE,
+            EdnValue::Int(ns.row.unwrap_or(1)),
+        )?;
+        tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(ns.col.unwrap_or(1)))?;
+
+        facts.push(tx.finish());
     }
+    Ok(())
+}
 
-    if let Some(vars) = kondo_data.analysis.var_definitions {
-        for v in vars {
-            emit_prog_parsing(&v.filename);
+fn process_kondo_vars(vars: &[VarDef], facts: &mut Vec<String>) -> anyhow::Result<()> {
+    for v in vars {
+        emit_prog_parsing(&v.filename);
 
-            let mut tx = TransactionBuilder::new();
-            let fqsn = format!("clj:{}/{}", v.ns, v.name);
-            let e_id = hash_id(&fqsn);
-            let parent_id = hash_id(&format!("clj:{}", v.ns));
+        let mut tx = TransactionBuilder::new();
+        let fqsn = format!("clj:{}/{}", v.ns, v.name);
+        let e_id = hash_id(&fqsn);
+        let parent_id = hash_id(&format!("clj:{}", v.ns));
 
-            tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
-            tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
-            tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
-            tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&v.ns))?;
-            tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&v.name))?;
+        tx.add(e_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
+        tx.add(e_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_CLOJURE))?;
+        tx.add(e_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fqsn))?;
+        tx.add(e_id, ATTR_SYMBOL_MODULE, EdnValue::String(&v.ns))?;
+        tx.add(e_id, ATTR_SYMBOL_NAME, EdnValue::String(&v.name))?;
 
-            let kind = if v.is_macro.unwrap_or(false) {
-                KIND_MACRO
+        let kind = if v.is_macro.unwrap_or(false) {
+            KIND_MACRO
+        } else {
+            KIND_FN
+        };
+        tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(kind))?;
+        tx.add(e_id, ATTR_PARENT_ENTITY, EdnValue::Ref(parent_id))?;
+        tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&v.filename))?;
+        tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(v.row.unwrap_or(1)))?;
+        tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(v.col.unwrap_or(1)))?;
+
+        if let Some(end_row) = v.end_row {
+            tx.add(e_id, ATTR_LOC_END_LINE, EdnValue::Int(end_row))?;
+        }
+        if let Some(end_col) = v.end_col {
+            tx.add(e_id, ATTR_LOC_END_COL, EdnValue::Int(end_col))?;
+        }
+
+        if let Some(doc_val) = &v.doc {
+            if let Some(doc_str) = doc_val.as_str() {
+                tx.add(e_id, ATTR_DOC_TEXT, EdnValue::String(doc_str))?;
             } else {
-                KIND_FN
-            };
-            tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(kind))?;
-            tx.add(e_id, ATTR_PARENT_ENTITY, EdnValue::Ref(parent_id))?;
-            tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&v.filename))?;
-            tx.add(e_id, ATTR_LOC_START_LINE, EdnValue::Int(v.row.unwrap_or(1)))?;
-            tx.add(e_id, ATTR_LOC_START_COL, EdnValue::Int(v.col.unwrap_or(1)))?;
-
-            if let Some(end_row) = v.end_row {
-                tx.add(e_id, ATTR_LOC_END_LINE, EdnValue::Int(end_row))?;
+                emit_diag(
+                    "warn",
+                    &v.filename,
+                    v.row.unwrap_or(1),
+                    v.col.unwrap_or(1),
+                    &fqsn,
+                    "TypeMismatch",
+                    "Docstring is not a scalar string; skipping",
+                );
             }
-            if let Some(end_col) = v.end_col {
-                tx.add(e_id, ATTR_LOC_END_COL, EdnValue::Int(end_col))?;
-            }
-
-            if let Some(doc_val) = &v.doc {
-                if let Some(doc_str) = doc_val.as_str() {
-                    tx.add(e_id, ATTR_DOC_TEXT, EdnValue::String(doc_str))?;
-                } else {
-                    emit_diag(
-                        "warn",
-                        &v.filename,
-                        v.row.unwrap_or(1),
-                        v.col.unwrap_or(1),
-                        &fqsn,
-                        "TypeMismatch",
-                        "Docstring is not a scalar string; skipping",
-                    );
-                }
-            }
-
-            if let Some(args_val) = &v.arglist_strs {
-                if let Some(args_array) = args_val.as_array() {
-                    let valid_args: Vec<String> = args_array
-                        .iter()
-                        .filter_map(|a| a.as_str().map(ToString::to_string))
-                        .collect();
-                    if !valid_args.is_empty() {
-                        let sig = valid_args.join("\n");
-                        tx.add(e_id, ATTR_CODE_SIGNATURE, EdnValue::String(&sig))?;
-                    }
-                } else {
-                    emit_diag(
-                        "warn",
-                        &v.filename,
-                        v.row.unwrap_or(1),
-                        v.col.unwrap_or(1),
-                        &fqsn,
-                        "TypeMismatch",
-                        "arglist-strs is not an array; skipping",
-                    );
-                }
-            }
-
-            facts.push(tx.finish());
         }
-    }
 
+        if let Some(args_val) = &v.arglist_strs {
+            if let Some(args_array) = args_val.as_array() {
+                let valid_args: Vec<String> = args_array
+                    .iter()
+                    .filter_map(|a| a.as_str().map(ToString::to_string))
+                    .collect();
+                if !valid_args.is_empty() {
+                    let sig = valid_args.join("\n");
+                    tx.add(e_id, ATTR_CODE_SIGNATURE, EdnValue::String(&sig))?;
+                }
+            } else {
+                emit_diag(
+                    "warn",
+                    &v.filename,
+                    v.row.unwrap_or(1),
+                    v.col.unwrap_or(1),
+                    &fqsn,
+                    "TypeMismatch",
+                    "arglist-strs is not an array; skipping",
+                );
+            }
+        }
+
+        facts.push(tx.finish());
+    }
+    Ok(())
+}
+
+fn process_kondo_usages(
+    usages: &[VarUsage],
+    local_namespaces: &HashSet<String>,
+    facts: &mut Vec<String>,
+) -> anyhow::Result<()> {
     let mut emitted_externals = HashSet::new();
 
-    if let Some(usages) = kondo_data.analysis.var_usages {
-        for u in usages {
-            let clean_name = u.name.trim_matches('.');
-            if clean_name.is_empty() {
-                continue;
-            }
-            let atomic_callee_name = clean_name.rsplit('.').next().unwrap_or(clean_name);
-            if atomic_callee_name.is_empty() {
-                continue;
-            }
+    for u in usages {
+        let clean_name = u.name.trim_matches('.');
+        if clean_name.is_empty() {
+            continue;
+        }
+        let atomic_callee_name = clean_name.rsplit('.').next().unwrap_or(clean_name);
+        if atomic_callee_name.is_empty() {
+            continue;
+        }
 
-            if let (Some(from_ns), Some(from_var), Some(to_ns)) = (u.from, u.from_var, u.to) {
-                let caller_fqsn = format!("clj:{from_ns}/{from_var}");
-                let callee_fqsn = format!("clj:{to_ns}/{clean_name}");
+        if let (Some(from_ns), Some(from_var), Some(to_ns)) = (&u.from, &u.from_var, &u.to) {
+            let caller_source_fqsn = format!("clj:{from_ns}/{from_var}");
+            let callee_target_fqsn = format!("clj:{to_ns}/{clean_name}");
 
-                let caller_id = hash_id(&caller_fqsn);
-                let callee_id = hash_id(&callee_fqsn);
-                let call_site_id = hash_id(&format!(
-                    "{}:{}:{}:{caller_fqsn}->{callee_fqsn}",
-                    u.filename,
-                    u.row.unwrap_or(1),
-                    u.col.unwrap_or(1)
-                ));
+            let caller_source_id = hash_id(&caller_source_fqsn);
+            let callee_target_id = hash_id(&callee_target_fqsn);
+            let call_site_id = hash_id(&format!(
+                "{}:{}:{}:{caller_source_fqsn}->{callee_target_fqsn}",
+                u.filename,
+                u.row.unwrap_or(1),
+                u.col.unwrap_or(1)
+            ));
 
-                let mut tx = TransactionBuilder::new();
-                tx.add(
-                    call_site_id,
-                    ATTR_ENTITY_TYPE,
-                    EdnValue::Keyword(TYPE_CALL_SITE),
+            let mut tx = TransactionBuilder::new();
+            tx.add(
+                call_site_id,
+                ATTR_ENTITY_TYPE,
+                EdnValue::Keyword(TYPE_CALL_SITE),
+            )?;
+            tx.add(
+                call_site_id,
+                ATTR_CALL_CALLER,
+                EdnValue::Ref(caller_source_id),
+            )?;
+            tx.add(
+                call_site_id,
+                ATTR_CALL_CALLEE,
+                EdnValue::Ref(callee_target_id),
+            )?;
+            tx.add(call_site_id, ATTR_LOC_FILE, EdnValue::String(&u.filename))?;
+            tx.add(
+                call_site_id,
+                ATTR_LOC_START_LINE,
+                EdnValue::Int(u.row.unwrap_or(1)),
+            )?;
+            tx.add(
+                call_site_id,
+                ATTR_LOC_START_COL,
+                EdnValue::Int(u.col.unwrap_or(1)),
+            )?;
+            facts.push(tx.finish());
+
+            // Emit external stub if callee belongs to a namespace not found in this workspace
+            if !local_namespaces.contains(to_ns) && emitted_externals.insert(callee_target_id) {
+                let mut stub_tx = TransactionBuilder::new();
+                stub_tx.add(
+                    callee_target_id,
+                    ATTR_SYMBOL_FQSN,
+                    EdnValue::String(&callee_target_fqsn),
                 )?;
-                tx.add(call_site_id, ATTR_CALL_CALLER, EdnValue::Ref(caller_id))?;
-                tx.add(call_site_id, ATTR_CALL_CALLEE, EdnValue::Ref(callee_id))?;
-                tx.add(call_site_id, ATTR_LOC_FILE, EdnValue::String(&u.filename))?;
-                tx.add(
-                    call_site_id,
-                    ATTR_LOC_START_LINE,
-                    EdnValue::Int(u.row.unwrap_or(1)),
+                stub_tx.add(
+                    callee_target_id,
+                    ATTR_SYMBOL_NAME,
+                    EdnValue::String(atomic_callee_name),
                 )?;
-                tx.add(
-                    call_site_id,
-                    ATTR_LOC_START_COL,
-                    EdnValue::Int(u.col.unwrap_or(1)),
+                stub_tx.add(
+                    callee_target_id,
+                    ATTR_SYMBOL_MODULE,
+                    EdnValue::String(to_ns),
                 )?;
-                facts.push(tx.finish());
-
-                // Emit external stub if callee belongs to a namespace not found in this workspace
-                if !local_namespaces.contains(&to_ns) && emitted_externals.insert(callee_id) {
-                    let mut stub_tx = TransactionBuilder::new();
-                    stub_tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(&callee_fqsn))?;
-                    stub_tx.add(
-                        callee_id,
-                        ATTR_SYMBOL_NAME,
-                        EdnValue::String(atomic_callee_name),
-                    )?;
-                    stub_tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String(&to_ns))?;
-                    stub_tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
-                    facts.push(stub_tx.finish());
-                }
+                stub_tx.add(callee_target_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
+                facts.push(stub_tx.finish());
             }
         }
+    }
+    Ok(())
+}
+
+fn process_kondo_output(kondo_data: &KondoOutput) -> anyhow::Result<Vec<String>> {
+    let mut facts = Vec::new();
+    let mut local_namespaces = HashSet::new();
+
+    let (ns_count, var_count) = get_counts(kondo_data);
+    emit_prog_init(ns_count + var_count);
+
+    if let Some(namespaces) = &kondo_data.analysis.namespace_definitions {
+        process_kondo_namespaces(namespaces, &mut facts, &mut local_namespaces)?;
+    }
+
+    if let Some(vars) = &kondo_data.analysis.var_definitions {
+        process_kondo_vars(vars, &mut facts)?;
+    }
+
+    if let Some(usages) = &kondo_data.analysis.var_usages {
+        process_kondo_usages(usages, &local_namespaces, &mut facts)?;
     }
 
     Ok(facts)
@@ -335,7 +381,7 @@ fn execute_kondo(target: &Path) -> anyhow::Result<Vec<String>> {
             return Ok(Vec::new());
         }
     };
-    process_kondo_output(kondo_data)
+    process_kondo_output(&kondo_data)
 }
 
 fn main() -> anyhow::Result<()> {
@@ -421,7 +467,7 @@ mod tests {
             },
         };
 
-        let facts = process_kondo_output(kondo_data).unwrap();
+        let facts = process_kondo_output(&kondo_data).unwrap();
         let output = facts.join("\n");
 
         assert!(output.contains(":symbol/external true"));
@@ -451,7 +497,7 @@ mod tests {
             },
         };
 
-        let facts = process_kondo_output(kondo_data).unwrap();
+        let facts = process_kondo_output(&kondo_data).unwrap();
         let output = facts.join("\n");
 
         assert!(output.contains(":symbol/module \"my.service\""));
