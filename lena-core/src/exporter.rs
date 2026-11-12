@@ -499,8 +499,8 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
             if name == "target"
                 || name == ".git"
                 || name == ".lena"
-                || name == "docs"
                 || name == "Cargo.lock"
+                || name == "docs"
                 || name == "node_modules"
             {
                 continue;

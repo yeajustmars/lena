@@ -17,7 +17,7 @@ mod query;
 mod skeleton;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use lena_core::db::LenaDb;
 use std::{path::PathBuf, sync::Arc};
 use tracing::Level;
@@ -63,6 +63,12 @@ enum Commands {
         /// Target directory to check
         #[arg(default_value = ".")]
         target: PathBuf,
+    },
+    /// Generate shell completion scripts
+    Completion {
+        /// The shell to generate the script for (bash, elvish, fish, powershell, zsh)
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
     },
     /// Generate static HTML documentation from the indexed codebase
     Doc {
@@ -174,7 +180,6 @@ enum Commands {
     },
 }
 
-// TODO: remove all test templates (i.e. /my_template.j2)
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -210,6 +215,12 @@ async fn main() -> Result<()> {
                 config.adapters.registered.len()
             );
             // TODO: implement detailed pre-flight checks here.
+        }
+        // TODO: move to completion.rs
+        Commands::Completion { shell } => {
+            let mut cmd = Cli::command();
+            let bin_name = cmd.get_name().to_string();
+            clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
         }
         Commands::Doc {
             out,
