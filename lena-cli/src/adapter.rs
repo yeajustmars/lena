@@ -123,7 +123,7 @@ async fn install_adapter(name: &str) -> Result<()> {
     info!("Installing lena-adapter-{name}...");
 
     match name {
-        "rust" | "clj" | "treesitter" => {
+        "rust" | "clojure" | "treesitter" => {
             let crate_name = format!("lena-adapter-{name}");
             let lena_root = dirs::home_dir().context("No home directory")?.join(".lena");
 
@@ -142,6 +142,8 @@ async fn install_adapter(name: &str) -> Result<()> {
             }
         }
         "go" => {
+            // TODO: publish lena-adapter-go as a downloadable binary
+            // TODO: add automated Go adapter build into release.sh
             let local_main = PathBuf::from("./lena-adapter-go/src/main.go");
 
             let status = if local_main.exists() {
@@ -171,7 +173,7 @@ async fn install_adapter(name: &str) -> Result<()> {
             }
         }
         _ => {
-            anyhow::bail!("Unknown adapter '{name}'. Available: rust, clj, treesitter, go");
+            anyhow::bail!("Unknown adapter '{name}'. Available: rust, clojure treesitter, go");
         }
     }
     Ok(())
@@ -194,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_managed_adapter_names() {
-        let supported = ["rust", "clj", "treesitter", "go"];
+        let supported = ["rust", "clojure", "treesitter", "go"];
         assert_eq!(supported.len(), 4);
         assert!(supported.contains(&"go"));
         assert!(supported.contains(&"rust"));
