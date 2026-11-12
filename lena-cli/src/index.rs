@@ -69,6 +69,7 @@ async fn run_adapter(
     _permit: tokio::sync::OwnedSemaphorePermit,
     pb: ProgressBar,
     report: Arc<Mutex<IndexingReport>>,
+    dry_run: bool,
 ) -> Result<usize> {
     let adapter_start = Instant::now();
     let Some(bin_path) = resolve_binary(&def.command) else {
@@ -156,7 +157,7 @@ async fn run_adapter(
     }
 
     if let Some(stdout) = child.stdout.take() {
-        facts_ingested = ingest_stream(&db, stdout, false, &lang).await?;
+        facts_ingested = ingest_stream(&db, stdout, false, dry_run, &lang).await?;
     }
 
     let status = child.wait().await?;
@@ -192,6 +193,7 @@ pub async fn run(
     db: &Arc<LenaDb>,
     explicit_adapters: Option<Vec<String>>,
     run_all: bool,
+    dry_run: bool,
     config: AdaptersConfig,
     report_config: ReportConfig,
 ) -> Result<()> {
@@ -258,6 +260,7 @@ pub async fn run(
             permit,
             pb,
             report_clone,
+            dry_run,
         ));
     }
 

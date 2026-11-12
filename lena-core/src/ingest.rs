@@ -29,6 +29,7 @@ pub async fn ingest_stream<R>(
     db: &Arc<LenaDb>,
     reader: R,
     allow_incomplete_facts: bool,
+    dry_run: bool,
     adapter_name: &str,
 ) -> Result<usize, IngestError>
 where
@@ -89,13 +90,19 @@ where
                 let facts = sanitize_batch(raw_facts);
                 let fact_count = facts.len();
                 if fact_count > 0 {
-                    match db.inner().transact(facts).await {
-                        Ok(report) => {
-                            total_facts += report.datoms_written;
-                            total_txs += 1;
-                        }
-                        Err(e) => {
-                            error!("Failed to transact batch (skipping): {e}");
+                    if dry_run {
+                        // In dry-run mode, we count the facts that *would* have been transacted
+                        total_facts += fact_count;
+                        total_txs += 1;
+                    } else {
+                        match db.inner().transact(facts).await {
+                            Ok(report) => {
+                                total_facts += report.datoms_written;
+                                total_txs += 1;
+                            }
+                            Err(e) => {
+                                error!("Failed to transact batch (skipping): {e}");
+                            }
                         }
                     }
                 }
@@ -183,7 +190,7 @@ mod tests {
         // Incomplete facts (missing mandatory module/file paths), so we test in permissive mode
         let edn_stream = b"[[:db/add 100 :entity/type :type/module] [:db/add 100 :symbol/name \"my_mod\"]]\n[[:db/add 101 :entity/type :type/function]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, false, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 3);
@@ -202,7 +209,7 @@ mod tests {
         // Incomplete fact violating strict validation (missing FQSN, LOC_FILE, etc.)
         let edn_stream = b"[[:db/add 100 :symbol/name \"my_mod\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, false, "test")
             .await
             .expect("Ingestion failed");
 
@@ -215,7 +222,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"\n   \n\t\n[[:db/add 100 :symbol/name \"test\"]]\n\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, false, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 1);
@@ -226,7 +233,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"[[:db/add 100 :symbol/name \"valid_1\"]]\n[MALFORMED NONSENSE\n[[:db/add 101 :symbol/name \"valid_2\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], true, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], true, false, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(
@@ -311,7 +318,7 @@ mod tests {
         let db = setup_db().await;
         let edn_stream = b"[[:db/add 100 :entity/type :type/function] [:db/add 100 :symbol/fqsn \"rust:core::test\"] [:db/add 100 :symbol/name \"test\"] [:db/add 100 :symbol/module \"core\"] [:db/add 100 :location/file \"src/lib.rs\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, false, "test")
             .await
             .expect("Ingestion failed");
         assert_eq!(facts_written, 5);
@@ -330,7 +337,7 @@ mod tests {
         // Module contains .rs extension -> must be rejected under strict mode
         let edn_stream = b"[[:db/add 100 :entity/type :type/function] [:db/add 100 :symbol/fqsn \"rust:core::test\"] [:db/add 100 :symbol/name \"test\"] [:db/add 100 :symbol/module \"core.rs\"] [:db/add 100 :location/file \"src/lib.rs\"]]\n";
 
-        let facts_written = ingest_stream(&db, &edn_stream[..], false, "test")
+        let facts_written = ingest_stream(&db, &edn_stream[..], false, false, "test")
             .await
             .expect("Ingestion execution errored");
         assert_eq!(

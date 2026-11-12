@@ -277,7 +277,7 @@ mod tests {
             [[:db/add 21 :entity/type :type/call-site] [:db/add 21 :call/caller 11] [:db/add 21 :call/callee 12]]\n\
         ";
 
-        crate::ingest::ingest_stream(&db, &edn[..], true, "test")
+        crate::ingest::ingest_stream(&db, &edn[..], true, false, "test")
             .await
             .unwrap();
 

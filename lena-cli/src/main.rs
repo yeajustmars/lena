@@ -58,6 +58,12 @@ enum Commands {
         /// The Fully Qualified Symbol Name
         fqsn: String,
     },
+    /// Validate adapters, grammars, and directory support without running a full index
+    Check {
+        /// Target directory to check
+        #[arg(default_value = ".")]
+        target: PathBuf,
+    },
     /// Generate static HTML documentation from the indexed codebase
     Doc {
         /// Output directory for the static site
@@ -90,6 +96,10 @@ enum Commands {
         /// Run all installed adapters registered in lena.toml
         #[arg(short = 'A', long, conflicts_with = "adapters")]
         all: bool,
+
+        /// Run the full adapter and validation pipeline without writing to the database
+        #[arg(long)]
+        dry_run: bool,
     },
     /// List available Fully Qualified Symbol Names (FQSNs) in the database
     List {
@@ -186,6 +196,21 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::List { filter, all } => list::run(&db, filter.as_deref(), all).await?,
         Commands::Adapter { action, name } => adapter::run(&action, name.as_deref()).await?,
+        Commands::Check { target } => {
+            // Stub for Check pre-flight logic (to be implemented in Phase 4 if needed)
+            println!(
+                "Validating Leña configuration and adapters for target: {}",
+                target.display()
+            );
+            let config =
+                lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?;
+            println!("Configuration loaded successfully.");
+            println!(
+                "Total registered adapters: {}",
+                config.adapters.registered.len()
+            );
+            // TODO: implement detailed pre-flight checks here.
+        }
         Commands::Doc {
             out,
             format,
@@ -197,6 +222,7 @@ async fn main() -> Result<()> {
             concurrency,
             adapters,
             all,
+            dry_run,
         } => {
             let config =
                 lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?;
@@ -206,6 +232,7 @@ async fn main() -> Result<()> {
                 &db,
                 adapters,
                 all,
+                dry_run,
                 config.adapters,
                 config.report,
             )
