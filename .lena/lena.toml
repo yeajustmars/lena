@@ -1,6 +1,8 @@
 [doc]
 exclude_patterns = [
-    "tests/fixtures/",
-    "vendor/.*",
-    "\\.(spec|test)\\.(ts|js)$"
+    "^[a-z].*.sh$"               # Exclude top-level helper scripts
+    "docs/assets/"               # Ignore docs JS/CSS
+    "tests/fixtures/",           # Exclude sample projects for testing
+    "vendor/.*",                 # Exclude any vendor info
+    "\\.(spec|test)\\.(ts|js)$"  # Exclude test JS
 ]
