@@ -285,7 +285,8 @@ pub async fn run(
     final_report.total_duration_ms = elapsed.as_millis() as u64;
     final_report.total_facts_ingested = total_facts;
 
-    match final_report.write_to_disk(&report_config, &target) {
+    let project_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    match final_report.write_to_disk(&report_config, &project_root) {
         Ok(path) if report_config.enabled => {
             info!("Indexing report saved to {}", path.display());
         }

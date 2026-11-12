@@ -56,7 +56,7 @@ impl Default for ReportConfig {
     fn default() -> Self {
         Self {
             format: "log".to_string(),
-            output_dir: "reports".to_string(), // Relative to project root
+            output_dir: ".lena/reports".to_string(), // Relative to project root
             enabled: true,
         }
     }
