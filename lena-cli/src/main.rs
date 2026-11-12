@@ -200,7 +200,16 @@ async fn main() -> Result<()> {
         } => {
             let config =
                 lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?;
-            index::run(target, concurrency, &db, adapters, all, config.adapters).await?
+            index::run(
+                target,
+                concurrency,
+                &db,
+                adapters,
+                all,
+                config.adapters,
+                config.report,
+            )
+            .await?;
         }
         Commands::Prompt {
             fqsn,

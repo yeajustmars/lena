@@ -7,6 +7,7 @@ pub mod db;
 pub mod docgen;
 pub mod exporter;
 pub mod ingest;
+pub mod report;
 pub mod rules;
 pub mod schema;
 pub mod skeleton;

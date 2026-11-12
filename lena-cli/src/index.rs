@@ -7,14 +7,15 @@
 use anyhow::{Context, Result, bail};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use lena_core::{
-    config::{AdapterDefinition, AdaptersConfig},
+    config::{AdapterDefinition, AdaptersConfig, ReportConfig},
     db::LenaDb,
     ingest::ingest_stream,
+    report::{Diagnostic, IndexingReport},
 };
 use std::{
     path::{Path, PathBuf},
     process::Stdio,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::Instant,
 };
 use tokio::{process::Command, sync::Semaphore, task::JoinSet};
@@ -67,6 +68,7 @@ async fn run_adapter(
     db: Arc<LenaDb>,
     _permit: tokio::sync::OwnedSemaphorePermit,
     pb: ProgressBar,
+    report: Arc<Mutex<IndexingReport>>,
 ) -> Result<usize> {
     let adapter_start = Instant::now();
     let Some(bin_path) = resolve_binary(&def.command) else {
@@ -95,46 +97,62 @@ async fn run_adapter(
     let mut facts_ingested = 0;
 
     // Concurrently process stderr for @PROG: and @DIAG:
+    let mut stderr_task = None;
     if let Some(stderr) = child.stderr.take() {
         let pb_clone = pb.clone();
         let lang_clone = lang.clone();
-        tokio::spawn(async move {
-            use tokio::io::{AsyncBufReadExt, BufReader};
-            let mut reader = BufReader::new(stderr).lines();
-            // TODO: clean up all this nesting
-            while let Ok(Some(line)) = reader.next_line().await {
-                if let Some(prog_str) = line.strip_prefix("@PROG:") {
-                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(prog_str) {
-                        if v["status"] == "init" {
-                            if let Some(total) = v["total"].as_u64() {
-                                pb_clone.set_length(total);
-                                pb_clone.set_style(
+        let report_clone = Arc::clone(&report);
+
+        stderr_task =
+            Some(tokio::spawn(async move {
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                let mut reader = BufReader::new(stderr).lines();
+                while let Ok(Some(line)) = reader.next_line().await {
+                    if let Some(prog_str) = line.strip_prefix("@PROG:") {
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(prog_str) {
+                            if v["status"] == "init" {
+                                if let Some(total) = v["total"].as_u64() {
+                                    pb_clone.set_length(total);
+                                    pb_clone.set_style(
                                     indicatif::ProgressStyle::with_template(
-                                        "{spinner:.green} [{bar:20.cyan/blue}] {pos}/{len} {msg}",
-                                    )
-                                    .unwrap()
-                                    .progress_chars("#>-"),
+                                        "{spinner:.green} [{bar:20.cyan/blue}] {pos}/{len} {msg}"
+                                    ).unwrap().progress_chars("#>-")
                                 );
-                            }
-                        } else if v["status"] == "parsing" {
-                            pb_clone.inc(1);
-                            if let Some(f) = v["file"].as_str() {
-                                pb_clone.set_message(format!("parsing {f}"));
+                                }
+                            } else if v["status"] == "parsing" {
+                                pb_clone.inc(1);
+                                if let Some(f) = v["file"].as_str() {
+                                    pb_clone.set_message(format!("parsing {f}"));
+                                }
                             }
                         }
+                    } else if let Some(diag_str) = line.strip_prefix("@DIAG:") {
+                        // Safely parse the untyped JSON and cast to our formal struct
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(diag_str) {
+                            let diag = Diagnostic {
+                                level: v["level"].as_str().unwrap_or("error").to_string(),
+                                file: v["file"].as_str().unwrap_or("").to_string(),
+                                line: v["line"].as_i64().unwrap_or(0),
+                                col: v["col"].as_i64().unwrap_or(0),
+                                symbol: v["symbol"].as_str().unwrap_or("").to_string(),
+                                category: v["category"].as_str().unwrap_or("").to_string(),
+                                message: v["message"].as_str().unwrap_or("").to_string(),
+                                adapter: lang_clone.clone(),
+                            };
+                            if let Ok(mut r) = report_clone.lock() {
+                                r.record_diagnostic(diag);
+                            }
+                        }
+                        pb_clone.suspend(|| {
+                            tracing::warn!("[{lang_clone} DIAG] {diag_str}");
+                        });
+                    } else {
+                        pb_clone.suspend(|| {
+                            tracing::debug!("[{lang_clone}] {line}");
+                        });
                     }
-                } else if let Some(diag_str) = line.strip_prefix("@DIAG:") {
-                    // Temporarily suspend the progress bar to log the diagnostic cleanly
-                    pb_clone.suspend(|| {
-                        tracing::warn!("[{lang_clone} DIAG] {diag_str}");
-                    });
-                } else {
-                    pb_clone.suspend(|| {
-                        tracing::debug!("[{lang_clone}] {line}");
-                    });
                 }
-            }
-        });
+            }));
     }
 
     if let Some(stdout) = child.stdout.take() {
@@ -144,7 +162,15 @@ async fn run_adapter(
     let status = child.wait().await?;
     let elapsed = adapter_start.elapsed();
 
+    // Ensure all diagnostics are processed before dropping the task
+    if let Some(task) = stderr_task {
+        let _ = task.await;
+    }
+
     if status.success() {
+        if let Ok(mut r) = report.lock() {
+            r.record_adapter_success(&lang, facts_ingested, elapsed);
+        }
         if facts_ingested > 0 {
             pb.finish_with_message(format!(
                 "✅ [{lang}] done: {facts_ingested} facts ({elapsed:.2?})"
@@ -167,9 +193,11 @@ pub async fn run(
     explicit_adapters: Option<Vec<String>>,
     run_all: bool,
     config: AdaptersConfig,
+    report_config: ReportConfig,
 ) -> Result<()> {
     let start_time = Instant::now();
     let mut targets_to_run = Vec::new();
+    let index_report = Arc::new(Mutex::new(IndexingReport::new(&target)));
 
     if run_all {
         for (lang, def) in config.registered {
@@ -198,9 +226,10 @@ pub async fn run(
     }
 
     let m = MultiProgress::new();
-    let spinner_style = ProgressStyle::with_template("{spinner:.green} {msg}")
-        .unwrap()
-        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+    let spinner_style =
+        ProgressStyle::with_template("{spinner:.green} [{bar:20.cyan/blue}] {pos}/{len} {msg}")
+            .unwrap()
+            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
 
     info!(
         "Beginning concurrent Leña indexing on: {}",
@@ -214,13 +243,22 @@ pub async fn run(
         let permit = Arc::clone(&semaphore).acquire_owned().await?;
         let db_clone = Arc::clone(db);
         let target_clone = target.clone();
+        let report_clone = Arc::clone(&index_report);
 
         let pb = m.add(ProgressBar::new_spinner());
         pb.set_style(spinner_style.clone());
         pb.set_message(format!("[{lang}] starting..."));
         pb.enable_steady_tick(std::time::Duration::from_millis(120));
 
-        join_set.spawn(run_adapter(lang, def, target_clone, db_clone, permit, pb));
+        join_set.spawn(run_adapter(
+            lang,
+            def,
+            target_clone,
+            db_clone,
+            permit,
+            pb,
+            report_clone,
+        ));
     }
 
     let mut total_facts = 0;
@@ -234,6 +272,24 @@ pub async fn run(
 
     m.clear().ok(); // Clear the spinners to print the final summary cleanly
     let elapsed = start_time.elapsed();
+
+    // Finalize and write the Indexing Report
+    let mut final_report = match Arc::try_unwrap(index_report) {
+        Ok(mutex) => mutex.into_inner().unwrap(),
+        Err(arc) => arc.lock().unwrap().clone(),
+    };
+
+    final_report.total_duration_ms = elapsed.as_millis() as u64;
+    final_report.total_facts_ingested = total_facts;
+
+    match final_report.write_to_disk(&report_config, &target) {
+        Ok(path) if report_config.enabled => {
+            info!("Indexing report saved to {}", path.display());
+        }
+        Err(e) => error!("Failed to write indexing report: {e}"),
+        _ => {}
+    }
+
     info!("Indexing complete. Total facts ingested: {total_facts} (Took {elapsed:.2?})");
     Ok(())
 }

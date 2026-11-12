@@ -24,6 +24,8 @@ pub struct LenaConfig {
     pub doc: DocConfig,
     /// Adapter installation and lifecycle settings
     pub adapters: AdaptersConfig,
+    /// Indexing report output settings
+    pub report: ReportConfig,
 }
 
 impl Default for LenaConfig {
@@ -33,6 +35,29 @@ impl Default for LenaConfig {
             prompt: PromptConfig::default(),
             doc: DocConfig::default(),
             adapters: AdaptersConfig::default(),
+            report: ReportConfig::default(),
+        }
+    }
+}
+
+/// Formats and location configuration for the Indexing Report.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct ReportConfig {
+    /// Output format (log, json, ndjson, edn, ndedn, markdown, xml)
+    pub format: String,
+    /// Directory where the index-<timestamp> report will be saved
+    pub output_dir: String,
+    /// Toggle whether the report is generated
+    pub enabled: bool,
+}
+
+impl Default for ReportConfig {
+    fn default() -> Self {
+        Self {
+            format: "log".to_string(),
+            output_dir: "reports".to_string(), // Relative to project root
+            enabled: true,
         }
     }
 }

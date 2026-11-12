@@ -13,6 +13,7 @@ exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
 lena-protocol = { path = "../lena-protocol", version = "0.1.0" }
 
 anyhow.workspace = true
+chrono.workspace = true
 dirs.workspace = true
 mesodb-core.workspace = true
 minijinja = "2.0"
