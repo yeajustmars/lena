@@ -36,8 +36,6 @@ func emitProgParsing(file string) {
 	fmt.Fprintf(os.Stderr, "@PROG:{\"status\":\"parsing\",\"file\":%s}\n", fileBytes)
 }
 
-const AdapterVersion = "0.2.0"
-
 func hashId(s string) uint64 {
 	h := fnv.New64a()
 	h.Write([]byte(s))
