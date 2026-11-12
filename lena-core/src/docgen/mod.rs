@@ -513,6 +513,7 @@ mod tests {
             project_name: "TestProject".into(),
             version: "1.0.0".into(),
             custom_css: None,
+            exclude_patterns: Vec::new(),
         };
 
         let builder = DocGraphBuilder::new(&db, options);
@@ -572,6 +573,7 @@ mod tests {
             project_name: "Test".into(),
             version: "1.0.0".into(),
             custom_css: None,
+            exclude_patterns: Vec::new(),
         };
 
         let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
@@ -650,6 +652,7 @@ mod tests {
             project_name: "GoTest".into(),
             version: "1.0.0".into(),
             custom_css: None,
+            exclude_patterns: Vec::new(),
         };
 
         let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
@@ -766,6 +769,7 @@ mod tests {
             project_name: "EdgeTest".into(),
             version: "1.0.0".into(),
             custom_css: None,
+            exclude_patterns: Vec::new(),
         };
 
         let graph = DocGraphBuilder::new(&db, options).build().await.unwrap();
