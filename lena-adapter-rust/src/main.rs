@@ -1,11 +1,18 @@
 // lena-adapter-rust/src/main.rs
 
-// #![deny(warnings)]
-// #![warn(clippy::all, clippy::pedantic)]
-// TODO: turn on pedantic and fix all warnings and issues
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
 
 use anyhow::Result;
 use clap::Parser;
+use ra_ap_syntax::{AstNode, Edition, SourceFile, ast, ast::HasAttrs, ast::HasName};
+use std::{
+    collections::{HashMap, HashSet, hash_map::DefaultHasher},
+    fs,
+    hash::{Hash, Hasher},
+    path::{Path, PathBuf},
+};
+
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
     ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
@@ -13,13 +20,6 @@ use lena_protocol::schema::{
     ATTR_SYMBOL_CONTAINER, ATTR_SYMBOL_EXTERNAL, ATTR_SYMBOL_FQSN, ATTR_SYMBOL_KIND,
     ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, KIND_FN, KIND_METHOD, LANG_RUST, TYPE_CALL_SITE,
     TYPE_FUNCTION, TYPE_MODULE,
-};
-use ra_ap_syntax::{AstNode, Edition, SourceFile, ast, ast::HasAttrs, ast::HasName};
-use std::{
-    collections::{HashMap, HashSet, hash_map::DefaultHasher},
-    fs,
-    hash::{Hash, Hasher},
-    path::{Path, PathBuf},
 };
 
 #[derive(Parser)]
@@ -65,18 +65,17 @@ fn emit_diag(
     let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
     eprintln!(
-        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
-        level, f, line, col, sym, category, msg
+        r#"@DIAG:{{"level":"{level}","file":{f},"line":{line},"col":{col},"symbol":{sym},"category":"{category}","message":{msg}}}"#
     );
 }
 
 fn emit_prog_init(total: usize) {
-    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+    eprintln!(r#"@PROG:{{"status":"init","total":{total}}}"#);
 }
 
 fn emit_prog_parsing(file: &str) {
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
-    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{f}}}"#);
 }
 
 #[must_use]
@@ -140,9 +139,7 @@ fn get_container_name(fn_def: &ast::Fn) -> Option<String> {
     None
 }
 
-fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
-    let mut facts = Vec::new();
-
+fn emit_module_fact(file: &ParsedFile, facts: &mut Vec<String>) -> Result<u64> {
     let filename = &file.path;
     let logical_module = &file.logical_module;
     let module_fqsn = format!("rust:{logical_module}");
@@ -165,142 +162,107 @@ fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
     tx.add(module_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
     let mod_name = logical_module.split("::").last().unwrap_or(logical_module);
     tx.add(module_id, ATTR_SYMBOL_NAME, EdnValue::String(mod_name))?;
+
+    facts.push(tx.finish());
+    Ok(module_id)
+}
+
+fn emit_function_facts(
+    fn_def: &ast::Fn,
+    file: &ParsedFile,
+    module_id: u64,
+    table: &SymbolTable,
+    facts: &mut Vec<String>,
+    emitted_externals: &mut HashSet<String>,
+) -> Result<()> {
+    let Some(name) = fn_def.name() else {
+        return Ok(());
+    };
+
+    let fn_name = name.text().to_string();
+    let container = get_container_name(fn_def);
+    let logical_module = &file.logical_module;
+    let filename = &file.path;
+
+    let fn_fqsn = if let Some(ref c) = container {
+        format!("rust:{logical_module}::{c}::{fn_name}")
+    } else {
+        format!("rust:{logical_module}::{fn_name}")
+    };
+    let fn_id = hash_id(&fn_fqsn);
+
+    let mut tx = TransactionBuilder::new();
+    tx.add(fn_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
+    tx.add(fn_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_RUST))?;
+    tx.add(fn_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fn_fqsn))?;
+    tx.add(fn_id, ATTR_SYMBOL_NAME, EdnValue::String(&fn_name))?;
+    tx.add(fn_id, ATTR_SYMBOL_MODULE, EdnValue::String(logical_module))?;
+
+    if let Some(ref c) = container {
+        tx.add(fn_id, ATTR_SYMBOL_CONTAINER, EdnValue::String(c))?;
+        tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_METHOD))?;
+    } else {
+        tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
+    }
+
+    tx.add(fn_id, ATTR_PARENT_ENTITY, EdnValue::Ref(module_id))?;
+    tx.add(fn_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
+    tx.add(fn_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
+    tx.add(fn_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
+
+    let docs = fn_def
+        .doc_comments()
+        .map(|doc| {
+            doc.syntax()
+                .text()
+                .to_string()
+                .trim_start_matches("///")
+                .trim_start_matches("//!")
+                .trim_start_matches(' ')
+                .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if !docs.is_empty() {
+        tx.add(fn_id, ATTR_DOC_TEXT, EdnValue::String(&docs))?;
+    }
+
+    if let Some(param_list) = fn_def.param_list() {
+        let ret_type = fn_def
+            .ret_type()
+            .map_or_else(String::new, |rt| rt.syntax().text().to_string());
+        let sig = format!("fn {fn_name}{param_list} {ret_type}");
+        tx.add(fn_id, ATTR_CODE_SIGNATURE, EdnValue::String(sig.trim()))?;
+    }
+
     facts.push(tx.finish());
 
-    let local_imports = table.use_maps.get(filename);
-    let mut emitted_externals = HashSet::new();
-
-    for fn_def in file.tree.syntax().descendants().filter_map(ast::Fn::cast) {
-        let Some(name) = fn_def.name() else { continue };
-
-        let fn_name = name.text().to_string();
-        let container = get_container_name(&fn_def);
-
-        let fn_fqsn = if let Some(ref c) = container {
-            format!("rust:{logical_module}::{c}::{fn_name}")
-        } else {
-            format!("rust:{logical_module}::{fn_name}")
-        };
-        let fn_id = hash_id(&fn_fqsn);
-
-        let mut tx = TransactionBuilder::new();
-        tx.add(fn_id, ATTR_ENTITY_TYPE, EdnValue::Keyword(TYPE_FUNCTION))?;
-        tx.add(fn_id, ATTR_ENTITY_LANGUAGE, EdnValue::Keyword(LANG_RUST))?;
-        tx.add(fn_id, ATTR_SYMBOL_FQSN, EdnValue::String(&fn_fqsn))?;
-        tx.add(fn_id, ATTR_SYMBOL_NAME, EdnValue::String(&fn_name))?;
-        tx.add(fn_id, ATTR_SYMBOL_MODULE, EdnValue::String(logical_module))?;
-
-        if let Some(ref c) = container {
-            tx.add(fn_id, ATTR_SYMBOL_CONTAINER, EdnValue::String(c))?;
-            tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_METHOD))?;
-        } else {
-            tx.add(fn_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(KIND_FN))?;
-        }
-
-        tx.add(fn_id, ATTR_PARENT_ENTITY, EdnValue::Ref(module_id))?;
-        tx.add(fn_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
-        tx.add(fn_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
-        tx.add(fn_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
-
-        let docs = fn_def
-            .doc_comments()
-            .map(|doc| {
-                doc.syntax()
-                    .text()
-                    .to_string()
-                    .trim_start_matches("///")
-                    .trim_start_matches("//!")
-                    .trim_start_matches(' ')
-                    .to_string()
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        if !docs.is_empty() {
-            tx.add(fn_id, ATTR_DOC_TEXT, EdnValue::String(&docs))?;
-        }
-
-        if let Some(param_list) = fn_def.param_list() {
-            let ret_type = fn_def
-                .ret_type()
-                .map_or_else(String::new, |rt| rt.syntax().text().to_string());
-            let sig = format!("fn {fn_name}{param_list} {ret_type}");
-            tx.add(fn_id, ATTR_CODE_SIGNATURE, EdnValue::String(sig.trim()))?;
-        }
-        facts.push(tx.finish());
-
-        if let Some(body) = fn_def.body() {
-            // Function calls
-            for call_expr in body.syntax().descendants().filter_map(ast::CallExpr::cast) {
-                if let Some(callee_expr) = call_expr.expr() {
-                    let raw_callee = callee_expr.syntax().text().to_string();
-
-                    let (callee_name, callee_fqsn) = if let Some(imported_fqsn) =
-                        local_imports.and_then(|i| i.get(&raw_callee).cloned())
-                    {
-                        let short_name = raw_callee
-                            .split("::")
-                            .last()
-                            .unwrap_or(&raw_callee)
-                            .to_string();
-                        (short_name, imported_fqsn)
-                    } else if raw_callee.contains("::") {
-                        let short_name = raw_callee
-                            .split("::")
-                            .last()
-                            .unwrap_or(&raw_callee)
-                            .to_string();
-                        (short_name, format!("rust:{raw_callee}"))
-                    } else {
-                        (
-                            raw_callee.clone(),
-                            format!("rust:{logical_module}::{raw_callee}"),
-                        )
-                    };
-
-                    facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
-
-                    if !table.local_fqsns.contains(&callee_fqsn)
-                        && emitted_externals.insert(callee_fqsn.clone())
-                    {
-                        facts.push(emit_external_stub(&callee_fqsn, &callee_name)?);
-                    }
-                }
-            }
-
-            // Method calls
-            for method_call in body
-                .syntax()
-                .descendants()
-                .filter_map(ast::MethodCallExpr::cast)
-            {
-                if let Some(name_ref) = method_call.name_ref() {
-                    let callee_name = name_ref.text().to_string();
-                    let callee_fqsn =
-                        format!("rust:{logical_module}::[UnknownType]::{}", callee_name);
-
-                    facts.push(emit_call_site(&fn_fqsn, fn_id, &callee_fqsn, filename)?);
-                    if !table.local_fqsns.contains(&callee_fqsn)
-                        && emitted_externals.insert(callee_fqsn.clone())
-                    {
-                        facts.push(emit_external_stub(&callee_fqsn, &callee_name)?);
-                    }
-                }
-            }
-        }
+    // Process the function body for call sites
+    if let Some(body) = fn_def.body() {
+        emit_call_sites(
+            &body,
+            &fn_fqsn,
+            fn_id,
+            file,
+            table,
+            facts,
+            emitted_externals,
+        )?;
     }
-    Ok(facts)
+
+    Ok(())
 }
 
 fn emit_call_site(
-    caller_fqsn: &str,
-    caller_id: u64,
-    callee_fqsn: &str,
+    caller_source_fqsn: &str,
+    caller_source_id: u64,
+    callee_target_fqsn: &str,
     filename: &str,
 ) -> Result<String> {
-    let call_site_fqsn = format!("call:{caller_fqsn}->{callee_fqsn}");
+    let call_site_fqsn = format!("call:{caller_source_fqsn}->{callee_target_fqsn}");
     let call_site_id = hash_id(&call_site_fqsn);
-    let callee_id = hash_id(callee_fqsn);
+    let callee_target_id = hash_id(callee_target_fqsn);
 
     let mut ctx = TransactionBuilder::new();
     ctx.add(
@@ -308,21 +270,144 @@ fn emit_call_site(
         ATTR_ENTITY_TYPE,
         EdnValue::Keyword(TYPE_CALL_SITE),
     )?;
-    ctx.add(call_site_id, ATTR_CALL_CALLER, EdnValue::Ref(caller_id))?;
-    ctx.add(call_site_id, ATTR_CALL_CALLEE, EdnValue::Ref(callee_id))?;
+    ctx.add(
+        call_site_id,
+        ATTR_CALL_CALLER,
+        EdnValue::Ref(caller_source_id),
+    )?;
+    ctx.add(
+        call_site_id,
+        ATTR_CALL_CALLEE,
+        EdnValue::Ref(callee_target_id),
+    )?;
     ctx.add(call_site_id, ATTR_LOC_FILE, EdnValue::String(filename))?;
     ctx.add(call_site_id, ATTR_LOC_START_LINE, EdnValue::Int(1))?;
     ctx.add(call_site_id, ATTR_LOC_START_COL, EdnValue::Int(1))?;
     Ok(ctx.finish())
 }
 
-fn emit_external_stub(callee_fqsn: &str, callee_name: &str) -> Result<String> {
-    let callee_id = hash_id(callee_fqsn);
+fn emit_call_sites(
+    body: &ast::BlockExpr,
+    fn_fqsn: &str,
+    fn_id: u64,
+    file: &ParsedFile,
+    table: &SymbolTable,
+    facts: &mut Vec<String>,
+    emitted_externals: &mut HashSet<String>,
+) -> Result<()> {
+    let local_imports = table.use_maps.get(&file.path);
+    let logical_module = &file.logical_module;
+    let filename = &file.path;
+
+    // Standard Function Calls
+    for call_expr in body.syntax().descendants().filter_map(ast::CallExpr::cast) {
+        if let Some(callee_expr) = call_expr.expr() {
+            let raw_callee = callee_expr.syntax().text().to_string();
+
+            let (callee_name, callee_target_fqsn) = if let Some(imported_fqsn) =
+                local_imports.and_then(|i| i.get(&raw_callee).cloned())
+            {
+                let short_name = raw_callee
+                    .split("::")
+                    .last()
+                    .unwrap_or(&raw_callee)
+                    .to_string();
+                (short_name, imported_fqsn)
+            } else if raw_callee.contains("::") {
+                let short_name = raw_callee
+                    .split("::")
+                    .last()
+                    .unwrap_or(&raw_callee)
+                    .to_string();
+                (short_name, format!("rust:{raw_callee}"))
+            } else {
+                (
+                    raw_callee.clone(),
+                    format!("rust:{logical_module}::{raw_callee}"),
+                )
+            };
+
+            facts.push(emit_call_site(
+                fn_fqsn,
+                fn_id,
+                &callee_target_fqsn,
+                filename,
+            )?);
+
+            if !table.local_fqsns.contains(&callee_target_fqsn)
+                && emitted_externals.insert(callee_target_fqsn.clone())
+            {
+                facts.push(emit_external_stub(&callee_target_fqsn, &callee_name)?);
+            }
+        }
+    }
+
+    // Method calls (e.g. `obj.method()`)
+    for method_call in body
+        .syntax()
+        .descendants()
+        .filter_map(ast::MethodCallExpr::cast)
+    {
+        if let Some(name_ref) = method_call.name_ref() {
+            let callee_name = name_ref.text().to_string();
+            let callee_target_fqsn = format!("rust:{logical_module}::[UnknownType]::{callee_name}");
+
+            facts.push(emit_call_site(
+                fn_fqsn,
+                fn_id,
+                &callee_target_fqsn,
+                filename,
+            )?);
+            if !table.local_fqsns.contains(&callee_target_fqsn)
+                && emitted_externals.insert(callee_target_fqsn.clone())
+            {
+                facts.push(emit_external_stub(&callee_target_fqsn, &callee_name)?);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn emit_facts(file: &ParsedFile, table: &SymbolTable) -> Result<Vec<String>> {
+    let mut facts = Vec::new();
+    let mut emitted_externals = HashSet::new();
+
+    let module_id = emit_module_fact(file, &mut facts)?;
+
+    for fn_def in file.tree.syntax().descendants().filter_map(ast::Fn::cast) {
+        emit_function_facts(
+            &fn_def,
+            file,
+            module_id,
+            table,
+            &mut facts,
+            &mut emitted_externals,
+        )?;
+    }
+
+    Ok(facts)
+}
+
+fn emit_external_stub(callee_target_fqsn: &str, callee_name: &str) -> Result<String> {
+    let callee_target_id = hash_id(callee_target_fqsn);
     let mut tx = TransactionBuilder::new();
-    tx.add(callee_id, ATTR_SYMBOL_FQSN, EdnValue::String(callee_fqsn))?;
-    tx.add(callee_id, ATTR_SYMBOL_NAME, EdnValue::String(callee_name))?;
-    tx.add(callee_id, ATTR_SYMBOL_MODULE, EdnValue::String("external"))?;
-    tx.add(callee_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
+    tx.add(
+        callee_target_id,
+        ATTR_SYMBOL_FQSN,
+        EdnValue::String(callee_target_fqsn),
+    )?;
+    tx.add(
+        callee_target_id,
+        ATTR_SYMBOL_NAME,
+        EdnValue::String(callee_name),
+    )?;
+    tx.add(
+        callee_target_id,
+        ATTR_SYMBOL_MODULE,
+        EdnValue::String("external"),
+    )?;
+    tx.add(callee_target_id, ATTR_SYMBOL_EXTERNAL, EdnValue::Bool(true))?;
     Ok(tx.finish())
 }
 
