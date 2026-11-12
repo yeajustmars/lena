@@ -175,10 +175,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string();
-            if let Some(parent) = file_path.parent() {
-                if parent.file_name().is_some() {
-                    logical_module = format!("{}/{}", parent.to_string_lossy(), logical_module);
-                }
+            if let Some(parent) = file_path.parent()
+                && parent.file_name().is_some()
+            {
+                logical_module = format!("{}/{}", parent.to_string_lossy(), logical_module);
             }
             logical_module = logical_module
                 .replace('\\', "/")
@@ -312,7 +312,11 @@ pub fn emit_facts(
     let atomic_mod_name = logical_module.rsplit('/').next().unwrap_or(logical_module);
 
     facts.push(format!(
-        "[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{mod_fqsn}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{atomic_mod_name}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{file_path}\"]]"
+        "[[:db/add {mod_id} {ATTR_ENTITY_TYPE} {TYPE_MODULE}] [:db/add {mod_id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {mod_id} {ATTR_SYMBOL_FQSN} \"{}\"] [:db/add {mod_id} {ATTR_SYMBOL_MODULE} \"{}\"] [:db/add {mod_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {mod_id} {ATTR_LOC_FILE} \"{}\"]]",
+        escape_string(&mod_fqsn),
+        escape_string(logical_module),
+        escape_string(atomic_mod_name),
+        escape_string(file_path)
     ));
 
     let mut emitted_externals = std::collections::HashSet::new();
@@ -364,13 +368,21 @@ pub fn emit_facts(
                 ));
 
                 let mut fact = format!(
-                    "[:db/add {id} {ATTR_SYMBOL_FQSN} \"{fqsn}\"] [:db/add {id} {ATTR_ENTITY_TYPE} :type/{entity_type}] [:db/add {id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {id} {ATTR_SYMBOL_NAME} \"{name}\"] [:db/add {id} {ATTR_SYMBOL_MODULE} \"{logical_module}\"] [:db/add {id} {ATTR_PARENT_ENTITY} {mod_id}] [:db/add {id} {ATTR_LOC_FILE} \"{file_path}\"] [:db/add {id} {ATTR_LOC_START_LINE} {}]",
+                    "[:db/add {id} {ATTR_SYMBOL_FQSN} \"{}\"] [:db/add {id} {ATTR_ENTITY_TYPE} :type/{entity_type}] [:db/add {id} {ATTR_ENTITY_LANGUAGE} \":lang/{lang_tag}\"] [:db/add {id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {id} {ATTR_SYMBOL_MODULE} \"{}\"] [:db/add {id} {ATTR_PARENT_ENTITY} {mod_id}] [:db/add {id} {ATTR_LOC_FILE} \"{}\"] [:db/add {id} {ATTR_LOC_START_LINE} {}]",
+                    escape_string(&fqsn),
+                    escape_string(name),
+                    escape_string(logical_module),
+                    escape_string(file_path),
                     capture.node.start_position().row + 1
                 );
 
                 if let Some(c) = container {
-                    fact += &format!(" [:db/add {id} {ATTR_SYMBOL_CONTAINER} \"{c}\"]");
+                    fact += &format!(
+                        " [:db/add {id} {ATTR_SYMBOL_CONTAINER} \"{}\"]",
+                        escape_string(&c)
+                    );
                 }
+
                 facts.push(format!("[{fact}]"));
             } else if *capture_name == "call.callee" {
                 let callee_name = capture.node.utf8_text(source_code.as_bytes())?;
@@ -413,7 +425,9 @@ pub fn emit_facts(
             let callee_id = hash_id(&callee_fqsn);
 
             let call_fact = format!(
-                "[[:db/add {call_site_id} {ATTR_ENTITY_TYPE} {TYPE_CALL_SITE}] [:db/add {call_site_id} {ATTR_SYMBOL_FQSN} \"{call_site_fqsn}\"] [:db/add {call_site_id} {ATTR_CALL_CALLER} {caller_id}] [:db/add {call_site_id} {ATTR_CALL_CALLEE} {callee_id}] [:db/add {call_site_id} {ATTR_LOC_FILE} \"{file_path}\"]]"
+                "[[:db/add {call_site_id} {ATTR_ENTITY_TYPE} {TYPE_CALL_SITE}] [:db/add {call_site_id} {ATTR_SYMBOL_FQSN} \"{}\"] [:db/add {call_site_id} {ATTR_CALL_CALLER} {caller_id}] [:db/add {call_site_id} {ATTR_CALL_CALLEE} {callee_id}] [:db/add {call_site_id} {ATTR_LOC_FILE} \"{}\"]]",
+                escape_string(&call_site_fqsn),
+                escape_string(file_path)
             );
             facts.push(call_fact);
 
@@ -432,7 +446,8 @@ pub fn emit_facts(
                     atomic_callee.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
                 if !atomic_callee.is_empty() {
                     let stub_fact = format!(
-                        "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{callee_fqsn}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} true]]",
+                        "[[:db/add {callee_id} {ATTR_SYMBOL_FQSN} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_NAME} \"{}\"] [:db/add {callee_id} {ATTR_SYMBOL_EXTERNAL} true]]",
+                        escape_string(&callee_fqsn),
                         escape_string(atomic_callee)
                     );
                     facts.push(stub_fact);

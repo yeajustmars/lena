@@ -55,9 +55,10 @@ impl FactValidator {
 
         for (e, attrs) in &entity_map {
             let ent_type = attrs.get(ATTR_ENTITY_TYPE).copied().unwrap_or("");
+            let clean_ent_type = ent_type.trim_matches(|c| c == '"' || c == '\\');
             let is_external = attrs.get(ATTR_SYMBOL_EXTERNAL).is_some();
 
-            if ent_type == TYPE_CALL_SITE {
+            if clean_ent_type == TYPE_CALL_SITE {
                 // Call sites must have both caller and callee
                 if !attrs.contains_key(ATTR_CALL_CALLER) {
                     errors.push(ValidationError::MissingAttribute {
@@ -83,11 +84,12 @@ impl FactValidator {
             }
 
             if let Some(name) = attrs.get(ATTR_SYMBOL_NAME) {
+                // Determine if this entity is a module by checking if the clean ent_type ends with "module"
+                let is_module = clean_ent_type.ends_with("module");
+
                 // Modules derived from filenames (e.g. `exceptions-filter.interface`) are allowed to contain dots.
                 // All other symbols (functions, classes, etc.) must be strictly atomic.
-                if name.contains("::")
-                    || (ent_type != crate::schema::TYPE_MODULE && name.contains('.'))
-                {
+                if name.contains("::") || (!is_module && name.contains('.')) {
                     errors.push(ValidationError::InvalidSymbolName {
                         entity: *e,
                         name: (*name).to_string(),
