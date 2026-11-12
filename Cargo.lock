@@ -2375,6 +2375,7 @@ dependencies = [
 name = "lena-adapter-treesitter"
 version = "0.1.11"
 dependencies = [
+ "anyhow",
  "clap",
  "lena-protocol",
  "libloading",

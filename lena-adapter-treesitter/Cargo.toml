@@ -10,8 +10,9 @@ repository.workspace = true
 exclude = ["tests/fixtures/*", ".lena/*", "dist/*"]
 
 [dependencies]
-lena-protocol.workspace = true
+anyhow.workspace = true
 clap.workspace = true
+lena-protocol.workspace = true
 libloading.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

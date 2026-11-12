@@ -1,14 +1,17 @@
 // lena-adapter-treesitter/src/main.rs
 
-//#![deny(warnings)]
-//#![warn(clippy::all, clippy::pedantic)]
-// TODO: turn on pedantic and fix all warnings and issues
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic)]
 
+use anyhow::Result;
 use clap::Parser;
-use std::collections::HashMap;
-use std::fs;
-use std::hash::{Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    fs,
+    hash::{Hash, Hasher},
+    path::{Path, PathBuf},
+};
 use tree_sitter::{Language, Parser as TsParser, Query, QueryCursor, StreamingIterator};
 
 use lena_protocol::schema::{
@@ -71,18 +74,17 @@ fn emit_diag(
     let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
     eprintln!(
-        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
-        level, f, line, col, sym, category, msg
+        r#"@DIAG:{{"level":"{level}","file":{f},"line":{line},"col":{col},"symbol":{sym},"category":"{category}","message":{msg}}}"#
     );
 }
 
 fn emit_prog_init(total: usize) {
-    eprintln!(r#"@PROG:{{"status":"init","total":{}}}"#, total);
+    eprintln!(r#"@PROG:{{"status":"init","total":{total}}}"#);
 }
 
 fn emit_prog_parsing(file: &str) {
     let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
-    eprintln!(r#"@PROG:{{"status":"parsing","file":{}}}"#, f);
+    eprintln!(r#"@PROG:{{"status":"parsing","file":{f}}}"#);
 }
 
 #[must_use]
@@ -125,76 +127,64 @@ fn visit_dirs(
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
-
+fn setup_parser(args: &Args) -> Result<(Language, &'static str, Vec<&'static str>)> {
     let (language, query_default, extensions) = match args.lang.as_str() {
         "python" => (
-            tree_sitter_python::LANGUAGE.into(),
+            Language::from(tree_sitter_python::LANGUAGE),
             DEFAULT_PYTHON_SCM,
             vec!["py"],
         ),
         "javascript" | "js" => (
-            tree_sitter_javascript::LANGUAGE.into(),
+            Language::from(tree_sitter_javascript::LANGUAGE),
             DEFAULT_JAVASCRIPT_SCM,
             vec!["js", "jsx"],
         ),
         "typescript" | "ts" => (
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            Language::from(tree_sitter_typescript::LANGUAGE_TYPESCRIPT),
             DEFAULT_TYPESCRIPT_SCM,
             vec!["ts", "tsx"],
         ),
         "bash" | "sh" => (
-            tree_sitter_bash::LANGUAGE.into(),
+            Language::from(tree_sitter_bash::LANGUAGE),
             DEFAULT_BASH_SCM,
             vec!["sh", "bash"],
         ),
         "java" => (
-            tree_sitter_java::LANGUAGE.into(),
+            Language::from(tree_sitter_java::LANGUAGE),
             DEFAULT_JAVA_SCM,
             vec!["java"],
         ),
         "php" => (
-            tree_sitter_php::LANGUAGE_PHP.into(),
+            Language::from(tree_sitter_php::LANGUAGE_PHP),
             DEFAULT_PHP_SCM,
             vec!["php"],
         ),
         "ruby" | "rb" => (
-            tree_sitter_ruby::LANGUAGE.into(),
+            Language::from(tree_sitter_ruby::LANGUAGE),
             DEFAULT_RUBY_SCM,
             vec!["rb"],
         ),
-        _ => return Err(format!("Unsupported language: {}", args.lang).into()),
+        _ => anyhow::bail!("Unsupported language: {}", args.lang),
     };
 
-    let query_source = if let Some(custom_query_path) = args.query {
-        fs::read_to_string(custom_query_path)?
-    } else {
-        query_default.to_string()
-    };
+    Ok((language, query_default, extensions))
+}
 
-    let lang_tag = match args.lang.as_str() {
-        "js" => "javascript",
-        "ts" => "typescript",
-        "rb" => "ruby",
-        "sh" => "bash",
-        other => other,
-    };
-
-    let mut files = Vec::new();
-    visit_dirs(&args.target, &extensions, &mut files)?;
-
-    let mut table = SymbolTable::default();
+fn parse_files(
+    files: &[PathBuf],
+    ts_query: &Query,
+    language: &Language,
+    lang_tag: &str,
+    table: &mut SymbolTable,
+) -> Result<Vec<ParsedFile>> {
     let mut parsed_files = Vec::new();
-    let ts_query = Query::new(&language, &query_source)?;
-
-    emit_prog_init(files.len());
 
     for file_path in files {
         let path_str = file_path.to_string_lossy().to_string();
+
         emit_prog_parsing(&path_str);
 
-        let source_code = match fs::read_to_string(&file_path) {
+        let source_code = match fs::read_to_string(file_path) {
             Ok(s) => s,
             Err(e) => {
                 emit_diag("error", &path_str, 1, 1, "", "IoError", &e.to_string());
@@ -202,7 +192,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
         let mut parser = TsParser::new();
-        parser.set_language(&language)?;
+        parser.set_language(language)?;
 
         if let Some(tree) = parser.parse(&source_code, None) {
             let path_str = file_path.to_string_lossy().to_string();
@@ -226,10 +216,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             discover_symbols(
                 &tree,
                 &source_code,
-                &ts_query,
+                ts_query,
                 &logical_module,
                 lang_tag,
-                &mut table,
+                table,
             )?;
 
             parsed_files.push(ParsedFile {
@@ -240,6 +230,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     }
+
+    Ok(parsed_files)
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
+    let (language, query_default, extensions) = setup_parser(&args)?;
+
+    let query_source = if let Some(custom_query_path) = args.query {
+        fs::read_to_string(custom_query_path)?
+    } else {
+        query_default.to_string()
+    };
+
+    let ts_query = Query::new(&language, &query_source)?;
+
+    let lang_tag = match args.lang.as_str() {
+        "js" => "javascript",
+        "ts" => "typescript",
+        "rb" => "ruby",
+        "sh" => "bash",
+        other => other,
+    };
+
+    let mut files = Vec::new();
+    visit_dirs(&args.target, &extensions, &mut files)?;
+
+    let mut table = SymbolTable::default();
+
+    emit_prog_init(files.len());
+
+    let parsed_files = parse_files(&files, &ts_query, &language, lang_tag, &mut table)?;
 
     for pf in parsed_files {
         let facts = emit_facts(
@@ -266,6 +289,14 @@ fn escape_string(s: &str) -> String {
         .replace('\r', "\\r")
 }
 
+/// Discovers symbols within the parsed AST and populates the global symbol table.
+///
+/// This performs an initial pass over the syntax tree using the provided Tree-sitter query
+/// to map raw symbol names to their Fully Qualified Symbol Names (FQSN).
+///
+/// # Errors
+///
+/// Returns an error if a matched node's content cannot be successfully decoded as UTF-8 string data.
 pub fn discover_symbols(
     tree: &tree_sitter::Tree,
     source_code: &str,
@@ -273,7 +304,7 @@ pub fn discover_symbols(
     logical_module: &str,
     lang_tag: &str,
     table: &mut SymbolTable,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let mut cursor = QueryCursor::new();
     let mut matches = cursor.matches(ts_query, tree.root_node(), source_code.as_bytes());
     let capture_names = ts_query.capture_names();
@@ -289,8 +320,8 @@ pub fn discover_symbols(
                         emit_diag(
                             "warn",
                             logical_module,
-                            (pos.row + 1) as i64,
-                            (pos.column + 1) as i64,
+                            i64::try_from(pos.row + 1).unwrap_or(0),
+                            i64::try_from(pos.column + 1).unwrap_or(0),
                             "",
                             "EncodingError",
                             &e.to_string(),
@@ -341,7 +372,16 @@ pub fn discover_symbols(
     Ok(())
 }
 
-#[allow(clippy::similar_names)]
+/// Emits ND-EDN facts for the symbols and call sites discovered in the parsed file.
+///
+/// This function performs a second pass over the AST to generate the actual Datalog
+/// transaction facts, including entity creation, module attribution, source location,
+/// and call edge linkages, appending them directly to the provided `facts` vector.
+///
+/// # Errors
+///
+/// Returns an error if an AST node's content cannot be successfully decoded as UTF-8
+/// when extracting container or symbol names.
 pub fn emit_facts(
     tree: &tree_sitter::Tree,
     source_code: &str,
@@ -387,8 +427,8 @@ pub fn emit_facts(
                         emit_diag(
                             "warn",
                             file_path,
-                            (pos.row + 1) as i64,
-                            (pos.column + 1) as i64,
+                            i64::try_from(pos.row + 1).unwrap_or(0),
+                            i64::try_from(pos.column + 1).unwrap_or(0),
                             "",
                             "EncodingError",
                             &e.to_string(),
@@ -445,17 +485,18 @@ pub fn emit_facts(
                 );
 
                 if let Some(c) = container {
-                    fact += &format!(
+                    let _ = write!(
+                        fact,
                         " [:db/add {id} {ATTR_SYMBOL_CONTAINER} \"{}\"]",
                         escape_string(&c)
                     );
                 }
 
                 facts.push(format!("[{fact}]"));
-            } else if *capture_name == "call.callee" {
-                if let Ok(callee_name) = capture.node.utf8_text(source_code.as_bytes()) {
-                    calls.push((capture.node.start_byte(), callee_name.to_string()));
-                }
+            } else if *capture_name == "call.callee"
+                && let Ok(callee_name) = capture.node.utf8_text(source_code.as_bytes())
+            {
+                calls.push((capture.node.start_byte(), callee_name.to_string()));
             }
         }
     }
@@ -530,6 +571,18 @@ pub fn emit_facts(
     Ok(facts)
 }
 
+/// Extracts all symbols and call site facts from a single source file.
+///
+/// This is the primary entry point for the testing harness and handles the full lifecycle
+/// of parsing the source code, discovering symbols, and emitting the formatted ND-EDN facts.
+///
+/// # Errors
+///
+/// Returns an error in the following scenarios:
+/// * The provided Tree-sitter language fails to load or configure.
+/// * The Tree-sitter parser fails to parse the source code.
+/// * The provided Tree-sitter `.scm` query is malformed or invalid.
+/// * Extracted AST nodes cannot be decoded as valid UTF-8 strings.
 pub fn extract_facts(
     language: &Language,
     source_code: &str,
@@ -572,21 +625,21 @@ mod tests {
 
     // Reusable fixture runner
     fn run_ts_fixture(
-        lang: tree_sitter::Language,
+        lang: &tree_sitter::Language,
         source: &str,
         query: &str,
         path: &str,
         module: &str,
         tag: &str,
     ) -> Vec<String> {
-        extract_facts(&lang, source, query, path, module, tag).expect("Failed to extract facts")
+        extract_facts(lang, source, query, path, module, tag).expect("Failed to extract facts")
     }
 
     #[test]
     fn test_python_symbol_captures() {
         let source = include_str!("../tests/fixtures/python/edge_cases.py");
         let facts = run_ts_fixture(
-            tree_sitter_python::LANGUAGE.into(),
+            &Language::from(tree_sitter_python::LANGUAGE),
             source,
             DEFAULT_PYTHON_SCM,
             "src/edge_cases.py",
@@ -603,7 +656,7 @@ mod tests {
     fn test_javascript_symbol_captures() {
         let source = include_str!("../tests/fixtures/javascript/edge_cases.js");
         let facts = run_ts_fixture(
-            tree_sitter_javascript::LANGUAGE.into(),
+            &Language::from(tree_sitter_javascript::LANGUAGE),
             source,
             DEFAULT_JAVASCRIPT_SCM,
             "src/edge_cases.js",
@@ -618,7 +671,7 @@ mod tests {
     fn test_typescript_symbol_captures() {
         let source = include_str!("../tests/fixtures/typescript/edge_cases.ts");
         let facts = run_ts_fixture(
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            &Language::from(tree_sitter_typescript::LANGUAGE_TYPESCRIPT),
             source,
             DEFAULT_TYPESCRIPT_SCM,
             "src/edge_cases.ts",
@@ -635,7 +688,7 @@ mod tests {
     fn test_java_symbol_captures() {
         let source = include_str!("../tests/fixtures/java/EdgeCases.java");
         let facts = run_ts_fixture(
-            tree_sitter_java::LANGUAGE.into(),
+            &Language::from(tree_sitter_java::LANGUAGE),
             source,
             DEFAULT_JAVA_SCM,
             "src/EdgeCases.java",
@@ -651,7 +704,7 @@ mod tests {
     fn test_php_symbol_captures() {
         let source = include_str!("../tests/fixtures/php/edge_cases.php");
         let facts = run_ts_fixture(
-            tree_sitter_php::LANGUAGE_PHP.into(),
+            &Language::from(tree_sitter_php::LANGUAGE_PHP),
             source,
             DEFAULT_PHP_SCM,
             "src/edge_cases.php",
@@ -667,7 +720,7 @@ mod tests {
     fn test_ruby_symbol_captures() {
         let source = include_str!("../tests/fixtures/ruby/edge_cases.rb");
         let facts = run_ts_fixture(
-            tree_sitter_ruby::LANGUAGE.into(),
+            &Language::from(tree_sitter_ruby::LANGUAGE),
             source,
             DEFAULT_RUBY_SCM,
             "src/edge_cases.rb",
@@ -683,7 +736,7 @@ mod tests {
     fn test_bash_symbol_captures() {
         let source = include_str!("../tests/fixtures/bash/edge_cases.sh");
         let facts = run_ts_fixture(
-            tree_sitter_bash::LANGUAGE.into(),
+            &Language::from(tree_sitter_bash::LANGUAGE),
             source,
             DEFAULT_BASH_SCM,
             "src/edge_cases.sh",
@@ -697,7 +750,7 @@ mod tests {
 
     // Helper for loading file-based fixtures
     fn run_file_fixture(
-        lang: tree_sitter::Language,
+        lang: &tree_sitter::Language,
         rel_path: &str,
         query: &str,
         lang_tag: &str,
@@ -709,7 +762,7 @@ mod tests {
         let source = std::fs::read_to_string(&path).unwrap();
         let logical_module = path.file_stem().unwrap().to_string_lossy().to_string();
         extract_facts(
-            &lang,
+            lang,
             &source,
             query,
             &path.to_string_lossy(),
@@ -722,7 +775,7 @@ mod tests {
     #[test]
     fn test_typescript_nestjs_real_world() {
         let facts = run_file_fixture(
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            &Language::from(tree_sitter_typescript::LANGUAGE_TYPESCRIPT),
             "tests/fixtures/typescript/nestjs/packages/nest-router/router-explorer.ts",
             DEFAULT_TYPESCRIPT_SCM,
             "typescript",
@@ -745,7 +798,7 @@ mod tests {
     #[test]
     fn test_java_spring_real_world() {
         let facts = run_file_fixture(
-            tree_sitter_java::LANGUAGE.into(),
+            &Language::from(tree_sitter_java::LANGUAGE),
             "tests/fixtures/java/spring-framework/spring-webmvc/src/main/java/org/springframework/web/servlet/DispatcherServlet.java",
             DEFAULT_JAVA_SCM,
             "java",
@@ -769,7 +822,7 @@ mod tests {
     #[test]
     fn test_php_laravel_real_world() {
         let facts = run_file_fixture(
-            tree_sitter_php::LANGUAGE_PHP.into(),
+            &Language::from(tree_sitter_php::LANGUAGE_PHP),
             "tests/fixtures/php/laravel/illuminate/routing/Route.php",
             DEFAULT_PHP_SCM,
             "php",
@@ -787,7 +840,7 @@ mod tests {
     #[test]
     fn test_ruby_sinatra_real_world() {
         let facts = run_file_fixture(
-            tree_sitter_ruby::LANGUAGE.into(),
+            &Language::from(tree_sitter_ruby::LANGUAGE),
             "tests/fixtures/ruby/sinatra/lib/sinatra/base.rb",
             DEFAULT_RUBY_SCM,
             "ruby",
@@ -808,7 +861,7 @@ mod tests {
     #[test]
     fn test_bash_nvm_real_world() {
         let facts = run_file_fixture(
-            tree_sitter_bash::LANGUAGE.into(),
+            &Language::from(tree_sitter_bash::LANGUAGE),
             "tests/fixtures/bash/nvm/nvm.sh",
             DEFAULT_BASH_SCM,
             "bash",
