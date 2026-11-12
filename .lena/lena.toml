@@ -1,0 +1,6 @@
+[doc]
+exclude_patterns = [
+    "tests/fixtures/",
+    "vendor/.*",
+    "\\.(spec|test)\\.(ts|js)$"
+]

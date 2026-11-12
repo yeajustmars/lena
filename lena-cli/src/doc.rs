@@ -20,6 +20,8 @@ pub async fn run(
     css_path: Option<&PathBuf>,
     github_actions: bool,
 ) -> Result<()> {
+    let config = lena_core::config::LenaConfig::load(std::env::current_dir().ok().as_deref())?.doc;
+
     println!(
         "Generating static documentation ({format} format) to {}...",
         out_dir.display()
@@ -35,6 +37,7 @@ pub async fn run(
         project_name: "Lena Project".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         custom_css: custom_css.clone(),
+        exclude_patterns: config.exclude_patterns,
     };
 
     let builder = DocGraphBuilder::new(db, options);

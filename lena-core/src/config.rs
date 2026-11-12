@@ -127,6 +127,8 @@ pub struct DocConfig {
     pub include_private: bool,
     /// Include Mermaid JS call graphs in output
     pub include_call_graphs: bool,
+    /// Regex patterns of file paths to exclude from documentation
+    pub exclude_patterns: Vec<String>,
 }
 
 impl Default for DocConfig {
@@ -136,6 +138,7 @@ impl Default for DocConfig {
             custom_css: None,
             include_private: false,
             include_call_graphs: true,
+            exclude_patterns: Vec::new(),
         }
     }
 }

@@ -1,5 +1,5 @@
-
-.lena/
+.lena/*
+!.lena/lena.toml
 .env
 /target
 **/target/**

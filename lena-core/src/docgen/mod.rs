@@ -18,6 +18,7 @@ pub struct DocGenOptions {
     pub project_name: String,
     pub version: String,
     pub custom_css: Option<String>,
+    pub exclude_patterns: Vec<String>,
 }
 
 pub struct DocGraphBuilder<'a> {
@@ -41,9 +42,21 @@ impl<'a> DocGraphBuilder<'a> {
         let (callers_map, callees_map) = self.fetch_call_graph_edges(&symbols_map).await?;
 
         let mut languages: BTreeMap<String, DocLanguage> = BTreeMap::new();
+
         let mut search_index: Vec<SearchEntry> = Vec::new();
 
+        let excludes: Vec<regex::Regex> = self
+            .options
+            .exclude_patterns
+            .iter()
+            .filter_map(|p| regex::Regex::new(p).ok())
+            .collect();
+
         for raw in raw_symbols {
+            if excludes.iter().any(|re| re.is_match(&raw.file_path)) {
+                continue;
+            }
+
             let fqsn = raw.fqsn.clone();
             let callers = callers_map.get(&fqsn).cloned().unwrap_or_default();
             let callees = callees_map.get(&fqsn).cloned().unwrap_or_default();
