@@ -14,7 +14,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"encoding/json"
 )
+
+const AdapterVersion = "0.2.0"
+
+func emitDiag(level, file string, line, col int, symbol, category, message string) {
+	msgBytes, _ := json.Marshal(message)
+	symBytes, _ := json.Marshal(symbol)
+	fileBytes, _ := json.Marshal(file)
+	fmt.Fprintf(os.Stderr, "@DIAG:{\"level\":%q,\"file\":%s,\"line\":%d,\"col\":%d,\"symbol\":%s,\"category\":%q,\"message\":%s}\n",
+		level, fileBytes, line, col, symBytes, category, msgBytes)
+}
 
 const AdapterVersion = "0.2.0"
 
@@ -250,9 +261,12 @@ func RunTwoPass(fset *token.FileSet, paths []string) ([]string, error) {
 	var parsedFiles []*ParsedFile
 
 	for _, path := range paths {
-		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments | parser.AllErrors)
 		if err != nil {
-			return nil, err
+			emitDiag("error", path, 1, 1, "", "ParseError", err.Error())
+			if node == nil {
+				continue
+			}
 		}
 		pf := &ParsedFile{
 			Path:    filepath.ToSlash(path),

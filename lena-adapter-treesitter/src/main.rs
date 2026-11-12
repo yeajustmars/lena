@@ -58,6 +58,24 @@ pub struct ParsedFile {
     pub tree: tree_sitter::Tree,
 }
 
+fn emit_diag(
+    level: &str,
+    file: &str,
+    line: i64,
+    col: i64,
+    symbol: &str,
+    category: &str,
+    message: &str,
+) {
+    let msg = serde_json::to_string(message).unwrap_or_else(|_| "\"\"".to_string());
+    let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(
+        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
+        level, f, line, col, sym, category, msg
+    );
+}
+
 #[must_use]
 fn hash_id(input: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -162,7 +180,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ts_query = Query::new(&language, &query_source)?;
 
     for file_path in files {
-        let source_code = fs::read_to_string(&file_path)?;
+        let path_str = file_path.to_string_lossy().to_string();
+        let source_code = match fs::read_to_string(&file_path) {
+            Ok(s) => s,
+            Err(e) => {
+                emit_diag("error", &path_str, 1, 1, "", "IoError", &e.to_string());
+                continue;
+            }
+        };
         let mut parser = TsParser::new();
         parser.set_language(&language)?;
 
@@ -244,7 +269,22 @@ pub fn discover_symbols(
         for capture in m.captures() {
             let capture_name = &capture_names[capture.index as usize];
             if capture_name.starts_with("symbol.") {
-                let name = capture.node.utf8_text(source_code.as_bytes())?;
+                let name = match capture.node.utf8_text(source_code.as_bytes()) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        let pos = capture.node.start_position();
+                        emit_diag(
+                            "warn",
+                            logical_module,
+                            (pos.row + 1) as i64,
+                            (pos.column + 1) as i64,
+                            "",
+                            "EncodingError",
+                            &e.to_string(),
+                        );
+                        continue;
+                    }
+                };
 
                 // Check if this symbol is inside a container (class/struct)
                 let mut container = None;
@@ -327,7 +367,22 @@ pub fn emit_facts(
 
             if capture_name.starts_with("symbol.") {
                 let entity_type = capture_name.replace("symbol.", "");
-                let name = capture.node.utf8_text(source_code.as_bytes())?;
+                let name = match capture.node.utf8_text(source_code.as_bytes()) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        let pos = capture.node.start_position();
+                        emit_diag(
+                            "warn",
+                            file_path,
+                            (pos.row + 1) as i64,
+                            (pos.column + 1) as i64,
+                            "",
+                            "EncodingError",
+                            &e.to_string(),
+                        );
+                        continue;
+                    }
+                };
 
                 let mut container = None;
                 let mut current = capture.node.parent();
@@ -385,8 +440,9 @@ pub fn emit_facts(
 
                 facts.push(format!("[{fact}]"));
             } else if *capture_name == "call.callee" {
-                let callee_name = capture.node.utf8_text(source_code.as_bytes())?;
-                calls.push((capture.node.start_byte(), callee_name.to_string()));
+                if let Ok(callee_name) = capture.node.utf8_text(source_code.as_bytes()) {
+                    calls.push((capture.node.start_byte(), callee_name.to_string()));
+                }
             }
         }
     }

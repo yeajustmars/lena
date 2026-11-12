@@ -64,11 +64,29 @@ struct VarDef {
     end_row: Option<i64>,
     #[serde(rename = "end-col")]
     end_col: Option<i64>,
-    doc: Option<String>,
+    doc: Option<serde_json::Value>,
     #[serde(rename = "macro")]
     is_macro: Option<bool>,
     #[serde(rename = "arglist-strs")]
-    arglist_strs: Option<Vec<String>>,
+    arglist_strs: Option<serde_json::Value>,
+}
+
+fn emit_diag(
+    level: &str,
+    file: &str,
+    line: i64,
+    col: i64,
+    symbol: &str,
+    category: &str,
+    message: &str,
+) {
+    let msg = serde_json::to_string(message).unwrap_or_else(|_| "\"\"".to_string());
+    let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(
+        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
+        level, f, line, col, sym, category, msg
+    );
 }
 
 #[derive(Deserialize, Debug)]
@@ -150,12 +168,44 @@ fn process_kondo_output(kondo_data: KondoOutput) -> anyhow::Result<Vec<String>> 
             if let Some(end_col) = v.end_col {
                 tx.add(e_id, ATTR_LOC_END_COL, EdnValue::Int(end_col))?;
             }
-            if let Some(doc) = v.doc {
-                tx.add(e_id, ATTR_DOC_TEXT, EdnValue::String(&doc))?;
+
+            if let Some(doc_val) = &v.doc {
+                if let Some(doc_str) = doc_val.as_str() {
+                    tx.add(e_id, ATTR_DOC_TEXT, EdnValue::String(doc_str))?;
+                } else {
+                    emit_diag(
+                        "warn",
+                        &v.filename,
+                        v.row.unwrap_or(1),
+                        v.col.unwrap_or(1),
+                        &fqsn,
+                        "TypeMismatch",
+                        "Docstring is not a scalar string; skipping",
+                    );
+                }
             }
-            if let Some(ref args) = v.arglist_strs {
-                let sig = args.join("\n");
-                tx.add(e_id, ATTR_CODE_SIGNATURE, EdnValue::String(&sig))?;
+
+            if let Some(args_val) = &v.arglist_strs {
+                if let Some(args_array) = args_val.as_array() {
+                    let valid_args: Vec<String> = args_array
+                        .iter()
+                        .filter_map(|a| a.as_str().map(ToString::to_string))
+                        .collect();
+                    if !valid_args.is_empty() {
+                        let sig = valid_args.join("\n");
+                        tx.add(e_id, ATTR_CODE_SIGNATURE, EdnValue::String(&sig))?;
+                    }
+                } else {
+                    emit_diag(
+                        "warn",
+                        &v.filename,
+                        v.row.unwrap_or(1),
+                        v.col.unwrap_or(1),
+                        &fqsn,
+                        "TypeMismatch",
+                        "arglist-strs is not an array; skipping",
+                    );
+                }
             }
 
             facts.push(tx.finish());
@@ -244,7 +294,21 @@ fn execute_kondo(target: &Path) -> anyhow::Result<Vec<String>> {
         }
     }
 
-    let kondo_data: KondoOutput = serde_json::from_slice(&output.stdout)?;
+    let kondo_data: KondoOutput = match serde_json::from_slice(&output.stdout) {
+        Ok(data) => data,
+        Err(e) => {
+            emit_diag(
+                "error",
+                target.to_str().unwrap_or(""),
+                1,
+                1,
+                "",
+                "ParseError",
+                &format!("Failed to parse clj-kondo JSON: {e}"),
+            );
+            return Ok(Vec::new());
+        }
+    };
     process_kondo_output(kondo_data)
 }
 

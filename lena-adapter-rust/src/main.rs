@@ -4,7 +4,7 @@
 // #![warn(clippy::all, clippy::pedantic)]
 // TODO: turn on pedantic and fix all warnings and issues
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use lena_protocol::emitter::{EdnValue, TransactionBuilder};
 use lena_protocol::schema::{
@@ -50,6 +50,24 @@ struct ParsedFile {
     path: String,
     logical_module: String,
     tree: ra_ap_syntax::SourceFile,
+}
+
+fn emit_diag(
+    level: &str,
+    file: &str,
+    line: i64,
+    col: i64,
+    symbol: &str,
+    category: &str,
+    message: &str,
+) {
+    let msg = serde_json::to_string(message).unwrap_or_else(|_| "\"\"".to_string());
+    let sym = serde_json::to_string(symbol).unwrap_or_else(|_| "\"\"".to_string());
+    let f = serde_json::to_string(file).unwrap_or_else(|_| "\"\"".to_string());
+    eprintln!(
+        r#"@DIAG:{{"level":"{}","file":{},"line":{},"col":{},"symbol":{},"category":"{}","message":{}}}"#,
+        level, f, line, col, sym, category, msg
+    );
 }
 
 #[must_use]
@@ -103,10 +121,10 @@ fn discover_symbols(file: &ParsedFile, table: &mut SymbolTable) {
 fn get_container_name(fn_def: &ast::Fn) -> Option<String> {
     let mut current = fn_def.syntax().parent();
     while let Some(node) = current {
-        if let Some(impl_block) = ast::Impl::cast(node.clone()) {
-            if let Some(ty) = impl_block.self_ty() {
-                return Some(ty.syntax().text().to_string());
-            }
+        if let Some(impl_block) = ast::Impl::cast(node.clone())
+            && let Some(ty) = impl_block.self_ty()
+        {
+            return Some(ty.syntax().text().to_string());
         }
         current = node.parent();
     }
@@ -366,13 +384,17 @@ fn visit_dirs(dir: &Path) -> Result<()> {
     let mut pkg_cache = HashMap::new();
 
     for path in &files_to_process {
-        let content = fs::read_to_string(path)
-            .with_context(|| format!("Failed to read {}", path.display()))?;
+        let path_str = path.to_string_lossy().to_string();
+        let content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(e) => {
+                emit_diag("error", &path_str, 1, 1, "", "IoError", &e.to_string());
+                continue;
+            }
+        };
         let parse = SourceFile::parse(&content, Edition::Edition2024);
 
-        let path_str = path.to_string_lossy().to_string();
         let file_stem = path.file_stem().unwrap_or_default().to_string_lossy();
-
         let package_name = find_package_name(path, &mut pkg_cache);
         let logical_module = format!("{package_name}::{file_stem}");
 
@@ -391,9 +413,22 @@ fn visit_dirs(dir: &Path) -> Result<()> {
     }
 
     for parsed_file in &parsed_files {
-        if let Ok(facts) = emit_facts(parsed_file, &symbol_table) {
-            for fact in facts {
-                println!("{fact}");
+        match emit_facts(parsed_file, &symbol_table) {
+            Ok(facts) => {
+                for fact in facts {
+                    println!("{fact}");
+                }
+            }
+            Err(e) => {
+                emit_diag(
+                    "error",
+                    &parsed_file.path,
+                    1,
+                    1,
+                    "",
+                    "EmissionError",
+                    &e.to_string(),
+                );
             }
         }
     }
