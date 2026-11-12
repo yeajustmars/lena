@@ -4,14 +4,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 use clap::Parser;
-use lena_protocol::emitter::{EdnValue, TransactionBuilder};
-use lena_protocol::schema::{
-    ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
-    ATTR_ENTITY_TYPE, ATTR_LOC_END_COL, ATTR_LOC_END_LINE, ATTR_LOC_FILE, ATTR_LOC_START_COL,
-    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_EXTERNAL, ATTR_SYMBOL_FQSN,
-    ATTR_SYMBOL_KIND, ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, KIND_FN, KIND_MACRO, KIND_MODULE,
-    LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
-};
 use serde::Deserialize;
 use std::{
     collections::{HashSet, hash_map::DefaultHasher},
@@ -19,6 +11,15 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     vec::Vec,
+};
+
+use lena_protocol::emitter::{EdnValue, TransactionBuilder};
+use lena_protocol::schema::{
+    ATTR_CALL_CALLEE, ATTR_CALL_CALLER, ATTR_CODE_SIGNATURE, ATTR_DOC_TEXT, ATTR_ENTITY_LANGUAGE,
+    ATTR_ENTITY_TYPE, ATTR_LOC_END_COL, ATTR_LOC_END_LINE, ATTR_LOC_FILE, ATTR_LOC_START_COL,
+    ATTR_LOC_START_LINE, ATTR_PARENT_ENTITY, ATTR_SYMBOL_EXTERNAL, ATTR_SYMBOL_FQSN,
+    ATTR_SYMBOL_KIND, ATTR_SYMBOL_MODULE, ATTR_SYMBOL_NAME, KIND_FN, KIND_MACRO, KIND_MODULE,
+    LANG_CLOJURE, TYPE_CALL_SITE, TYPE_FUNCTION, TYPE_MODULE,
 };
 
 #[derive(Parser)]
@@ -185,6 +186,7 @@ fn process_kondo_vars(vars: &[VarDef], facts: &mut Vec<String>) -> anyhow::Resul
         } else {
             KIND_FN
         };
+
         tx.add(e_id, ATTR_SYMBOL_KIND, EdnValue::Keyword(kind))?;
         tx.add(e_id, ATTR_PARENT_ENTITY, EdnValue::Ref(parent_id))?;
         tx.add(e_id, ATTR_LOC_FILE, EdnValue::String(&v.filename))?;
